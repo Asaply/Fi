@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus } from "lucide-react";
 import Modal from "@/components/Modal";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { supabase } from "@/lib/supabaseClient";
 import "./Finanzas.css";
 
 const MOCK_DATA = [
@@ -13,8 +13,33 @@ const MOCK_DATA = [
 ];
 
 export default function FinanzasPage() {
-    const [transactions, setTransactions] = useLocalStorage("antigravity_transactions", MOCK_DATA);
+    const [transactions, setTransactions] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const fetchTransactions = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching transactions:", error);
+        } else {
+            const formattedData = data.map(t => ({
+                ...t,
+                // Ensure date format is correct for inputs (YYYY-MM-DD)
+                date: t.date ? new Date(t.date).toISOString().split('T')[0] : ''
+            }));
+            setTransactions(formattedData || []);
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        fetchTransactions();
+    }, []);
     const [modalType, setModalType] = useState("Ingreso"); // Ingreso or Egreso
     const [editingTransaction, setEditingTransaction] = useState(null);
 
@@ -62,14 +87,24 @@ export default function FinanzasPage() {
         setItemToDelete(id);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (itemToDelete) {
-            setTransactions(transactions.filter(t => t.id !== itemToDelete));
+            const { error } = await supabase
+                .from('transactions')
+                .delete()
+                .eq('id', itemToDelete);
+
+            if (error) {
+                console.error("Error deleting transaction:", error);
+                alert("Hubo un error al eliminar la transacción.");
+            } else {
+                setTransactions(transactions.filter(t => t.id !== itemToDelete));
+            }
             setItemToDelete(null);
         }
     };
 
-    const handleFormSubmit = (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
         if (!formData.concept || !formData.amount || !formData.date) {
             alert("Por favor completa los campos requeridos.");
@@ -77,7 +112,6 @@ export default function FinanzasPage() {
         }
 
         const payload = {
-            id: editingTransaction ? editingTransaction.id : Date.now(),
             date: formData.date,
             client: formData.client || "N/A",
             concept: formData.concept,
@@ -86,9 +120,32 @@ export default function FinanzasPage() {
         };
 
         if (editingTransaction) {
-            setTransactions(transactions.map(t => t.id === editingTransaction.id ? payload : t));
+            const { data, error } = await supabase
+                .from('transactions')
+                .update(payload)
+                .eq('id', editingTransaction.id)
+                .select();
+
+            if (error) {
+                console.error("Error updating transaction:", error);
+                alert("Hubo un error al actualizar.");
+            } else if (data?.[0]) {
+                const updated = transactions.map(t => t.id === editingTransaction.id ? data[0] : t);
+                setTransactions(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
+            }
         } else {
-            setTransactions([payload, ...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)));
+            const { data, error } = await supabase
+                .from('transactions')
+                .insert([payload])
+                .select();
+
+            if (error) {
+                console.error("Error creating transaction:", error);
+                alert("Hubo un error al crear.");
+            } else if (data?.[0]) {
+                const updated = [data[0], ...transactions];
+                setTransactions(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
+            }
         }
 
         setIsModalOpen(false);
@@ -138,88 +195,94 @@ export default function FinanzasPage() {
                 </div>
             </div>
 
-            <div className="summary-cards">
-                <div className="card summary-card">
-                    <span className="summary-title">Total Ingresos</span>
-                    <span className="summary-amount amount-positive">{formatCurrency(totalIngresos)}</span>
-                </div>
-                <div className="card summary-card">
-                    <span className="summary-title">Total Egresos</span>
-                    <span className="summary-amount amount-negative">{formatCurrency(totalEgresos)}</span>
-                </div>
-                <div className="card summary-card glass">
-                    <span className="summary-title">Ganancia Neta</span>
-                    <span className="summary-amount">{formatCurrency(gananciaNeta)}</span>
-                </div>
-            </div>
-
-            <div className="card chart-section">
-                <span className="summary-title">Ingresos vs Egresos (Últimos 3 meses)</span>
-                <div className="chart-placeholder">
-                    {chartData.map((data, index) => {
-                        const incomeHeight = Math.max((data.ingresos / maxAmount) * 180, data.ingresos > 0 ? 10 : 0);
-                        const expenseHeight = Math.max((data.egresos / maxAmount) * 180, data.egresos > 0 ? 10 : 0);
-                        return (
-                            <div className="bar-group" key={index} title={`${data.label}: Ingresos ${formatCurrency(data.ingresos)} | Egresos ${formatCurrency(data.egresos)}`}>
-                                <div className="bar bar-income" style={{ height: `${incomeHeight}px` }}></div>
-                                <div className="bar bar-expense" style={{ height: `${expenseHeight}px` }}></div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            <div className="card table-section">
-                <div className="table-header">
-                    <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Transacciones Recientes</h2>
-                    <div className="filters-group">
-                        <select className="select-filter">
-                            <option>Febrero 2026</option>
-                            <option>Enero 2026</option>
-                        </select>
-                        <select className="select-filter">
-                            <option>Todos los clientes</option>
-                            <option>Acme Corp</option>
-                            <option>TechFlow</option>
-                        </select>
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>Cargando finanzas...</div>
+            ) : (
+                <>
+                    <div className="summary-cards">
+                        <div className="card summary-card">
+                            <span className="summary-title">Total Ingresos</span>
+                            <span className="summary-amount amount-positive">{formatCurrency(totalIngresos)}</span>
+                        </div>
+                        <div className="card summary-card">
+                            <span className="summary-title">Total Egresos</span>
+                            <span className="summary-amount amount-negative">{formatCurrency(totalEgresos)}</span>
+                        </div>
+                        <div className="card summary-card glass">
+                            <span className="summary-title">Ganancia Neta</span>
+                            <span className="summary-amount">{formatCurrency(gananciaNeta)}</span>
+                        </div>
                     </div>
-                </div>
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Cliente</th>
-                            <th>Concepto</th>
-                            <th>Tipo</th>
-                            <th>Monto</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {transactions.map(t => (
-                            <tr key={t.id}>
-                                <td>{t.date}</td>
-                                <td>{t.client}</td>
-                                <td>{t.concept}</td>
-                                <td>
-                                    <span className={`badge badge-${t.type.toLowerCase()}`}>
-                                        {t.type}
-                                    </span>
-                                </td>
-                                <td className={t.type === 'Ingreso' ? 'amount-positive' : 'amount-negative'}>
-                                    {formatCurrency(t.amount)}
-                                </td>
-                                <td>
-                                    <div className="actions-cell">
-                                        <button className="btn-icon-sm" onClick={() => openModal(t.type, t)}><Edit2 size={16} /></button>
-                                        <button className="btn-icon-sm" onClick={() => handleDelete(t.id)}><Trash2 size={16} /></button>
+
+                    <div className="card chart-section">
+                        <span className="summary-title">Ingresos vs Egresos (Últimos 3 meses)</span>
+                        <div className="chart-placeholder">
+                            {chartData.map((data, index) => {
+                                const incomeHeight = Math.max((data.ingresos / maxAmount) * 180, data.ingresos > 0 ? 10 : 0);
+                                const expenseHeight = Math.max((data.egresos / maxAmount) * 180, data.egresos > 0 ? 10 : 0);
+                                return (
+                                    <div className="bar-group" key={index} title={`${data.label}: Ingresos ${formatCurrency(data.ingresos)} | Egresos ${formatCurrency(data.egresos)}`}>
+                                        <div className="bar bar-income" style={{ height: `${incomeHeight}px` }}></div>
+                                        <div className="bar bar-expense" style={{ height: `${expenseHeight}px` }}></div>
                                     </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="card table-section">
+                        <div className="table-header">
+                            <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Transacciones Recientes</h2>
+                            <div className="filters-group">
+                                <select className="select-filter">
+                                    <option>Febrero 2026</option>
+                                    <option>Enero 2026</option>
+                                </select>
+                                <select className="select-filter">
+                                    <option>Todos los clientes</option>
+                                    <option>Acme Corp</option>
+                                    <option>TechFlow</option>
+                                </select>
+                            </div>
+                        </div>
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Concepto</th>
+                                    <th>Tipo</th>
+                                    <th>Monto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {transactions.map(t => (
+                                    <tr key={t.id}>
+                                        <td>{t.date}</td>
+                                        <td>{t.client}</td>
+                                        <td>{t.concept}</td>
+                                        <td>
+                                            <span className={`badge badge-${t.type.toLowerCase()}`}>
+                                                {t.type}
+                                            </span>
+                                        </td>
+                                        <td className={t.type === 'Ingreso' ? 'amount-positive' : 'amount-negative'}>
+                                            {formatCurrency(t.amount)}
+                                        </td>
+                                        <td>
+                                            <div className="actions-cell">
+                                                <button className="btn-icon-sm" onClick={() => openModal(t.type, t)}><Edit2 size={16} /></button>
+                                                <button className="btn-icon-sm" onClick={() => handleDelete(t.id)}><Trash2 size={16} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={`${editingTransaction ? 'Editar' : 'Registrar Nuevo'} ${modalType}`}>
                 <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={handleFormSubmit}>

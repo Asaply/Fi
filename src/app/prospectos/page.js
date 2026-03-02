@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, UserPlus, Mail, Phone, Clock, Target, ArrowRight, Trash2 } from "lucide-react";
 import Modal from "@/components/Modal";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { supabase } from "@/lib/supabaseClient";
 import "./Prospectos.css";
 
 const STAGES = [
@@ -20,8 +20,28 @@ const INITIAL_PROSPECTS = [
 ];
 
 export default function ProspectosPage() {
-    const [prospects, setProspects] = useLocalStorage("antigravity_prospects", INITIAL_PROSPECTS);
+    const [prospects, setProspects] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [draggedItem, setDraggedItem] = useState(null);
+
+    const fetchProspects = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from('prospects')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching prospects:", error);
+        } else {
+            setProspects(data || []);
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        fetchProspects();
+    }, []);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,14 +108,26 @@ export default function ProspectosPage() {
         e.currentTarget.classList.remove("drag-over");
     };
 
-    const handleDrop = (e, stageId) => {
+    const handleDrop = async (e, stageId) => {
         e.preventDefault();
         e.currentTarget.classList.remove("drag-over");
 
         if (draggedItem && draggedItem.stage !== stageId) {
+            // Optimistic update
             setProspects(prospects.map(p =>
                 p.id === draggedItem.id ? { ...p, stage: stageId } : p
             ));
+
+            const { error } = await supabase
+                .from('prospects')
+                .update({ stage: stageId })
+                .eq('id', draggedItem.id);
+
+            if (error) {
+                console.error("Error updating stage:", error);
+                // Revert via refetch
+                fetchProspects();
+            }
         }
     };
 
@@ -105,15 +137,25 @@ export default function ProspectosPage() {
         setItemToDelete(id);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (itemToDelete) {
-            setProspects(prospects.filter(p => p.id !== itemToDelete));
+            const { error } = await supabase
+                .from('prospects')
+                .delete()
+                .eq('id', itemToDelete);
+
+            if (error) {
+                console.error("Error deleting prospect:", error);
+                alert("Hubo un error al eliminar el prospecto.");
+            } else {
+                setProspects(prospects.filter(p => p.id !== itemToDelete));
+            }
             setItemToDelete(null);
             setIsModalOpen(false);
         }
     };
 
-    const handleFormSubmit = (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.company) {
             alert("Por favor ingresa al menos el nombre y la empresa.");
@@ -121,14 +163,42 @@ export default function ProspectosPage() {
         }
 
         const payload = {
-            ...formData,
-            id: editingProspect ? editingProspect.id : Date.now(),
+            name: formData.name,
+            company: formData.company,
+            source: formData.source,
+            service: formData.service,
+            budget: formData.budget ? parseFloat(formData.budget) : 0,
+            probability: formData.probability ? parseInt(formData.probability) : 50,
+            date: formData.date,
+            stage: formData.stage,
+            notes: formData.notes
         };
 
         if (editingProspect) {
-            setProspects(prospects.map(p => p.id === editingProspect.id ? payload : p));
+            const { data, error } = await supabase
+                .from('prospects')
+                .update(payload)
+                .eq('id', editingProspect.id)
+                .select();
+
+            if (error) {
+                console.error("Error updating prospect:", error);
+                alert("Hubo un error al actualizar.");
+            } else if (data?.[0]) {
+                setProspects(prospects.map(p => p.id === editingProspect.id ? data[0] : p));
+            }
         } else {
-            setProspects([...prospects, payload]);
+            const { data, error } = await supabase
+                .from('prospects')
+                .insert([payload])
+                .select();
+
+            if (error) {
+                console.error("Error creating prospect:", error);
+                alert("Hubo un error al crear.");
+            } else if (data?.[0]) {
+                setProspects([data[0], ...prospects]);
+            }
         }
 
         setIsModalOpen(false);
@@ -144,83 +214,87 @@ export default function ProspectosPage() {
                 </button>
             </div>
 
-            <div className="pipeline-board">
-                {STAGES.map(stage => {
-                    const stageProspects = prospects.filter(p => p.stage === stage.id);
-                    const totalValue = stageProspects.reduce((acc, p) => {
-                        return acc + parseInt(p.budget.toString().replace(/[^0-9]/g, '') || 0);
-                    }, 0);
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>Cargando prospectos...</div>
+            ) : (
+                <div className="pipeline-board">
+                    {STAGES.map(stage => {
+                        const stageProspects = prospects.filter(p => p.stage === stage.id);
+                        const totalValue = stageProspects.reduce((acc, p) => {
+                            return acc + parseInt(p.budget.toString().replace(/[^0-9]/g, '') || 0);
+                        }, 0);
 
-                    return (
-                        <div
-                            key={stage.id}
-                            className="pipeline-column"
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={(e) => handleDrop(e, stage.id)}
-                        >
-                            <div className="column-header" style={{ borderBottomColor: `${stage.color}40` }}>
-                                <div className="column-title">
-                                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: stage.color }}></div>
-                                    {stage.title}
-                                </div>
-                                <div className="column-value">
-                                    {formatCurrency(totalValue)} ({stageProspects.length})
-                                </div>
-                            </div>
-
-                            <div className="lead-cards">
-                                {stageProspects.map(prospect => (
-                                    <div
-                                        key={prospect.id}
-                                        className="lead-card"
-                                        style={{ borderLeftColor: stage.color }}
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, prospect)}
-                                        onDragEnd={handleDragEnd}
-                                        onClick={() => openModal(prospect)}
-                                    >
-                                        <div className="lead-header">
-                                            <div>
-                                                <div className="lead-name">{prospect.name}</div>
-                                                <div className="lead-company">{prospect.company}</div>
-                                            </div>
-                                            <span className="lead-source">{prospect.source}</span>
-                                        </div>
-
-                                        <div className="lead-budget">
-                                            {prospect.budget ? formatCurrency(prospect.budget) : "$0.00"}
-                                        </div>
-
-                                        <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px", display: "flex", justifyContent: "space-between" }}>
-                                            <span>Probabilidad</span>
-                                            <span>{prospect.probability}%</span>
-                                        </div>
-                                        <div className="probability-bar">
-                                            <div
-                                                className="probability-fill"
-                                                style={{
-                                                    width: `${prospect.probability}%`,
-                                                    backgroundColor: prospect.probability > 60 ? 'var(--success)' : prospect.probability > 30 ? 'var(--warning)' : 'var(--text-tertiary)'
-                                                }}
-                                            ></div>
-                                        </div>
-
-                                        <div className="lead-footer">
-                                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                                                <Clock size={12} /> {prospect.date}
-                                            </div>
-                                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                                                <Target size={12} /> {prospect.service}
-                                            </div>
-                                        </div>
+                        return (
+                            <div
+                                key={stage.id}
+                                className="pipeline-column"
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, stage.id)}
+                            >
+                                <div className="column-header" style={{ borderBottomColor: `${stage.color}40` }}>
+                                    <div className="column-title">
+                                        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: stage.color }}></div>
+                                        {stage.title}
                                     </div>
-                                ))}
+                                    <div className="column-value">
+                                        {formatCurrency(totalValue)} ({stageProspects.length})
+                                    </div>
+                                </div>
+
+                                <div className="lead-cards">
+                                    {stageProspects.map(prospect => (
+                                        <div
+                                            key={prospect.id}
+                                            className="lead-card"
+                                            style={{ borderLeftColor: stage.color }}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, prospect)}
+                                            onDragEnd={handleDragEnd}
+                                            onClick={() => openModal(prospect)}
+                                        >
+                                            <div className="lead-header">
+                                                <div>
+                                                    <div className="lead-name">{prospect.name}</div>
+                                                    <div className="lead-company">{prospect.company}</div>
+                                                </div>
+                                                <span className="lead-source">{prospect.source}</span>
+                                            </div>
+
+                                            <div className="lead-budget">
+                                                {prospect.budget ? formatCurrency(prospect.budget) : "$0.00"}
+                                            </div>
+
+                                            <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px", display: "flex", justifyContent: "space-between" }}>
+                                                <span>Probabilidad</span>
+                                                <span>{prospect.probability}%</span>
+                                            </div>
+                                            <div className="probability-bar">
+                                                <div
+                                                    className="probability-fill"
+                                                    style={{
+                                                        width: `${prospect.probability}%`,
+                                                        backgroundColor: prospect.probability > 60 ? 'var(--success)' : prospect.probability > 30 ? 'var(--warning)' : 'var(--text-tertiary)'
+                                                    }}
+                                                ></div>
+                                            </div>
+
+                                            <div className="lead-footer">
+                                                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                                                    <Clock size={12} /> {prospect.date}
+                                                </div>
+                                                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                                                    <Target size={12} /> {prospect.service}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             <Modal
                 isOpen={isModalOpen}

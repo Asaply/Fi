@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Calendar, Mail, Phone, Link as LinkIcon, Edit2, Trash2 } from "lucide-react";
 import Modal from "@/components/Modal";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { supabase } from "@/lib/supabaseClient";
 import "./Clientes.css";
 
 const COLUMNS = [
@@ -20,8 +20,34 @@ const INITIAL_CLIENTS = [
 ];
 
 export default function ClientesPage() {
-    const [clients, setClients] = useLocalStorage("antigravity_clientes", INITIAL_CLIENTS);
+    const [clients, setClients] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [draggedItem, setDraggedItem] = useState(null);
+
+    const fetchClients = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from('clients')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching clients:", error);
+        } else {
+            // Mapping start_date to startDate to keep compatibility with existing frontend state 
+            const formattedData = data.map(c => ({
+                ...c,
+                startDate: c.start_date,
+                contactPerson: c.contact_person
+            }));
+            setClients(formattedData || []);
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        fetchClients();
+    }, []);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,14 +108,26 @@ export default function ClientesPage() {
         e.currentTarget.classList.remove("drag-over");
     };
 
-    const handleDrop = (e, status) => {
+    const handleDrop = async (e, status) => {
         e.preventDefault();
         e.currentTarget.classList.remove("drag-over");
 
         if (draggedItem && draggedItem.status !== status) {
+            // Optimistic update
             setClients(clients.map(c =>
                 c.id === draggedItem.id ? { ...c, status } : c
             ));
+
+            const { error } = await supabase
+                .from('clients')
+                .update({ status })
+                .eq('id', draggedItem.id);
+
+            if (error) {
+                console.error("Error updating status:", error);
+                // Revert to original state by re-fetching if error occurs
+                fetchClients();
+            }
         }
     };
 
@@ -99,15 +137,25 @@ export default function ClientesPage() {
         setItemToDelete(id);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (itemToDelete) {
-            setClients(clients.filter(c => c.id !== itemToDelete));
+            const { error } = await supabase
+                .from('clients')
+                .delete()
+                .eq('id', itemToDelete);
+
+            if (error) {
+                console.error("Error deleting client:", error);
+                alert("Hubo un error al eliminar el cliente.");
+            } else {
+                setClients(clients.filter(c => c.id !== itemToDelete));
+            }
             setItemToDelete(null);
             setIsModalOpen(false);
         }
     };
 
-    const handleFormSubmit = (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.service) {
             alert("Por favor ingresa al menos el nombre y el servicio.");
@@ -115,14 +163,52 @@ export default function ClientesPage() {
         }
 
         const payload = {
-            ...formData,
-            id: editingClient ? editingClient.id : Date.now(),
+            name: formData.name,
+            service: formData.service,
+            price: formData.price,
+            start_date: formData.startDate,
+            status: formData.status,
+            notes: formData.notes,
+            email: formData.email,
+            phone: formData.phone,
+            contact_person: formData.contactPerson
         };
 
         if (editingClient) {
-            setClients(clients.map(c => c.id === editingClient.id ? payload : c));
+            const { data, error } = await supabase
+                .from('clients')
+                .update(payload)
+                .eq('id', editingClient.id)
+                .select();
+
+            if (error) {
+                console.error("Error updating client:", error);
+                alert("Hubo un error al actualizar.");
+            } else if (data?.[0]) {
+                const formattedData = {
+                    ...data[0],
+                    startDate: data[0].start_date,
+                    contactPerson: data[0].contact_person
+                };
+                setClients(clients.map(c => c.id === editingClient.id ? formattedData : c));
+            }
         } else {
-            setClients([...clients, payload]);
+            const { data, error } = await supabase
+                .from('clients')
+                .insert([payload])
+                .select();
+
+            if (error) {
+                console.error("Error creating client:", error);
+                alert("Hubo un error al crear.");
+            } else if (data?.[0]) {
+                const formattedData = {
+                    ...data[0],
+                    startDate: data[0].start_date,
+                    contactPerson: data[0].contact_person
+                };
+                setClients([formattedData, ...clients]);
+            }
         }
 
         setIsModalOpen(false);
@@ -138,51 +224,55 @@ export default function ClientesPage() {
                 </button>
             </div>
 
-            <div className="kanban-board">
-                {COLUMNS.map(col => {
-                    const colClients = clients.filter(c => c.status === col.id);
-                    return (
-                        <div
-                            key={col.id}
-                            className="kanban-column"
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={(e) => handleDrop(e, col.id)}
-                        >
-                            <div className="column-header">
-                                <span className="column-title">{col.title}</span>
-                                <span className="column-count">{colClients.length}</span>
-                            </div>
-                            <div className="kanban-cards">
-                                {colClients.map(client => (
-                                    <div
-                                        key={client.id}
-                                        className="client-card"
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, client)}
-                                        onDragEnd={handleDragEnd}
-                                        onClick={() => openModal(client)}
-                                    >
-                                        <div className="card-header">
-                                            <span className="client-name">{client.name}</span>
-                                        </div>
-                                        <div className="service-type" style={{ marginBottom: "8px" }}>{client.service}</div>
-                                        <div className="project-price">{client.price}</div>
-                                        <div className="card-footer">
-                                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                                                <Calendar size={12} /> {client.startDate}
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>Cargando clientes...</div>
+            ) : (
+                <div className="kanban-board">
+                    {COLUMNS.map(col => {
+                        const colClients = clients.filter(c => c.status === col.id);
+                        return (
+                            <div
+                                key={col.id}
+                                className="kanban-column"
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, col.id)}
+                            >
+                                <div className="column-header">
+                                    <span className="column-title">{col.title}</span>
+                                    <span className="column-count">{colClients.length}</span>
+                                </div>
+                                <div className="kanban-cards">
+                                    {colClients.map(client => (
+                                        <div
+                                            key={client.id}
+                                            className="client-card"
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, client)}
+                                            onDragEnd={handleDragEnd}
+                                            onClick={() => openModal(client)}
+                                        >
+                                            <div className="card-header">
+                                                <span className="client-name">{client.name}</span>
                                             </div>
-                                            <div className="profile-icon" style={{ width: "20px", height: "20px", fontSize: "10px" }}>
-                                                {client.contactPerson ? client.contactPerson.charAt(0) : <Phone size={10} />}
+                                            <div className="service-type" style={{ marginBottom: "8px" }}>{client.service}</div>
+                                            <div className="project-price">{client.price}</div>
+                                            <div className="card-footer">
+                                                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                                                    <Calendar size={12} /> {client.startDate}
+                                                </div>
+                                                <div className="profile-icon" style={{ width: "20px", height: "20px", fontSize: "10px" }}>
+                                                    {client.contactPerson ? client.contactPerson.charAt(0) : <Phone size={10} />}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             <Modal
                 isOpen={isModalOpen}
