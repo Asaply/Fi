@@ -5,6 +5,8 @@ import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabaseClient";
 import "./Clientes.css";
 
+export const revalidate = 0; // Disable Next.js caching so it always fetches fresh data
+
 const COLUMNS = [
     { id: "prospecto", title: "Prospecto" },
     { id: "propuesta", title: "Propuesta enviada" },

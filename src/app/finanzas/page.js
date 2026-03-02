@@ -5,6 +5,8 @@ import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabaseClient";
 import "./Finanzas.css";
 
+export const revalidate = 0; // Disable Next.js caching so it always fetches fresh data
+
 const MOCK_DATA = [
     { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },
     { id: 2, date: "2026-02-18", client: "N/A", concept: "Suscripción Vercel", type: "Egreso", amount: 400 },
