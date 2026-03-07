@@ -5,8 +5,6 @@ import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabaseClient";
 import "./Prospectos.css";
 
-export const revalidate = 0; // Disable Next.js caching so it always fetches fresh data
-
 const STAGES = [
     { id: "nuevo", title: "Nuevo", color: "#86868b" },
     { id: "contactado", title: "Contactado", color: "#0071e3" },

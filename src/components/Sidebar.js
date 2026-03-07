@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, Target, Rocket } from "lucide-react";
+import { LayoutDashboard, Users, Target, CircleDollarSign } from "lucide-react";
 import "./Sidebar.css";
 
 export default function Sidebar() {
     return (
         <aside className="sidebar">
             <div className="sidebar-brand">
-                <Rocket className="brand-icon" size={24} />
-                <span className="brand-name">Antigravity</span>
+                <CircleDollarSign className="brand-icon" size={24} />
+                <span className="brand-name">FNCE</span>
             </div>
 
             <nav className="sidebar-nav">
