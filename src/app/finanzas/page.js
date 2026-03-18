@@ -15,32 +15,35 @@ const MOCK_DATA = [
 
 export default function FinanzasPage() {
     const [transactions, setTransactions] = useState([]);
+    const [clients, setClients] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const fetchTransactions = async () => {
+    const fetchData = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase
-            .from('transactions')
-            .select('*')
-            .order('date', { ascending: false });
+        try {
+            const [txRes, clientsRes] = await Promise.all([
+                supabase.from('transactions').select('*').order('date', { ascending: false }),
+                supabase.from('clients').select('id, name, total_price, status')
+            ]);
 
-        if (error) {
-            console.error("Error fetching transactions:", error);
-        } else {
-            const formattedData = data.map(t => ({
-                ...t,
-                // Ensure date format is correct for inputs (YYYY-MM-DD)
-                date: t.date ? new Date(t.date).toISOString().split('T')[0] : ''
-            }));
-            setTransactions(formattedData || []);
+            if (txRes.error) console.error("Error fetching transactions:", txRes.error);
+            else {
+                const formattedData = (txRes.data || []).map(t => ({
+                    ...t,
+                    date: t.date ? new Date(t.date).toISOString().split('T')[0] : ''
+                }));
+                setTransactions(formattedData);
+            }
+
+            if (clientsRes.error) console.error("Error fetching clients:", clientsRes.error);
+            else setClients(clientsRes.data || []);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
-    useEffect(() => {
-        fetchTransactions();
-    }, []);
+    useEffect(() => { fetchData(); }, []);
     const [modalType, setModalType] = useState("Ingreso"); // Ingreso or Egreso
     const [editingTransaction, setEditingTransaction] = useState(null);
 
@@ -55,6 +58,16 @@ export default function FinanzasPage() {
     const totalIngresos = transactions.filter(t => t.type === "Ingreso").reduce((acc, curr) => acc + curr.amount, 0);
     const totalEgresos = transactions.filter(t => t.type === "Egreso").reduce((acc, curr) => acc + curr.amount, 0);
     const gananciaNeta = totalIngresos - totalEgresos;
+
+    // Por Cobrar: sum of (total_price - paid) for all active clients
+    const porCobrar = clients
+        .filter(c => c.status !== 'entregado')
+        .reduce((sum, c) => {
+            const paid = transactions
+                .filter(t => t.type === 'Ingreso' && t.client?.toLowerCase() === c.name?.toLowerCase())
+                .reduce((s, t) => s + (t.amount || 0), 0);
+            return sum + Math.max((c.total_price || 0) - paid, 0);
+        }, 0);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
@@ -212,6 +225,11 @@ export default function FinanzasPage() {
                         <div className="card summary-card glass">
                             <span className="summary-title">Ganancia Neta</span>
                             <span className="summary-amount">{formatCurrency(gananciaNeta)}</span>
+                        </div>
+                        <div className="card summary-card" style={{ borderLeft: "3px solid #f5a623" }}>
+                            <span className="summary-title">⏳ Por Cobrar</span>
+                            <span className="summary-amount" style={{ color: "#f5a623" }}>{formatCurrency(porCobrar)}</span>
+                            <span style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "4px" }}>Clientes activos</span>
                         </div>
                     </div>
 

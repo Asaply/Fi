@@ -13,41 +13,47 @@ const COLUMNS = [
     { id: "mantenimiento", title: "Mantenimiento" }
 ];
 
-const INITIAL_CLIENTS = [
-    { id: 1, name: "Acme Corp", service: "Web Development", price: "$45,000", startDate: "2026-02-15", status: "desarrollo", notes: "Falta contenido visual", email: "contacto@acme.com", phone: "555-0102", contactPerson: "Juan Pérez" },
-    { id: 2, name: "TechFlow", service: "Mantenimiento", price: "$12,000/mes", startDate: "2025-11-01", status: "mantenimiento", notes: "Pago el día 1 de cada mes", email: "admin@techflow.io", phone: "555-9988", contactPerson: "Ana Gomez" },
-    { id: 3, name: "Studio Zen", service: "Branding", price: "$25,000", startDate: "2026-02-01", status: "propuesta", notes: "Esperando confirmación", email: "hola@studiozen.com", phone: "555-1122", contactPerson: "Carlos Ruiz" }
-];
-
 export default function ClientesPage() {
     const [clients, setClients] = useState([]);
+    const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [draggedItem, setDraggedItem] = useState(null);
 
-    const fetchClients = async () => {
+    const fetchData = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase
-            .from('clients')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            const [clientsRes, txRes] = await Promise.all([
+                supabase.from('clients').select('*').order('created_at', { ascending: false }),
+                supabase.from('transactions').select('client, amount, type')
+            ]);
 
-        if (error) {
-            console.error("Error fetching clients:", error);
-        } else {
-            // Mapping start_date to startDate to keep compatibility with existing frontend state 
-            const formattedData = data.map(c => ({
-                ...c,
-                startDate: c.start_date,
-                contactPerson: c.contact_person
-            }));
-            setClients(formattedData || []);
+            if (clientsRes.error) console.error("Error fetching clients:", clientsRes.error);
+            else {
+                const formattedData = (clientsRes.data || []).map(c => ({
+                    ...c,
+                    startDate: c.start_date,
+                    contactPerson: c.contact_person,
+                    total_price: c.total_price || 0
+                }));
+                setClients(formattedData);
+            }
+
+            if (txRes.error) console.error("Error fetching transactions:", txRes.error);
+            else setTransactions(txRes.data || []);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
-    useEffect(() => {
-        fetchClients();
-    }, []);
+    useEffect(() => { fetchData(); }, []);
+
+    // Calculate how much has been paid for a given client name
+    const getPaidAmount = (clientName) => {
+        if (!clientName) return 0;
+        return transactions
+            .filter(t => t.type === 'Ingreso' && t.client?.toLowerCase() === clientName.toLowerCase())
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+    };
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,7 +62,7 @@ export default function ClientesPage() {
     const [formData, setFormData] = useState({
         name: "",
         service: "",
-        price: "",
+        total_price: "",
         startDate: new Date().toISOString().split('T')[0],
         contactPerson: "",
         phone: "",
@@ -68,13 +74,23 @@ export default function ClientesPage() {
     const openModal = (client = null) => {
         if (client) {
             setEditingClient(client);
-            setFormData({ ...client });
+            setFormData({
+                name: client.name || "",
+                service: client.service || "",
+                total_price: client.total_price || "",
+                startDate: client.startDate || new Date().toISOString().split('T')[0],
+                contactPerson: client.contactPerson || "",
+                phone: client.phone || "",
+                email: client.email || "",
+                status: client.status || "prospecto",
+                notes: client.notes || ""
+            });
         } else {
             setEditingClient(null);
             setFormData({
                 name: "",
                 service: "",
-                price: "",
+                total_price: "",
                 startDate: new Date().toISOString().split('T')[0],
                 contactPerson: "",
                 phone: "",
@@ -89,9 +105,7 @@ export default function ClientesPage() {
     const handleDragStart = (e, client) => {
         setDraggedItem(client);
         e.dataTransfer.effectAllowed = "move";
-        setTimeout(() => {
-            e.target.classList.add("dragging");
-        }, 0);
+        setTimeout(() => { e.target.classList.add("dragging"); }, 0);
     };
 
     const handleDragEnd = (e) => {
@@ -113,37 +127,19 @@ export default function ClientesPage() {
         e.currentTarget.classList.remove("drag-over");
 
         if (draggedItem && draggedItem.status !== status) {
-            // Optimistic update
-            setClients(clients.map(c =>
-                c.id === draggedItem.id ? { ...c, status } : c
-            ));
-
-            const { error } = await supabase
-                .from('clients')
-                .update({ status })
-                .eq('id', draggedItem.id);
-
-            if (error) {
-                console.error("Error updating status:", error);
-                // Revert to original state by re-fetching if error occurs
-                fetchClients();
-            }
+            setClients(clients.map(c => c.id === draggedItem.id ? { ...c, status } : c));
+            const { error } = await supabase.from('clients').update({ status }).eq('id', draggedItem.id);
+            if (error) { console.error("Error updating status:", error); fetchData(); }
         }
     };
 
     const [itemToDelete, setItemToDelete] = useState(null);
 
-    const handleDelete = (id) => {
-        setItemToDelete(id);
-    };
+    const handleDelete = (id) => { setItemToDelete(id); };
 
     const confirmDelete = async () => {
         if (itemToDelete) {
-            const { error } = await supabase
-                .from('clients')
-                .delete()
-                .eq('id', itemToDelete);
-
+            const { error } = await supabase.from('clients').delete().eq('id', itemToDelete);
             if (error) {
                 console.error("Error deleting client:", error);
                 alert("Hubo un error al eliminar el cliente.");
@@ -165,7 +161,7 @@ export default function ClientesPage() {
         const payload = {
             name: formData.name,
             service: formData.service,
-            price: formData.price,
+            total_price: parseFloat(formData.total_price) || 0,
             start_date: formData.startDate,
             status: formData.status,
             notes: formData.notes,
@@ -175,44 +171,26 @@ export default function ClientesPage() {
         };
 
         if (editingClient) {
-            const { data, error } = await supabase
-                .from('clients')
-                .update(payload)
-                .eq('id', editingClient.id)
-                .select();
-
-            if (error) {
-                console.error("Error updating client:", error);
-                alert("Hubo un error al actualizar.");
-            } else if (data?.[0]) {
-                const formattedData = {
-                    ...data[0],
-                    startDate: data[0].start_date,
-                    contactPerson: data[0].contact_person
-                };
-                setClients(clients.map(c => c.id === editingClient.id ? formattedData : c));
+            const { data, error } = await supabase.from('clients').update(payload).eq('id', editingClient.id).select();
+            if (error) { console.error("Error updating client:", error); alert("Hubo un error al actualizar."); }
+            else if (data?.[0]) {
+                const formatted = { ...data[0], startDate: data[0].start_date, contactPerson: data[0].contact_person, total_price: data[0].total_price || 0 };
+                setClients(clients.map(c => c.id === editingClient.id ? formatted : c));
             }
         } else {
-            const { data, error } = await supabase
-                .from('clients')
-                .insert([payload])
-                .select();
-
-            if (error) {
-                console.error("Error creating client:", error);
-                alert("Hubo un error al crear.");
-            } else if (data?.[0]) {
-                const formattedData = {
-                    ...data[0],
-                    startDate: data[0].start_date,
-                    contactPerson: data[0].contact_person
-                };
-                setClients([formattedData, ...clients]);
+            const { data, error } = await supabase.from('clients').insert([payload]).select();
+            if (error) { console.error("Error creating client:", error); alert("Hubo un error al crear."); }
+            else if (data?.[0]) {
+                const formatted = { ...data[0], startDate: data[0].start_date, contactPerson: data[0].contact_person, total_price: data[0].total_price || 0 };
+                setClients([formatted, ...clients]);
             }
         }
 
         setIsModalOpen(false);
     };
+
+    const formatCurrency = (amount) =>
+        new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
 
     return (
         <div className="page-container clientes-page">
@@ -243,30 +221,58 @@ export default function ClientesPage() {
                                     <span className="column-count">{colClients.length}</span>
                                 </div>
                                 <div className="kanban-cards">
-                                    {colClients.map(client => (
-                                        <div
-                                            key={client.id}
-                                            className="client-card"
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, client)}
-                                            onDragEnd={handleDragEnd}
-                                            onClick={() => openModal(client)}
-                                        >
-                                            <div className="card-header">
-                                                <span className="client-name">{client.name}</span>
-                                            </div>
-                                            <div className="service-type" style={{ marginBottom: "8px" }}>{client.service}</div>
-                                            <div className="project-price">{client.price}</div>
-                                            <div className="card-footer">
-                                                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                                                    <Calendar size={12} /> {client.startDate}
+                                    {colClients.map(client => {
+                                        const paid = getPaidAmount(client.name);
+                                        const total = client.total_price || 0;
+                                        const pending = Math.max(total - paid, 0);
+                                        const pct = total > 0 ? Math.min((paid / total) * 100, 100) : 0;
+                                        return (
+                                            <div
+                                                key={client.id}
+                                                className="client-card"
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, client)}
+                                                onDragEnd={handleDragEnd}
+                                                onClick={() => openModal(client)}
+                                            >
+                                                <div className="card-header">
+                                                    <span className="client-name">{client.name}</span>
                                                 </div>
-                                                <div className="profile-icon" style={{ width: "20px", height: "20px", fontSize: "10px" }}>
-                                                    {client.contactPerson ? client.contactPerson.charAt(0) : <Phone size={10} />}
+                                                <div className="service-type" style={{ marginBottom: "8px" }}>{client.service}</div>
+
+                                                {total > 0 && (
+                                                    <div style={{ marginBottom: "10px" }}>
+                                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                                                            <span style={{ color: "var(--success)" }}>{formatCurrency(paid)} cobrado</span>
+                                                            <span>{formatCurrency(total)}</span>
+                                                        </div>
+                                                        <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: "99px", height: "5px", overflow: "hidden" }}>
+                                                            <div style={{ width: `${pct}%`, height: "100%", background: pending > 0 ? "var(--accent)" : "var(--success)", borderRadius: "99px", transition: "width 0.4s ease" }} />
+                                                        </div>
+                                                        {pending > 0 && (
+                                                            <div style={{ fontSize: "11px", color: "var(--warning, #f5a623)", marginTop: "4px", fontWeight: 600 }}>
+                                                                Pendiente: {formatCurrency(pending)}
+                                                            </div>
+                                                        )}
+                                                        {pending === 0 && total > 0 && (
+                                                            <div style={{ fontSize: "11px", color: "var(--success)", marginTop: "4px", fontWeight: 600 }}>
+                                                                ✓ Pagado completo
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <div className="card-footer">
+                                                    <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                                                        <Calendar size={12} /> {client.startDate}
+                                                    </div>
+                                                    <div className="profile-icon" style={{ width: "20px", height: "20px", fontSize: "10px" }}>
+                                                        {client.contactPerson ? client.contactPerson.charAt(0) : <Phone size={10} />}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         );
@@ -274,11 +280,7 @@ export default function ClientesPage() {
                 </div>
             )}
 
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title={editingClient ? "Editar Cliente" : "Nuevo Cliente"}
-            >
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingClient ? "Editar Cliente" : "Nuevo Cliente"}>
                 <form style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} onSubmit={handleFormSubmit}>
                     <div className="detail-grid">
                         <div className="detail-item">
@@ -290,8 +292,8 @@ export default function ClientesPage() {
                             <input type="text" className="select-filter" required value={formData.service} onChange={e => setFormData({ ...formData, service: e.target.value })} />
                         </div>
                         <div className="detail-item">
-                            <span className="detail-label">Precio del Proyecto</span>
-                            <input type="text" className="select-filter" placeholder="$0.00" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
+                            <span className="detail-label">Precio Total del Proyecto (MXN)</span>
+                            <input type="number" className="select-filter" placeholder="0.00" step="0.01" min="0" value={formData.total_price} onChange={e => setFormData({ ...formData, total_price: e.target.value })} />
                         </div>
                         <div className="detail-item">
                             <span className="detail-label">Fecha de Inicio</span>
@@ -333,14 +335,11 @@ export default function ClientesPage() {
                                 <Trash2 size={16} /> Eliminar
                             </button>
                         ) : <div></div>}
-
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsModalOpen(false)}>
                                 Cancelar
                             </button>
-                            <button type="submit" className="btn-primary">
-                                Guardar Cliente
-                            </button>
+                            <button type="submit" className="btn-primary">Guardar Cliente</button>
                         </div>
                     </div>
                 </form>

@@ -1,8 +1,12 @@
+'use client';
+
 import { Plus, User } from "lucide-react";
+import { usePathname } from "next/navigation";
 import "./Topbar.css";
 
-export default function Topbar() {
+export default function Topbar({ onNewClick }) {
     const currentMonth = new Date().toLocaleString("es-MX", { month: "long" });
+    const pathname = usePathname();
 
     return (
         <header className="topbar">
@@ -11,7 +15,7 @@ export default function Topbar() {
             </div>
 
             <div className="topbar-right">
-                <button className="btn-primary icon-btn">
+                <button className="btn-primary icon-btn topbar-btn" onClick={onNewClick}>
                     <Plus size={18} />
                     <span>Nuevo</span>
                 </button>
