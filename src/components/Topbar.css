@@ -49,3 +49,14 @@
     justify-content: center;
     cursor: pointer;
 }
+
+/* Mobile Topbar */
+@media (max-width: 768px) {
+    .current-month {
+        display: none;
+    }
+    .topbar-right .btn-primary {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}

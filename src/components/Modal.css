@@ -71,3 +71,11 @@
         transform: translateY(0) scale(1);
     }
 }
+
+/* Mobile Modal */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 16px;
+        max-width: calc(100% - 32px);
+    }
+}
