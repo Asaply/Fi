@@ -189,3 +189,34 @@
     background-color: #0A84FF;
     opacity: 0.8;
 }
+
+/* Mobile Finanzas */
+@media (max-width: 768px) {
+    .summary-cards {
+        grid-template-columns: 1fr !important;
+    }
+    .finanzas-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .filters-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .filters-group button {
+        flex: 1;
+        justify-content: center;
+    }
+    .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .table-header .filters-group {
+        width: 100%;
+    }
+    .table-header .select-filter {
+        flex: 1;
+    }
+}

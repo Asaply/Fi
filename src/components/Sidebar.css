@@ -66,3 +66,39 @@
     padding: 0 12px;
     margin-bottom: 4px;
 }
+
+/* Mobile Bottom Bar */
+@media (max-width: 768px) {
+    .sidebar {
+        flex-direction: row;
+        justify-content: space-around;
+        gap: 4px;
+        align-items: center;
+    }
+    .sidebar-brand, .sidebar-section {
+        display: none !important;
+    }
+    .sidebar-nav {
+        flex-direction: row;
+        width: 100%;
+        justify-content: space-around;
+        gap: 0;
+    }
+    .nav-item {
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        font-size: 10px;
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+    }
+    .nav-item span {
+        display: none;
+    }
+    .nav-item svg {
+        width: 20px;
+        height: 20px;
+        margin: 0 auto;
+    }
+}

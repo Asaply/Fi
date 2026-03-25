@@ -276,3 +276,44 @@ button {
 .btn-primary:hover {
   background: var(--accent-hover);
 }
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+    height: 100dvh;
+  }
+  .sidebar {
+    order: 3;
+    width: 100% !important;
+    height: 70px !important;
+    padding: 8px !important;
+    border-right: none !important;
+    border-top: 1px solid var(--border-color);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+  }
+  .topbar {
+    padding: 0 16px !important;
+  }
+  .main-content {
+    order: 2;
+    padding-bottom: 80px !important; /* Make room for bottom nav */
+  }
+  .page-container {
+    padding: 16px !important;
+  }
+  .page-title {
+    font-size: 24px !important;
+    margin-bottom: 16px !important;
+  }
+  .card {
+    padding: 16px !important;
+  }
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
