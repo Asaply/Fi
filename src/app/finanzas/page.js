@@ -275,7 +275,7 @@ export default function FinanzasPage() {
                         </div>
                     </div>
 
-                    <PLCalendar transactions={transactions} />
+                    <PLCalendar transactions={transactions} porCobrar={porCobrar} />
 
                     <div className="card table-section">
                         <div className="table-header">

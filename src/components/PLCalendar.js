@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './PLCalendar.css';
 
-const PLCalendar = ({ transactions }) => {
+const PLCalendar = ({ transactions, porCobrar }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarDays, setCalendarDays] = useState([]);
 
@@ -37,6 +37,8 @@ const PLCalendar = ({ transactions }) => {
             // Calculate PnL for this day
             let dailyIngresos = 0;
             let dailyEgresos = 0;
+            let dailyGastosPersonales = 0;
+            let dailyInversiones = 0;
             let hasData = false;
 
             transactions.forEach(t => {
@@ -44,6 +46,8 @@ const PLCalendar = ({ transactions }) => {
                     hasData = true;
                     if (t.type === 'Ingreso') dailyIngresos += t.amount;
                     if (t.type === 'Egreso') dailyEgresos += t.amount;
+                    if (t.type === 'Gasto Personal') dailyGastosPersonales += t.amount;
+                    if (t.type === 'Inversión') dailyInversiones += t.amount;
                 }
             });
 
@@ -53,6 +57,8 @@ const PLCalendar = ({ transactions }) => {
                 day,
                 dateStr,
                 pnl,
+                gastos: dailyGastosPersonales,
+                inversiones: dailyInversiones,
                 hasData
             });
         }
@@ -88,9 +94,16 @@ const PLCalendar = ({ transactions }) => {
     return (
         <div className="pl-calendar-container">
             <div className="pl-calendar-header">
-                <div className="pl-calendar-title">
-                    <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)", margin: 0 }}>P&L Calendar</h2>
-                    <span className="info-icon" title="Profit and Loss Calendar">i</span>
+                <div className="pl-calendar-title" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)", margin: 0 }}>P&L Calendar</h2>
+                        <span className="info-icon" title="Profit and Loss Calendar">i</span>
+                    </div>
+                    {porCobrar !== undefined && porCobrar > 0 && (
+                        <div style={{ background: 'rgba(245, 166, 35, 0.1)', padding: '4px 12px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#f5a623', fontWeight: 600 }}>⏳ Por Cobrar: {formatCurrency(porCobrar)}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="pl-calendar-controls">
@@ -153,6 +166,12 @@ const PLCalendar = ({ transactions }) => {
                             <div key={d.dateStr} className={`pl-calendar-cell ${pnlClass}`}>
                                 <div className="pl-calendar-date">{d.day}</div>
                                 <div className="pl-calendar-amount">{displayPnl}</div>
+                                {d.hasData && (d.gastos > 0 || d.inversiones > 0) && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', textAlign: 'center', width: '100%' }}>
+                                        {d.inversiones > 0 && <span style={{ fontSize: '10px', color: '#0A84FF', fontWeight: 600, background: 'rgba(10, 132, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>Inv: {formatCurrency(d.inversiones)}</span>}
+                                        {d.gastos > 0 && <span style={{ fontSize: '10px', color: '#8E8E93', fontWeight: 600, background: 'rgba(142, 142, 147, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>GP: -{formatCurrency(d.gastos)}</span>}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
