@@ -224,4 +224,15 @@
     .table-header .select-filter {
         flex: 1;
     }
+    .chart-placeholder {
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: 16px;
+    }
+    .bar {
+        width: 20px;
+    }
+    .bar-group {
+        gap: 4px;
+    }
 }
