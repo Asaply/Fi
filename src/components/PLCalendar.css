@@ -130,6 +130,23 @@
 
 /* Mobile fixes for PLCalendar */
 @media (max-width: 768px) {
+    .pl-calendar-grid {
+        grid-template-columns: repeat(7, minmax(40px, 1fr));
+    }
+    .pl-calendar-cell {
+        padding: 8px 4px;
+        min-height: 70px;
+    }
+    .pl-calendar-weekday {
+        font-size: 10px;
+        padding: 8px 4px;
+    }
+    .pl-calendar-amount {
+        font-size: 11px;
+    }
+    .pl-calendar-container {
+        padding: 16px;
+    }
     .pl-calendar-header {
         flex-direction: column;
         align-items: flex-start;

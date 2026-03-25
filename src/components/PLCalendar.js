@@ -15,6 +15,16 @@ const PLCalendar = ({ transactions, porCobrar }) => {
         return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
     };
 
+    const formatCompact = (amount) => {
+        if (Math.abs(amount) >= 1000000) {
+            return (amount / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        }
+        if (Math.abs(amount) >= 1000) {
+            return (amount / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+        }
+        return amount.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    };
+
     const generateCalendar = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -153,10 +163,10 @@ const PLCalendar = ({ transactions, porCobrar }) => {
                         if (d.hasData) {
                             if (d.pnl > 0) {
                                 pnlClass = "pnl-positive";
-                                displayPnl = `+${d.pnl.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                displayPnl = `+${formatCompact(d.pnl)}`;
                             } else if (d.pnl < 0) {
                                 pnlClass = "pnl-negative";
-                                displayPnl = `${d.pnl.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                displayPnl = `${formatCompact(d.pnl)}`;
                             } else {
                                 displayPnl = "0.00";
                             }
@@ -168,8 +178,8 @@ const PLCalendar = ({ transactions, porCobrar }) => {
                                 <div className="pl-calendar-amount">{displayPnl}</div>
                                 {d.hasData && (d.gastos > 0 || d.inversiones > 0) && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', textAlign: 'center', width: '100%' }}>
-                                        {d.inversiones > 0 && <span style={{ fontSize: '10px', color: '#0A84FF', fontWeight: 600, background: 'rgba(10, 132, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>Inv: {formatCurrency(d.inversiones)}</span>}
-                                        {d.gastos > 0 && <span style={{ fontSize: '10px', color: '#8E8E93', fontWeight: 600, background: 'rgba(142, 142, 147, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>GP: -{formatCurrency(d.gastos)}</span>}
+                                        {d.inversiones > 0 && <span style={{ fontSize: '9px', color: '#0A84FF', fontWeight: 600, background: 'rgba(10, 132, 255, 0.1)', padding: '2px', borderRadius: '4px', wordBreak: 'break-all' }}>Inv: ${formatCompact(d.inversiones)}</span>}
+                                        {d.gastos > 0 && <span style={{ fontSize: '9px', color: '#8E8E93', fontWeight: 600, background: 'rgba(142, 142, 147, 0.1)', padding: '2px', borderRadius: '4px', wordBreak: 'break-all' }}>GP: -${formatCompact(d.gastos)}</span>}
                                     </div>
                                 )}
                             </div>
