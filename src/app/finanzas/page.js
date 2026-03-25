@@ -292,45 +292,47 @@ export default function FinanzasPage() {
                                 </select>
                             </div>
                         </div>
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Concepto</th>
-                                    <th>Tipo</th>
-                                    <th>Monto</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {transactions.map(t => (
-                                    <tr key={t.id}>
-                                        <td>{t.date}</td>
-                                        <td>{t.client}</td>
-                                        <td>{t.concept}</td>
-                                        <td>
-                                            <span className={`badge badge-${t.type.toLowerCase().replace(' ', '-')}`}>
-                                                {t.type}
-                                            </span>
-                                        </td>
-                                        <td className={
-                                            t.type === 'Ingreso' ? 'amount-positive' : 
-                                            (t.type === 'Egreso' || t.type === 'Gasto Personal') ? 'amount-negative' : 
-                                            t.type === 'Inversión' ? 'amount-investment' : ''
-                                        }>
-                                            {formatCurrency(t.amount)}
-                                        </td>
-                                        <td>
-                                            <div className="actions-cell">
-                                                <button className="btn-icon-sm" onClick={() => openModal(t.type, t)}><Edit2 size={16} /></button>
-                                                <button className="btn-icon-sm" onClick={() => handleDelete(t.id)}><Trash2 size={16} /></button>
-                                            </div>
-                                        </td>
+                        <div className="table-responsive">
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Concepto</th>
+                                        <th>Tipo</th>
+                                        <th>Monto</th>
+                                        <th>Acciones</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {transactions.map(t => (
+                                        <tr key={t.id}>
+                                            <td>{t.date}</td>
+                                            <td>{t.client}</td>
+                                            <td>{t.concept}</td>
+                                            <td>
+                                                <span className={`badge badge-${t.type.toLowerCase().replace(' ', '-')}`}>
+                                                    {t.type}
+                                                </span>
+                                            </td>
+                                            <td className={
+                                                t.type === 'Ingreso' ? 'amount-positive' : 
+                                                (t.type === 'Egreso' || t.type === 'Gasto Personal') ? 'amount-negative' : 
+                                                t.type === 'Inversión' ? 'amount-investment' : ''
+                                            }>
+                                                {formatCurrency(t.amount)}
+                                            </td>
+                                            <td>
+                                                <div className="actions-cell">
+                                                    <button className="btn-icon-sm" onClick={() => openModal(t.type, t)}><Edit2 size={16} /></button>
+                                                    <button className="btn-icon-sm" onClick={() => handleDelete(t.id)}><Trash2 size={16} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </>
             )}

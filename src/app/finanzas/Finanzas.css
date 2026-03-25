@@ -200,13 +200,17 @@
         align-items: flex-start;
         gap: 16px;
     }
-    .filters-group {
+    .finanzas-header .filters-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         width: 100%;
-        justify-content: space-between;
+        gap: 8px;
     }
-    .filters-group button {
-        flex: 1;
+    .finanzas-header .filters-group button {
+        width: 100%;
         justify-content: center;
+        font-size: 13px;
+        padding: 10px 8px;
     }
     .table-header {
         flex-direction: column;
@@ -215,6 +219,7 @@
     }
     .table-header .filters-group {
         width: 100%;
+        display: flex;
     }
     .table-header .select-filter {
         flex: 1;
