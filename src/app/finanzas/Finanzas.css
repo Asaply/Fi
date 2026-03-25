@@ -161,3 +161,31 @@
     background: var(--border-color);
     color: var(--text-primary);
 }
+
+.badge-gasto-personal {
+    background: rgba(142, 142, 147, 0.1);
+    color: #8E8E93;
+}
+
+.badge-inversión {
+    background: rgba(10, 132, 255, 0.1);
+    color: #0A84FF;
+}
+
+.amount-gasto {
+    color: #8E8E93;
+}
+
+.amount-investment {
+    color: #0A84FF;
+}
+
+.bar-gasto {
+    background-color: #8E8E93;
+    opacity: 0.8;
+}
+
+.bar-investment {
+    background-color: #0A84FF;
+    opacity: 0.8;
+}

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp } from "lucide-react";
 import Modal from "@/components/Modal";
 import PLCalendar from "@/components/PLCalendar";
 import { supabase } from "@/lib/supabaseClient";
@@ -57,6 +57,8 @@ export default function FinanzasPage() {
 
     const totalIngresos = transactions.filter(t => t.type === "Ingreso").reduce((acc, curr) => acc + curr.amount, 0);
     const totalEgresos = transactions.filter(t => t.type === "Egreso").reduce((acc, curr) => acc + curr.amount, 0);
+    const totalGastosPersonales = transactions.filter(t => t.type === "Gasto Personal").reduce((acc, curr) => acc + curr.amount, 0);
+    const totalInversiones = transactions.filter(t => t.type === "Inversión").reduce((acc, curr) => acc + curr.amount, 0);
     const gananciaNeta = totalIngresos - totalEgresos;
 
     // Por Cobrar: sum of (total_price - paid) for all active clients
@@ -175,6 +177,8 @@ export default function FinanzasPage() {
                 label: d.toLocaleString('es-MX', { month: 'short' }),
                 ingresos: 0,
                 egresos: 0,
+                gastosPersonales: 0,
+                inversiones: 0,
             };
 
             transactions.forEach(t => {
@@ -182,6 +186,8 @@ export default function FinanzasPage() {
                 if (parseInt(tYear) === d.getFullYear() && parseInt(tMonth) === d.getMonth() + 1) {
                     if (t.type === 'Ingreso') monthData.ingresos += t.amount;
                     if (t.type === 'Egreso') monthData.egresos += t.amount;
+                    if (t.type === 'Gasto Personal') monthData.gastosPersonales += t.amount;
+                    if (t.type === 'Inversión') monthData.inversiones += t.amount;
                 }
             });
 
@@ -191,7 +197,7 @@ export default function FinanzasPage() {
     };
 
     const chartData = getLast3MonthsData();
-    const maxAmount = Math.max(...chartData.flatMap(d => [d.ingresos, d.egresos]), 100);
+    const maxAmount = Math.max(...chartData.flatMap(d => [d.ingresos, d.egresos, d.gastosPersonales, d.inversiones]), 100);
 
     return (
         <div className="page-container">
@@ -206,6 +212,14 @@ export default function FinanzasPage() {
                         <ArrowDownRight size={16} />
                         <span>Egreso</span>
                     </button>
+                    <button className="btn-primary icon-btn glass" onClick={() => openModal("Gasto Personal")} style={{ background: "rgba(142, 142, 147, 0.1)", color: "#8E8E93" }}>
+                        <Wallet size={16} />
+                        <span>Gasto Personal</span>
+                    </button>
+                    <button className="btn-primary icon-btn glass" onClick={() => openModal("Inversión")} style={{ background: "rgba(10, 132, 255, 0.1)", color: "#0A84FF" }}>
+                        <TrendingUp size={16} />
+                        <span>Inversión</span>
+                    </button>
                 </div>
             </div>
 
@@ -213,7 +227,7 @@ export default function FinanzasPage() {
                 <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>Cargando finanzas...</div>
             ) : (
                 <>
-                    <div className="summary-cards">
+                    <div className="summary-cards" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
                         <div className="card summary-card">
                             <span className="summary-title">Total Ingresos</span>
                             <span className="summary-amount amount-positive">{formatCurrency(totalIngresos)}</span>
@@ -231,18 +245,30 @@ export default function FinanzasPage() {
                             <span className="summary-amount" style={{ color: "#f5a623" }}>{formatCurrency(porCobrar)}</span>
                             <span style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "4px" }}>Clientes activos</span>
                         </div>
+                        <div className="card summary-card" style={{ borderLeft: "3px solid #8E8E93" }}>
+                            <span className="summary-title">Gastos Personales</span>
+                            <span className="summary-amount amount-gasto">{formatCurrency(totalGastosPersonales)}</span>
+                        </div>
+                        <div className="card summary-card" style={{ borderLeft: "3px solid #0A84FF" }}>
+                            <span className="summary-title">Inversiones</span>
+                            <span className="summary-amount amount-investment">{formatCurrency(totalInversiones)}</span>
+                        </div>
                     </div>
 
                     <div className="card chart-section">
-                        <span className="summary-title">Ingresos vs Egresos (Últimos 3 meses)</span>
+                        <span className="summary-title">Resumen (Últimos 3 meses)</span>
                         <div className="chart-placeholder">
                             {chartData.map((data, index) => {
                                 const incomeHeight = Math.max((data.ingresos / maxAmount) * 180, data.ingresos > 0 ? 10 : 0);
                                 const expenseHeight = Math.max((data.egresos / maxAmount) * 180, data.egresos > 0 ? 10 : 0);
+                                const gastoHeight = Math.max((data.gastosPersonales / maxAmount) * 180, data.gastosPersonales > 0 ? 10 : 0);
+                                const invHeight = Math.max((data.inversiones / maxAmount) * 180, data.inversiones > 0 ? 10 : 0);
                                 return (
-                                    <div className="bar-group" key={index} title={`${data.label}: Ingresos ${formatCurrency(data.ingresos)} | Egresos ${formatCurrency(data.egresos)}`}>
+                                    <div className="bar-group" key={index} title={`${data.label}: Ingresos ${formatCurrency(data.ingresos)} | Egresos ${formatCurrency(data.egresos)} | Gastos Personales ${formatCurrency(data.gastosPersonales)} | Inversiones ${formatCurrency(data.inversiones)}`}>
                                         <div className="bar bar-income" style={{ height: `${incomeHeight}px` }}></div>
                                         <div className="bar bar-expense" style={{ height: `${expenseHeight}px` }}></div>
+                                        <div className="bar bar-gasto" style={{ height: `${gastoHeight}px` }}></div>
+                                        <div className="bar bar-investment" style={{ height: `${invHeight}px` }}></div>
                                     </div>
                                 );
                             })}
@@ -284,11 +310,15 @@ export default function FinanzasPage() {
                                         <td>{t.client}</td>
                                         <td>{t.concept}</td>
                                         <td>
-                                            <span className={`badge badge-${t.type.toLowerCase()}`}>
+                                            <span className={`badge badge-${t.type.toLowerCase().replace(' ', '-')}`}>
                                                 {t.type}
                                             </span>
                                         </td>
-                                        <td className={t.type === 'Ingreso' ? 'amount-positive' : 'amount-negative'}>
+                                        <td className={
+                                            t.type === 'Ingreso' ? 'amount-positive' : 
+                                            (t.type === 'Egreso' || t.type === 'Gasto Personal') ? 'amount-negative' : 
+                                            t.type === 'Inversión' ? 'amount-investment' : ''
+                                        }>
                                             {formatCurrency(t.amount)}
                                         </td>
                                         <td>

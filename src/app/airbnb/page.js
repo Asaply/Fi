@@ -1,19 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BedDouble, CalendarDays, Wallet, TrendingUp, Users } from 'lucide-react';
 import Modal from '@/components/Modal';
+import { supabase } from '@/lib/supabaseClient';
 import './Airbnb.css';
 
-const mockReservations = [
-    { id: 'RES-001', guest: 'María González', dates: '12 Mar - 15 Mar', status: 'Confirmada', amount: '$4,500 MXN', property: 'Villa Sol' },
-    { id: 'RES-002', guest: 'John Smith', dates: '18 Mar - 22 Mar', status: 'Pendiente', amount: '$7,200 MXN', property: 'Casa Luna' },
-    { id: 'RES-003', guest: 'Andrea Torres', dates: '25 Mar - 30 Mar', status: 'Confirmada', amount: '$8,000 MXN', property: 'Villa Sol' },
-    { id: 'RES-004', guest: 'Roberto Ruiz', dates: '02 Abr - 05 Abr', status: 'Cancelada', amount: '$3,100 MXN', property: 'Estudio Centro' },
-];
-
 export default function Airbnb() {
-    const [reservations, setReservations] = useState(mockReservations);
+    const [reservations, setReservations] = useState([]);
     const [filter, setFilter] = useState('Todas');
     const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -26,14 +20,37 @@ export default function Airbnb() {
         amount: '',
         status: 'Pendiente'
     });
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase.from('airbnb_reservations').select('*').order('created_at', { ascending: false });
+        if (error) {
+            console.error("Error fetching reservations", error);
+        } else {
+            setReservations(data || []);
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const filteredReservations = filter === 'Todas'
         ? reservations
         : reservations.filter(r => r.status === filter);
 
-    const handleDelete = (id) => {
-        setReservations(reservations.filter(r => r.id !== id));
-        setSelectedBooking(null);
+    const handleDelete = async (id) => {
+        if (!confirm("¿Estás seguro de que deseas eliminar esta reservación?")) return;
+        const { error } = await supabase.from('airbnb_reservations').delete().eq('id', id);
+        if (error) {
+            console.error("Error deleting", error);
+            alert("Hubo un error al eliminar.");
+        } else {
+            setReservations(reservations.filter(r => r.id !== id));
+            setSelectedBooking(null);
+        }
     };
 
     const handleEditClick = () => {
@@ -45,9 +62,22 @@ export default function Airbnb() {
         setEditForm({ ...editForm, [e.target.name]: e.target.value });
     };
 
-    const handleSaveChanges = () => {
-        setReservations(reservations.map(r => r.id === editForm.id ? editForm : r));
-        setSelectedBooking(editForm);
+    const handleSaveChanges = async () => {
+        const { data, error } = await supabase.from('airbnb_reservations').update({
+            guest: editForm.guest,
+            property: editForm.property,
+            dates: editForm.dates,
+            amount: editForm.amount,
+            status: editForm.status
+        }).eq('id', editForm.id).select();
+
+        if (error) {
+            console.error("Error updating reservation", error);
+            alert("Hubo un error al actualizar.");
+        } else if (data && data[0]) {
+            setReservations(reservations.map(r => r.id === editForm.id ? data[0] : r));
+            setSelectedBooking(data[0]);
+        }
         setIsEditing(false);
     };
 
@@ -55,20 +85,41 @@ export default function Airbnb() {
         setNewForm({ ...newForm, [e.target.name]: e.target.value });
     };
 
-    const handleSaveNew = () => {
-        const newId = `RES-00${reservations.length + 1}`;
+    const handleSaveNew = async () => {
+        const amountStr = `${newForm.amount.includes('$') ? newForm.amount : '$' + newForm.amount}`;
+        const finalAmountStr = amountStr.includes('MXN') ? amountStr : `${amountStr} MXN`;
         const newRes = {
-            id: newId,
             guest: newForm.guest,
             property: newForm.property,
             dates: newForm.dates,
-            amount: `${newForm.amount.includes('$') ? newForm.amount : '$' + newForm.amount} MXN`,
+            amount: finalAmountStr,
             status: newForm.status
         };
-        setReservations([...reservations, newRes]);
+
+        const { data, error } = await supabase.from('airbnb_reservations').insert([newRes]).select();
+        
+        if (error) {
+            console.error("Error creating reservation", error);
+            alert("Hubo un error al crear la reservación.");
+        } else if (data && data[0]) {
+            setReservations([data[0], ...reservations]);
+        }
         setIsNewBookingModalOpen(false);
         setNewForm({ guest: '', property: 'Villa Sol', dates: '', amount: '', status: 'Pendiente' });
     };
+
+    const totalIngresos = reservations
+        .filter(r => r.status === 'Confirmada')
+        .reduce((sum, r) => {
+            const num = parseFloat(r.amount.replace(/[^0-9.-]+/g, ""));
+            return sum + (isNaN(num) ? 0 : num);
+        }, 0);
+
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+    };
+
+    const huespedesActivos = new Set(reservations.filter(r => r.status === 'Confirmada').map(r => r.guest)).size;
 
     return (
         <div className="airbnb-container">
@@ -91,9 +142,9 @@ export default function Airbnb() {
                         <Wallet size={24} className="stat-icon" />
                     </div>
                     <div className="stat-info">
-                        <span className="stat-label">Ingresos del Mes</span>
-                        <span className="stat-value">$45,200 <span className="currency">MXN</span></span>
-                        <span className="stat-trend positive"><TrendingUp size={14} /> +12% vs mes anterior</span>
+                        <span className="stat-label">Ingresos Globales</span>
+                        <span className="stat-value">{formatCurrency(totalIngresos)}</span>
+                        <span className="stat-trend positive"><TrendingUp size={14} /> Total confirmadas</span>
                     </div>
                 </div>
 
@@ -102,9 +153,9 @@ export default function Airbnb() {
                         <CalendarDays size={24} className="stat-icon" />
                     </div>
                     <div className="stat-info">
-                        <span className="stat-label">Tasa de Ocupación</span>
-                        <span className="stat-value">78%</span>
-                        <span className="stat-trend positive"><TrendingUp size={14} /> +5% vs mes anterior</span>
+                        <span className="stat-label">Reservaciones</span>
+                        <span className="stat-value">{reservations.length}</span>
+                        <span className="stat-trend neutral">Activas en el sistema</span>
                     </div>
                 </div>
 
@@ -113,9 +164,9 @@ export default function Airbnb() {
                         <Users size={24} className="stat-icon" />
                     </div>
                     <div className="stat-info">
-                        <span className="stat-label">Huéspedes Activos</span>
-                        <span className="stat-value">12</span>
-                        <span className="stat-trend neutral">En 3 propiedades</span>
+                        <span className="stat-label">Huéspedes Únicos</span>
+                        <span className="stat-value">{huespedesActivos}</span>
+                        <span className="stat-trend neutral">Con reservaciones confirmadas</span>
                     </div>
                 </div>
             </section>
@@ -151,12 +202,14 @@ export default function Airbnb() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredReservations.map((res) => (
+                            {isLoading ? (
+                                <tr><td colSpan="7" className="text-center py-4 text-secondary">Cargando...</td></tr>
+                            ) : filteredReservations.map((res) => (
                                 <tr key={res.id}>
-                                    <td className="font-medium text-secondary">{res.id}</td>
+                                    <td className="font-medium text-secondary">RES-{res.id}</td>
                                     <td>
                                         <div className="guest-cell">
-                                            <div className="guest-avatar">{res.guest.charAt(0)}</div>
+                                            <div className="guest-avatar">{res.guest ? res.guest.charAt(0) : '?'}</div>
                                             <span className="font-semibold">{res.guest}</span>
                                         </div>
                                     </td>
@@ -183,7 +236,7 @@ export default function Airbnb() {
                                     </td>
                                 </tr>
                             ))}
-                            {filteredReservations.length === 0 && (
+                            {!isLoading && filteredReservations.length === 0 && (
                                 <tr>
                                     <td colSpan="7" className="empty-state">No hay reservaciones que coincidan con el filtro.</td>
                                 </tr>
@@ -243,7 +296,7 @@ export default function Airbnb() {
                     <div className="booking-details-container">
                         <div className="detail-row">
                             <span className="text-secondary font-medium">ID:</span>
-                            <span className="font-semibold">{selectedBooking.id}</span>
+                            <span className="font-semibold">RES-{selectedBooking.id}</span>
                         </div>
                         <div className="detail-row">
                             <span className="text-secondary font-medium">Huésped:</span>
