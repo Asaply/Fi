@@ -13,6 +13,10 @@ export const metadata = {
   title: "FNCE",
   description: "Internal agency management dashboard",
   manifest: "/manifest.json",
+  icons: {
+    icon: '/favicon.png',
+    apple: '/apple-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
