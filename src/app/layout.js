@@ -12,6 +12,12 @@ const inter = Inter({
 export const metadata = {
   title: "FNCE",
   description: "Internal agency management dashboard",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "FNCE",
+  },
 };
 
 export const viewport = {
