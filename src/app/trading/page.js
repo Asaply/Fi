@@ -17,6 +17,7 @@ export default function TradingPage() {
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         asset: "",
+        type: "Long", // Long, Short
         lot_size: "",
         invested_amount: "",
         status: "Abierto", // Abierto, Cerrado
@@ -56,6 +57,7 @@ export default function TradingPage() {
             setFormData({
                 date: tradeToEdit.date,
                 asset: tradeToEdit.asset,
+                type: tradeToEdit.type || "Long",
                 lot_size: tradeToEdit.lot_size.toString(),
                 invested_amount: tradeToEdit.invested_amount.toString(),
                 status: tradeToEdit.status,
@@ -67,6 +69,7 @@ export default function TradingPage() {
             setFormData({
                 date: new Date().toISOString().split('T')[0],
                 asset: "",
+                type: "Long",
                 lot_size: "",
                 invested_amount: "",
                 status: "Abierto",
@@ -104,6 +107,7 @@ export default function TradingPage() {
         const payload = {
             date: formData.date,
             asset: formData.asset.toUpperCase(),
+            type: formData.type,
             lot_size: parseFloat(formData.lot_size) || 0,
             invested_amount: parseFloat(formData.invested_amount) || 0,
             status: formData.status,
@@ -212,6 +216,7 @@ export default function TradingPage() {
                                     <tr>
                                         <th>Fecha (Apertura)</th>
                                         <th>Activo / Par</th>
+                                        <th>Tipo</th>
                                         <th>Lote</th>
                                         <th>Inversión</th>
                                         <th>Estado</th>
@@ -229,6 +234,11 @@ export default function TradingPage() {
                                         <tr key={t.id}>
                                             <td>{t.date}</td>
                                             <td style={{ fontWeight: 600 }}>{t.asset}</td>
+                                            <td>
+                                                <span className={`badge ${t.type === 'Short' ? 'badge-perdida' : 'badge-ganada'}`} style={{ opacity: 0.8 }}>
+                                                    {t.type || 'Long'}
+                                                </span>
+                                            </td>
                                             <td>{t.lot_size}</td>
                                             <td>{formatCurrency(t.invested_amount)}</td>
                                             <td>
@@ -274,6 +284,13 @@ export default function TradingPage() {
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Activo (Ej. USD/CHF) *</label>
                             <input type="text" className="select-filter" placeholder="USD/CHF" style={{ width: '100%' }} required value={formData.asset} onChange={e => setFormData({ ...formData, asset: e.target.value })} />
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Tipo *</label>
+                            <select className="select-filter" style={{ width: '100%' }} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
+                                <option value="Long">Long</option>
+                                <option value="Short">Short</option>
+                            </select>
                         </div>
                     </div>
                     
