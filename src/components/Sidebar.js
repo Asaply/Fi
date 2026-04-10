@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Target, CircleDollarSign, Home, LayoutTemplate, LineChart } from "lucide-react";
+import { LayoutDashboard, Users, Target, CircleDollarSign, Home, LayoutTemplate, LineChart, Activity } from "lucide-react";
 import { useTopbar } from "./TopbarContext";
 import "./Sidebar.css";
 
@@ -37,6 +37,10 @@ export default function Sidebar() {
                 <Link href="/trading" className={`nav-item ${pathname === '/trading' ? 'active' : ''}`}>
                     <LineChart size={20} />
                     <span>Trading</span>
+                </Link>
+                <Link href="/portfolio" className={`nav-item ${pathname === '/portfolio' ? 'active' : ''}`}>
+                    <Activity size={20} />
+                    <span>Portfolio Health</span>
                 </Link>
 
                 {customDashboards && customDashboards.length > 0 && (
