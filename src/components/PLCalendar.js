@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './PLCalendar.css';
 
-const PLCalendar = ({ transactions, porCobrar }) => {
+const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarDays, setCalendarDays] = useState([]);
 
@@ -49,19 +49,26 @@ const PLCalendar = ({ transactions, porCobrar }) => {
             let dailyEgresos = 0;
             let dailyGastosPersonales = 0;
             let dailyInversiones = 0;
+            let tradingPnl = 0;
             let hasData = false;
 
             transactions.forEach(t => {
                 if (t.date === dateStr) {
                     hasData = true;
-                    if (t.type === 'Ingreso') dailyIngresos += t.amount;
-                    if (t.type === 'Egreso') dailyEgresos += t.amount;
-                    if (t.type === 'Gasto Personal') dailyGastosPersonales += t.amount;
-                    if (t.type === 'Inversión') dailyInversiones += t.amount;
+                    if (mode === 'finanzas') {
+                        if (t.type === 'Ingreso') dailyIngresos += t.amount || 0;
+                        if (t.type === 'Egreso') dailyEgresos += t.amount || 0;
+                        if (t.type === 'Gasto Personal') dailyGastosPersonales += t.amount || 0;
+                        if (t.type === 'Inversión') dailyInversiones += t.amount || 0;
+                    } else if (mode === 'trading') {
+                        if (t.status === 'Cerrado' || t.status === 'Closed') {
+                            tradingPnl += t.pnl || 0;
+                        }
+                    }
                 }
             });
 
-            const pnl = dailyIngresos - dailyEgresos;
+            const pnl = mode === 'trading' ? tradingPnl : (dailyIngresos - dailyEgresos);
 
             days.push({
                 day,

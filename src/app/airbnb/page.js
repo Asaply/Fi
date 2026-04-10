@@ -97,7 +97,7 @@ export default function Airbnb() {
         };
 
         const { data, error } = await supabase.from('airbnb_reservations').insert([newRes]).select();
-        
+
         if (error) {
             console.error("Error creating reservation", error);
             alert("Hubo un error al crear la reservación.");
