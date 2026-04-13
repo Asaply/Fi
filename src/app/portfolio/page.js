@@ -161,6 +161,8 @@ export default function PortfolioHealth() {
     let divScore = 50, volScore = 50, benchScore = 50, liqScore = 90;
     const recs = [];
     
+    let cryptoPerc = 0;
+
     if (enrichedAssets.length > 0) {
         // Diversification
         const maxVal = Math.max(...enrichedAssets.map(a => a.value));
@@ -170,7 +172,7 @@ export default function PortfolioHealth() {
 
         // Volatility (Proxy via Crypto exposure)
         const cryptoVal = enrichedAssets.filter(a => a.category.toLowerCase() === 'crypto').reduce((s, a) => s + a.value, 0);
-        const cryptoPerc = (cryptoVal / totalValue) * 100;
+        cryptoPerc = (cryptoVal / totalValue) * 100;
         if (cryptoPerc > 50) { volScore -= 30; recs.push(`High volatility flagged: ${cryptoPerc.toFixed(1)}% in Crypto.`); }
         else { volScore += 20; }
 
