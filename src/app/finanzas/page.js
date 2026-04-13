@@ -46,6 +46,7 @@ export default function FinanzasPage() {
     useEffect(() => { fetchData(); }, []);
     const [modalType, setModalType] = useState("Ingreso"); // Ingreso or Egreso
     const [editingTransaction, setEditingTransaction] = useState(null);
+    const [activeFilter, setActiveFilter] = useState("Todos");
 
     // Form State
     const [formData, setFormData] = useState({
@@ -204,21 +205,28 @@ export default function FinanzasPage() {
             <div className="finanzas-header">
                 <h1 className="page-title">Finanzas</h1>
                 <div className="filters-group">
-                    <button className="btn-primary icon-btn glass" onClick={() => openModal("Ingreso")} style={{ background: "rgba(52, 199, 89, 0.1)", color: "var(--success)" }}>
+                    <button className="btn-primary icon-btn glass" onClick={() => setActiveFilter("Todos")} style={{ background: "rgba(255, 255, 255, 0.05)", color: "var(--text-primary)", border: activeFilter === 'Todos' ? '1px solid #fff' : 'none' }}>
+                        <span>Todos ({transactions.length})</span>
+                    </button>
+                    <button className="btn-primary icon-btn glass" onClick={() => setActiveFilter("Ingreso")} style={{ background: "rgba(52, 199, 89, 0.1)", color: "var(--success)", opacity: activeFilter === 'Ingreso' ? 1 : 0.5 }}>
                         <ArrowUpRight size={16} />
-                        <span>Ingreso</span>
+                        <span>Ingreso ({transactions.filter(t=>t.type==='Ingreso').length})</span>
                     </button>
-                    <button className="btn-primary icon-btn glass" onClick={() => openModal("Egreso")} style={{ background: "rgba(255, 59, 48, 0.1)", color: "var(--danger)" }}>
+                    <button className="btn-primary icon-btn glass" onClick={() => setActiveFilter("Egreso")} style={{ background: "rgba(255, 59, 48, 0.1)", color: "var(--danger)", opacity: activeFilter === 'Egreso' ? 1 : 0.5 }}>
                         <ArrowDownRight size={16} />
-                        <span>Egreso</span>
+                        <span>Egreso ({transactions.filter(t=>t.type==='Egreso').length})</span>
                     </button>
-                    <button className="btn-primary icon-btn glass" onClick={() => openModal("Gasto Personal")} style={{ background: "rgba(142, 142, 147, 0.1)", color: "#8E8E93" }}>
+                    <button className="btn-primary icon-btn glass" onClick={() => setActiveFilter("Gasto Personal")} style={{ background: "rgba(142, 142, 147, 0.1)", color: "#8E8E93", opacity: activeFilter === 'Gasto Personal' ? 1 : 0.5 }}>
                         <Wallet size={16} />
-                        <span>Gasto Personal</span>
+                        <span>Gasto Personal ({transactions.filter(t=>t.type==='Gasto Personal').length})</span>
                     </button>
-                    <button className="btn-primary icon-btn glass" onClick={() => openModal("Inversión")} style={{ background: "rgba(10, 132, 255, 0.1)", color: "#0A84FF" }}>
+                    <button className="btn-primary icon-btn glass" onClick={() => setActiveFilter("Inversión")} style={{ background: "rgba(10, 132, 255, 0.1)", color: "#0A84FF", opacity: activeFilter === 'Inversión' ? 1 : 0.5 }}>
                         <TrendingUp size={16} />
-                        <span>Inversión</span>
+                        <span>Inversión ({transactions.filter(t=>t.type==='Inversión').length})</span>
+                    </button>
+                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 8px' }}></div>
+                    <button className="btn-primary" onClick={() => openModal("Ingreso")} style={{ padding: '8px 16px' }}>
+                        <Plus size={16} /> Nueva Transacción
                     </button>
                 </div>
             </div>
@@ -305,7 +313,7 @@ export default function FinanzasPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {transactions.map(t => (
+                                    {(activeFilter === 'Todos' ? transactions : transactions.filter(t => t.type === activeFilter)).map(t => (
                                         <tr key={t.id}>
                                             <td>{t.date}</td>
                                             <td>{t.client}</td>

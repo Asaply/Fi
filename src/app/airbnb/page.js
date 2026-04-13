@@ -16,7 +16,8 @@ export default function Airbnb() {
     const [newForm, setNewForm] = useState({
         guest: '',
         property: 'Villa Sol',
-        dates: '',
+        checkIn: '',
+        checkOut: '',
         amount: '',
         status: 'Pendiente'
     });
@@ -63,10 +64,19 @@ export default function Airbnb() {
     };
 
     const handleSaveChanges = async () => {
+        let finalDates = editForm.dates;
+        if (editForm.checkIn && editForm.checkOut) {
+            if (new Date(editForm.checkOut) <= new Date(editForm.checkIn)) {
+                alert("El Check-out debe ser posterior al Check-in.");
+                return;
+            }
+            finalDates = `${editForm.checkIn} a ${editForm.checkOut}`;
+        }
+
         const { data, error } = await supabase.from('airbnb_reservations').update({
             guest: editForm.guest,
             property: editForm.property,
-            dates: editForm.dates,
+            dates: finalDates,
             amount: editForm.amount,
             status: editForm.status
         }).eq('id', editForm.id).select();
@@ -86,12 +96,21 @@ export default function Airbnb() {
     };
 
     const handleSaveNew = async () => {
+        if (!newForm.checkIn || !newForm.checkOut) {
+            alert("Las fechas de Check-in y Check-out son requeridas.");
+            return;
+        }
+        if (new Date(newForm.checkOut) <= new Date(newForm.checkIn)) {
+            alert("El Check-out debe ser posterior al Check-in.");
+            return;
+        }
+
         const amountStr = `${newForm.amount.includes('$') ? newForm.amount : '$' + newForm.amount}`;
         const finalAmountStr = amountStr.includes('MXN') ? amountStr : `${amountStr} MXN`;
         const newRes = {
             guest: newForm.guest,
             property: newForm.property,
-            dates: newForm.dates,
+            dates: `${newForm.checkIn} a ${newForm.checkOut}`,
             amount: finalAmountStr,
             status: newForm.status
         };
@@ -105,7 +124,7 @@ export default function Airbnb() {
             setReservations([data[0], ...reservations]);
         }
         setIsNewBookingModalOpen(false);
-        setNewForm({ guest: '', property: 'Villa Sol', dates: '', amount: '', status: 'Pendiente' });
+        setNewForm({ guest: '', property: 'Villa Sol', checkIn: '', checkOut: '', amount: '', status: 'Pendiente' });
     };
 
     const totalIngresos = reservations
@@ -219,8 +238,16 @@ export default function Airbnb() {
                                             <span>{res.property}</span>
                                         </div>
                                     </td>
-                                    <td>{res.dates}</td>
-                                    <td className="font-semibold">{res.amount}</td>
+                                    <td>
+                                        {!res.dates || res.dates === '-' ? (
+                                            <span className="status-badge status-cancelada" style={{ cursor: 'pointer' }} onClick={() => { setSelectedBooking(res); setIsEditing(true); }}>
+                                                Fechas faltantes
+                                            </span>
+                                        ) : (
+                                            res.dates
+                                        )}
+                                    </td>
+                                    <td className="font-semibold">{formatCurrency(parseFloat(res.amount.toString().replace(/[^0-9.-]+/g, "")) || 0)}</td>
                                     <td>
                                         <span className={`status-badge status-${res.status.toLowerCase()}`}>
                                             {res.status}
@@ -266,8 +293,12 @@ export default function Airbnb() {
                         </select>
                     </div>
                     <div className="form-group">
-                        <label>Fechas</label>
-                        <input type="text" name="dates" className="form-input" placeholder="Ej: 14 Abr - 18 Abr" value={newForm.dates} onChange={handleNewChange} />
+                        <label>Check-in *</label>
+                        <input type="date" name="checkIn" className="form-input" required value={newForm.checkIn} onChange={handleNewChange} />
+                    </div>
+                    <div className="form-group">
+                        <label>Check-out *</label>
+                        <input type="date" name="checkOut" className="form-input" required value={newForm.checkOut} onChange={handleNewChange} />
                     </div>
                     <div className="form-group">
                         <label>Monto Total (MXN sin signo ni letras)</label>
@@ -342,9 +373,17 @@ export default function Airbnb() {
                                 <option value="Estudio Centro">Estudio Centro</option>
                             </select>
                         </div>
+                        <div className="form-group" style={{ opacity: 0.5 }}>
+                            <label>Fechas Actuales</label>
+                            <input type="text" disabled className="form-input" value={editForm?.dates || ''} />
+                        </div>
                         <div className="form-group">
-                            <label>Fechas</label>
-                            <input type="text" name="dates" className="form-input" value={editForm?.dates || ''} onChange={handleEditChange} />
+                            <label>Nuevo Check-in (Opcional si deseas cambiar)</label>
+                            <input type="date" name="checkIn" className="form-input" value={editForm?.checkIn || ''} onChange={handleEditChange} />
+                        </div>
+                        <div className="form-group">
+                            <label>Nuevo Check-out</label>
+                            <input type="date" name="checkOut" className="form-input" value={editForm?.checkOut || ''} onChange={handleEditChange} />
                         </div>
                         <div className="form-group">
                             <label>Monto Total</label>

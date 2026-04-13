@@ -8,8 +8,9 @@ import "./Prospectos.css";
 const STAGES = [
     { id: "nuevo", title: "Nuevo", color: "#86868b" },
     { id: "contactado", title: "Contactado", color: "#0071e3" },
-    { id: "negociacion", title: "En negociación", color: "#ff9f0a" },
-    { id: "ganado", title: "Ganado", color: "#34c759" },
+    { id: "propuesta", title: "Propuesta enviada", color: "#af52de" },
+    { id: "negociacion", title: "Negociación", color: "#ff9f0a" },
+    { id: "cerrado", title: "Cerrado", color: "#34c759" },
     { id: "perdido", title: "Perdido", color: "#ff3b30" }
 ];
 
@@ -217,8 +218,9 @@ export default function ProspectosPage() {
             {isLoading ? (
                 <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>Cargando prospectos...</div>
             ) : (
-                <div className="pipeline-board">
-                    {STAGES.map(stage => {
+                <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '20px', display: 'flex' }}>
+                    <div className="pipeline-board" style={{ minWidth: 'max-content' }}>
+                        {STAGES.map(stage => {
                         const stageProspects = prospects.filter(p => p.stage === stage.id);
                         const totalValue = stageProspects.reduce((acc, p) => {
                             return acc + parseInt(p.budget.toString().replace(/[^0-9]/g, '') || 0);
@@ -292,7 +294,8 @@ export default function ProspectosPage() {
                                 </div>
                             </div>
                         );
-                    })}
+                        })}
+                    </div>
                 </div>
             )}
 

@@ -104,6 +104,15 @@ export default function TradingPage() {
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         
+        const numericPnl = parseFloat(formData.pnl) || 0;
+        let finalOutcome = formData.status === 'Abierto' ? 'Pendiente' : formData.outcome;
+        
+        // BUG 1 Fix: Sync outcome and PnL automatically
+        if (formData.status === 'Cerrado') {
+            if (numericPnl > 0) finalOutcome = 'Ganada';
+            else if (numericPnl < 0) finalOutcome = 'Perdida';
+        }
+
         const payload = {
             date: formData.date,
             asset: formData.asset.toUpperCase(),
@@ -111,8 +120,8 @@ export default function TradingPage() {
             lot_size: parseFloat(formData.lot_size) || 0,
             invested_amount: parseFloat(formData.invested_amount) || 0,
             status: formData.status,
-            outcome: formData.status === 'Abierto' ? 'Pendiente' : formData.outcome,
-            pnl: formData.status === 'Cerrado' ? (parseFloat(formData.pnl) || 0) : 0
+            outcome: finalOutcome,
+            pnl: formData.status === 'Cerrado' ? numericPnl : 0
         };
 
         if (editingTrade) {
@@ -210,8 +219,8 @@ export default function TradingPage() {
                         <div className="table-header">
                             <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Historial de Operaciones</h2>
                         </div>
-                        <div className="table-responsive">
-                            <table className="data-table">
+                        <div className="table-responsive" style={{ width: '100%', overflowX: 'auto' }}>
+                            <table className="data-table" style={{ minWidth: '800px' }}>
                                 <thead>
                                     <tr>
                                         <th>Fecha (Apertura)</th>

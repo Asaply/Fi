@@ -1,4 +1,4 @@
-"use client";
+6y"use client";
 import { useState, useEffect } from "react";
 import { Plus, Calendar, Mail, Phone, Link as LinkIcon, Edit2, Trash2 } from "lucide-react";
 import Modal from "@/components/Modal";
@@ -205,8 +205,9 @@ export default function ClientesPage() {
             {isLoading ? (
                 <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>Cargando clientes...</div>
             ) : (
-                <div className="kanban-board">
-                    {COLUMNS.map(col => {
+                <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '20px', display: 'flex' }}>
+                    <div className="kanban-board" style={{ minWidth: 'max-content' }}>
+                        {COLUMNS.map(col => {
                         const colClients = clients.filter(c => c.status === col.id);
                         return (
                             <div
@@ -277,6 +278,7 @@ export default function ClientesPage() {
                             </div>
                         );
                     })}
+                    </div>
                 </div>
             )}
 
