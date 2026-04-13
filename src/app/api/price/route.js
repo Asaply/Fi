@@ -3,32 +3,57 @@ import { NextResponse } from 'next/server';
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const ticker = searchParams.get('ticker');
+    const range = searchParams.get('range'); // e.g. 1y, 7d
 
     if (!ticker) {
         return NextResponse.json({ error: 'Ticker is required' }, { status: 400 });
     }
 
     try {
-        const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`, {
+        let url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`;
+        
+        // If an extended range is requested, adjust query params for historical data
+        if (range) {
+            let interval = '1d';
+            if (range === '7d') interval = '1d';
+            else if (range === '1mo') interval = '1d';
+            else if (range === '1y' || range === 'ytd') interval = '1d'; // Simplify to 1d
+            
+            url += `?range=${range}&interval=${interval}`;
+        }
+
+        const response = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
                 'Accept': 'application/json'
             },
-            next: { revalidate: 60 } // Cache for 60 seconds
+            next: { revalidate: 60 } 
         });
 
         if (!response.ok) {
-            return NextResponse.json({ error: 'Failed to fetch price' }, { status: response.status });
+            return NextResponse.json({ error: 'Failed to fetch' }, { status: response.status });
         }
 
         const data = await response.json();
+        const result = data?.chart?.result?.[0];
         
-        if (data.chart && data.chart.result && data.chart.result.length > 0) {
-            const price = data.chart.result[0].meta.regularMarketPrice;
-            return NextResponse.json({ price });
+        if (result) {
+            const price = result.meta.regularMarketPrice;
+            
+            let history = [];
+            // If timestamps and close prices exist
+            if (range && result.timestamp && result.indicators?.quote?.[0]?.close) {
+                const closes = result.indicators.quote[0].close;
+                history = result.timestamp.map((t, i) => ({
+                    time: t,
+                    price: closes[i] || null
+                })).filter(h => h.price !== null);
+            }
+
+            return NextResponse.json({ price, history });
         }
 
-        return NextResponse.json({ error: 'Price not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Data not found' }, { status: 404 });
     } catch (error) {
         console.error('Yahoo Finance Proxy Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
