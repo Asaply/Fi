@@ -1,4 +1,4 @@
-6y"use client";
+"use client";
 import { useState, useEffect } from "react";
 import { Plus, Calendar, Mail, Phone, Link as LinkIcon, Edit2, Trash2 } from "lucide-react";
 import Modal from "@/components/Modal";
