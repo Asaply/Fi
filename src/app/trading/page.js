@@ -1,13 +1,35 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, LineChart, Target, DollarSign } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, LineChart, Target, DollarSign, TrendingUp } from "lucide-react";
 import Modal from "@/components/Modal";
 import PLCalendar from "@/components/PLCalendar";
 import { supabase } from "@/lib/supabaseClient";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 import "./Trading.css";
+import { getFilter, setFilter } from '@/lib/filterMemory';
+
+const PERIODOS_TRAD = [
+    { value: '1m', label: 'Este mes' },
+    { value: '3m', label: '3 meses' },
+    { value: '6m', label: '6 meses' },
+    { value: '1y', label: 'Este año' },
+];
+
+function getFechaInicioTrad(periodo) {
+    const now = new Date();
+    switch (periodo) {
+        case '1m': return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        case '3m': return new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
+        case '6m': return new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
+        case '1y': return new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+        default:   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    }
+}
 
 export default function TradingPage() {
     const [operations, setOperations] = useState([]);
+    const [periodo, setPeriodo] = useState('1m');
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTrade, setEditingTrade] = useState(null);
@@ -28,12 +50,15 @@ export default function TradingPage() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            // Test table exists by query, if not use mock or handle error
-            const { data, error } = await supabase.from('trading_operations').select('*').order('date', { ascending: false });
-            
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data, error } = await supabase
+                .from('trading_operations')
+                .select('*')
+                .eq('user_id', user?.id)
+                .order('date', { ascending: false });
+
             if (error) {
                 console.error("Error fetching trading operations:", error);
-                // Fallback to empty array if table doesn't exist yet
                 setOperations([]);
             } else {
                 const formattedData = (data || []).map(t => ({
@@ -50,6 +75,11 @@ export default function TradingPage() {
     };
 
     useEffect(() => { fetchData(); }, []);
+
+    useEffect(() => {
+        const saved = getFilter('trading');
+        if (saved) setPeriodo(saved);
+    }, []);
 
     const openModal = (tradeToEdit = null) => {
         if (tradeToEdit) {
@@ -113,6 +143,7 @@ export default function TradingPage() {
             else if (numericPnl < 0) finalOutcome = 'Perdida';
         }
 
+        const { data: { user } } = await supabase.auth.getUser();
         const payload = {
             date: formData.date,
             asset: formData.asset.toUpperCase(),
@@ -121,7 +152,8 @@ export default function TradingPage() {
             invested_amount: parseFloat(formData.invested_amount) || 0,
             status: formData.status,
             outcome: finalOutcome,
-            pnl: formData.status === 'Cerrado' ? numericPnl : 0
+            pnl: formData.status === 'Cerrado' ? numericPnl : 0,
+            user_id: user?.id,
         };
 
         if (editingTrade) {
@@ -156,34 +188,50 @@ export default function TradingPage() {
         setIsModalOpen(false);
     };
 
-    const closedTrades = operations.filter(t => t.status === "Cerrado");
-    const totalPnL = closedTrades.reduce((acc, curr) => acc + (curr.pnl || 0), 0);
-    const wonTrades = closedTrades.filter(t => t.outcome === "Ganada").length;
-    const lostTrades = closedTrades.filter(t => t.outcome === "Perdida").length;
+    const fechaInicioTrad = getFechaInicioTrad(periodo);
+    const filteredOps = operations.filter(t => t.date >= fechaInicioTrad);
+
+    const closedTrades = filteredOps.filter(t => t.status === "Cerrado");
+    const totalPnL = closedTrades.reduce((acc, curr) => acc + (Number(curr.pnl) || 0), 0);
+    const wonTrades = closedTrades.filter(t => Number(t.pnl) > 0).length;
+    const lostTrades = closedTrades.filter(t => Number(t.pnl) < 0).length;
     const winRate = closedTrades.length > 0 ? ((wonTrades / closedTrades.length) * 100).toFixed(1) : 0;
     const openTradesCount = operations.filter(t => t.status === "Abierto").length;
 
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
     };
 
     return (
         <div className="page-container">
             <div className="trading-header">
-                <div>
+                <div className="trading-header-title">
                     <h1 className="page-title">Trading</h1>
-                    <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>Registro y bitácora de operaciones</p>
+                    <p className="trading-header-subtitle">Registro y bitácora de operaciones</p>
                 </div>
-                <div className="filters-group">
-                    <button className="btn-primary icon-btn glass" onClick={() => openModal()} style={{ background: "rgba(10, 132, 255, 0.1)", color: "#0A84FF" }}>
-                        <Plus size={16} />
+                <div className="filters-group" style={{ alignItems: 'center' }}>
+                    <div style={{ display: 'inline-flex', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '9px', padding: '3px', gap: '2px' }}>
+                        {PERIODOS_TRAD.map(p => (
+                            <button key={p.value} onClick={() => { setFilter('trading', p.value); setPeriodo(p.value); }} style={{
+                                background: periodo === p.value ? 'var(--bg-elevated)' : 'transparent',
+                                border: 'none', color: periodo === p.value ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontSize: '12px', fontWeight: 500, padding: '5px 12px', borderRadius: '6px',
+                                cursor: 'pointer', transition: 'all 0.15s',
+                                boxShadow: periodo === p.value ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+                            }}>{p.label}</button>
+                        ))}
+                    </div>
+                    <button className="btn-primary" onClick={() => openModal()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Plus size={15} />
                         <span>Nuevo Trade</span>
                     </button>
                 </div>
             </div>
 
             {isLoading ? (
-                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>Cargando operaciones...</div>
+                <div className="summary-cards">
+                    <SkeletonCard /><SkeletonCard /><SkeletonCard />
+                </div>
             ) : (
                 <>
                     <div className="summary-cards">
@@ -199,10 +247,13 @@ export default function TradingPage() {
                             <span className="summary-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Target size={16} /> Win Rate (Cerradas)
                             </span>
-                            <span className="summary-amount amount-neutral">{winRate}%</span>
+                            <span className={`summary-amount ${Number(winRate) >= 60 ? 'amount-positive' : Number(winRate) >= 40 ? 'amount-warning' : closedTrades.length === 0 ? 'amount-neutral' : 'amount-negative'}`}>{winRate}%</span>
                             <div style={{ display: 'flex', gap: '8px', fontSize: '12px', marginTop: '4px' }}>
                                 <span style={{ color: "var(--success)" }}>W: {wonTrades}</span>
                                 <span style={{ color: "var(--danger)" }}>L: {lostTrades}</span>
+                                {closedTrades.length - wonTrades - lostTrades > 0 && (
+                                    <span style={{ color: "var(--text-secondary)" }}>BE: {closedTrades.length - wonTrades - lostTrades}</span>
+                                )}
                             </div>
                         </div>
                         <div className="card summary-card">
@@ -213,12 +264,20 @@ export default function TradingPage() {
                         </div>
                     </div>
 
-                    <PLCalendar transactions={operations} mode="trading" />
+                    <PLCalendar transactions={filteredOps} mode="trading" />
 
                     <div className="card table-section">
                         <div className="table-header">
                             <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Historial de Operaciones</h2>
                         </div>
+                        {filteredOps.length === 0 ? (
+                            <EmptyState
+                                icon={<TrendingUp size={48} />}
+                                title="Sin trades en este período"
+                                description="Agrega tu primer trade para empezar a rastrear tu rendimiento."
+                                action={{ label: "+ Nuevo Trade", onClick: () => openModal() }}
+                            />
+                        ) : (
                         <div className="table-responsive" style={{ width: '100%', overflowX: 'auto' }}>
                             <table className="data-table" style={{ minWidth: '800px' }}>
                                 <thead>
@@ -235,11 +294,7 @@ export default function TradingPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {operations.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No hay operaciones registradas aún.</td>
-                                        </tr>
-                                    ) : operations.map(t => (
+                                    {filteredOps.map(t => (
                                         <tr key={t.id}>
                                             <td>{t.date}</td>
                                             <td style={{ fontWeight: 600 }}>{t.asset}</td>
@@ -278,6 +333,7 @@ export default function TradingPage() {
                                 </tbody>
                             </table>
                         </div>
+                        )}
                     </div>
                 </>
             )}
@@ -322,20 +378,21 @@ export default function TradingPage() {
                                 <option value="Cerrado">Cerrado</option>
                             </select>
                         </div>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', opacity: formData.status === 'Abierto' ? 0.5 : 1, pointerEvents: formData.status === 'Abierto' ? 'none' : 'auto' }}>
-                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Resultado (Solo Cerrado)</label>
-                            <select className="select-filter" style={{ width: '100%' }} value={formData.outcome} onChange={e => setFormData({ ...formData, outcome: e.target.value })}>
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="Ganada">Ganada</option>
-                                <option value="Perdida">Perdida</option>
-                            </select>
-                        </div>
                     </div>
 
                     {formData.status === 'Cerrado' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>P&L (Monto Ganado ó -Perdido) *</label>
-                            <input type="number" step="0.01" className="select-filter" placeholder="Ej. 50.00 ó -20.00" style={{ width: '100%' }} required={formData.status === 'Cerrado'} value={formData.pnl} onChange={e => setFormData({ ...formData, pnl: e.target.value })} />
+                            <input type="number" step="any" className="select-filter" placeholder="Ej. 50.00 ó -20.00" style={{ width: '100%' }} required={formData.status === 'Cerrado'} value={formData.pnl} onChange={e => {
+                                const val = e.target.value;
+                                const num = parseFloat(val);
+                                let newOutcome = formData.outcome;
+                                if (!isNaN(num)) {
+                                    if (num > 0) newOutcome = 'Ganada';
+                                    else if (num < 0) newOutcome = 'Perdida';
+                                }
+                                setFormData({ ...formData, pnl: val, outcome: newOutcome });
+                            }} />
                         </div>
                     )}
 

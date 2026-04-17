@@ -1,87 +1,91 @@
 'use client';
-import { useState } from 'react';
-import { LineChart, Activity, Briefcase, Edit2, Trash2, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trash2, Loader, Activity } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
-export default function FinancialSummaryWidget({ widgetId, data = {}, updateWidgetData, removeWidget }) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [localData, setLocalData] = useState({
-        title: data.title || 'Resumen Financiero',
-        capital: data.capital || 125500,
-        margin: data.margin || 24.5,
-        receivables: data.receivables || 8200,
-        payables: data.payables || 3150
-    });
+export default function FinancialSummaryWidget({ widgetId, removeWidget }) {
+    const [metrics, setMetrics] = useState({ capital: 0, income: 0, expenses: 0, receivables: 0, margin: 0 });
+    const [isLoading, setIsLoading] = useState(false);
+    const [isError, setIsError] = useState(false);
 
-    const handleSave = () => {
-        updateWidgetData(widgetId, localData);
-        setIsEditing(false);
-    };
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            setIsError(false);
+            try {
+                const now = new Date();
+                const fromDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+                const [txRes, clientsRes] = await Promise.all([
+                    supabase.from('transactions').select('type, amount').gte('date', fromDate),
+                    supabase.from('clients').select('total_price, status'),
+                ]);
 
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-    };
+                let income = 0, expenses = 0;
+                txRes.data?.forEach(tx => {
+                    const amt = parseFloat(tx.amount) || 0;
+                    if (tx.type === 'Ingreso') income += amt;
+                    else if (tx.type === 'Egreso') expenses += amt;
+                });
+
+                const receivables = clientsRes.data
+                    ?.filter(c => ['propuesta', 'desarrollo'].includes(c.status))
+                    .reduce((s, c) => s + (parseFloat(c.total_price) || 0), 0) || 0;
+
+                const capital = income - expenses;
+                const margin = income > 0 ? ((income - expenses) / income) * 100 : 0;
+                setMetrics({ capital, income, expenses, receivables, margin });
+            } catch (e) {
+                console.error(e);
+                setIsError(true);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const fmt = (v) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(v);
 
     return (
-        <div className="widget-card financial-summary-widget">
-            <h4 className="widget-title">
-                <LineChart size={18} className="title-icon text-primary" />
-                {isEditing ? (
-                    <input
-                        className="widget-title-input"
-                        value={localData.title}
-                        onChange={(e) => setLocalData({ ...localData, title: e.target.value })}
-                    />
+        <div className="fnce-widget">
+            <div className="fnce-widget-header widget-drag-handle">
+                <span className="fnce-widget-title">Resumen Financiero</span>
+                <span className="fnce-live-badge">LIVE</span>
+                <button onClick={() => removeWidget(widgetId)} className="fnce-widget-btn" title="Eliminar">
+                    <Trash2 size={13} />
+                </button>
+            </div>
+
+            <div className="fnce-widget-body">
+                {isLoading ? (
+                    <div className="fnce-loading">
+                        <Loader size={16} className="spin-anim" />
+                    </div>
+                ) : isError ? (
+                    <div className="fnce-error">Error al cargar datos. Verifica tu conexión.</div>
                 ) : (
-                    localData.title
+                    <div className="fnce-metrics-grid">
+                        <div className="fnce-metric-card">
+                            <span className="fnce-metric-card-label">Capital Neto</span>
+                            <span className={`fnce-metric-card-value ${metrics.capital < 0 ? 'negative' : ''}`}>
+                                {fmt(metrics.capital)}
+                            </span>
+                        </div>
+                        <div className="fnce-metric-card">
+                            <Activity size={11} className="fnce-metric-card-icon" />
+                            <span className="fnce-metric-card-label">Margen</span>
+                            <span className="fnce-metric-card-value">{metrics.margin.toFixed(1)}%</span>
+                        </div>
+                        <div className="fnce-metric-card">
+                            <span className="fnce-metric-card-label">Total Ingresos</span>
+                            <span className="fnce-metric-card-value">{fmt(metrics.income)}</span>
+                        </div>
+                        <div className="fnce-metric-card">
+                            <span className="fnce-metric-card-label">C. por Cobrar</span>
+                            <span className="fnce-metric-card-value accent">{fmt(metrics.receivables)}</span>
+                        </div>
+                    </div>
                 )}
-                <div className="widget-header-actions">
-                    {isEditing ? (
-                        <button onClick={handleSave} className="widget-action-btn save" title="Guardar">
-                            <Check size={16} />
-                        </button>
-                    ) : (
-                        <button onClick={() => setIsEditing(true)} className="widget-action-btn edit" title="Editar">
-                            <Edit2 size={14} />
-                        </button>
-                    )}
-                    <button onClick={() => removeWidget(widgetId)} className="widget-action-btn delete" title="Eliminar Widget">
-                        <Trash2 size={14} />
-                    </button>
-                </div>
-            </h4>
-            <div className="widget-content summary-grid">
-                <div className="summary-box">
-                    <span className="summary-label text-secondary">Capital Total</span>
-                    {isEditing ? (
-                        <input className="widget-input" type="number" value={localData.capital} onChange={e => setLocalData({ ...localData, capital: Number(e.target.value) })} />
-                    ) : (
-                        <span className="summary-value text-xl">{formatCurrency(localData.capital)}</span>
-                    )}
-                </div>
-                <div className="summary-box">
-                    <span className="summary-label text-secondary"><Activity size={14} className="inline-icon" /> Margen de Beneficio</span>
-                    {isEditing ? (
-                        <input className="widget-input" type="number" step="0.1" value={localData.margin} onChange={e => setLocalData({ ...localData, margin: Number(e.target.value) })} />
-                    ) : (
-                        <span className="summary-value text-xl">{localData.margin}%</span>
-                    )}
-                </div>
-                <div className="summary-box">
-                    <span className="summary-label text-secondary"><Briefcase size={14} className="inline-icon" /> C. por Cobrar</span>
-                    {isEditing ? (
-                        <input className="widget-input" type="number" value={localData.receivables} onChange={e => setLocalData({ ...localData, receivables: Number(e.target.value) })} />
-                    ) : (
-                        <span className="summary-value text-xl text-warning">{formatCurrency(localData.receivables)}</span>
-                    )}
-                </div>
-                <div className="summary-box">
-                    <span className="summary-label text-secondary">C. por Pagar</span>
-                    {isEditing ? (
-                        <input className="widget-input" type="number" value={localData.payables} onChange={e => setLocalData({ ...localData, payables: Number(e.target.value) })} />
-                    ) : (
-                        <span className="summary-value text-xl text-danger">{formatCurrency(localData.payables)}</span>
-                    )}
-                </div>
             </div>
         </div>
     );

@@ -1,33 +1,49 @@
 .trading-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 32px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    gap: 16px;
+}
+
+.trading-header-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.trading-header-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 .summary-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-bottom: 32px;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 .summary-card {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .summary-title {
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
 }
 
 .summary-amount {
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 700;
-    letter-spacing: -1px;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
 }
 
 .amount-positive {
@@ -40,6 +56,10 @@
 
 .amount-neutral {
     color: var(--text-primary);
+}
+
+.amount-warning {
+    color: var(--warning);
 }
 
 .table-section {
@@ -75,18 +95,25 @@
 
 .data-table th,
 .data-table td {
-    padding: 16px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--bg-border-subtle);
 }
 
 .data-table th {
-    color: var(--text-secondary);
-    font-weight: 500;
-    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
 }
 
-.data-table tr:hover {
-    background: rgba(0, 0, 0, 0.02);
+.data-table td {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.data-table tr:hover td {
+    background: var(--bg-surface);
 }
 
 .badge {

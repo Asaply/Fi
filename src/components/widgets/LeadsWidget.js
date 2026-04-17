@@ -65,73 +65,76 @@ export default function LeadsWidget({ widgetId, data = {}, updateWidgetData, rem
                 </div>
             </h4>
             <div className="widget-content">
-                <ul className="widget-list">
-                    {localLeads.map(lead => (
-                        <li
-                            key={lead.id}
-                            className={`widget-list-item lead-item ${!isEditing && lead.url ? 'clickable' : ''}`}
-                            onClick={() => {
-                                if (!isEditing && lead.url) {
-                                    router.push(lead.url);
-                                }
-                            }}
-                        >
-                            {isEditing ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                                    <input
-                                        className="widget-input"
-                                        value={lead.name}
-                                        onChange={(e) => handleLeadChange(lead.id, 'name', e.target.value)}
-                                        placeholder="Empresa o Persona"
-                                    />
-                                    <div style={{ display: 'flex', gap: '8px' }}>
+                {!isEditing && localLeads.length === 0 ? (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <p className="text-secondary text-sm" style={{ margin: 0 }}>No tienes prospectos activos.</p>
+                    </div>
+                ) : (
+                    <ul className="widget-list">
+                        {localLeads.map(lead => (
+                            <li
+                                key={lead.id}
+                                className={`widget-list-item lead-item ${!isEditing && lead.url ? 'clickable' : ''}`}
+                                onClick={() => {
+                                    if (!isEditing && lead.url) {
+                                        router.push(lead.url);
+                                    }
+                                }}
+                            >
+                                {isEditing ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                                         <input
                                             className="widget-input"
-                                            value={lead.status}
-                                            onChange={(e) => handleLeadChange(lead.id, 'status', e.target.value)}
-                                            placeholder="Status"
-                                            style={{ flex: 1 }}
+                                            value={lead.name}
+                                            onChange={(e) => handleLeadChange(lead.id, 'name', e.target.value)}
+                                            placeholder="Empresa o Persona"
                                         />
-                                        <input
-                                            className="widget-input"
-                                            value={lead.amount}
-                                            onChange={(e) => handleLeadChange(lead.id, 'amount', e.target.value)}
-                                            placeholder="Monto"
-                                            style={{ width: '80px' }}
-                                        />
-                                        <button onClick={() => removeLead(lead.id)} className="widget-action-btn delete" style={{ background: 'rgba(255,59,48,0.1)' }}>
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input
+                                                className="widget-input"
+                                                value={lead.status}
+                                                onChange={(e) => handleLeadChange(lead.id, 'status', e.target.value)}
+                                                placeholder="Status"
+                                                style={{ flex: 1 }}
+                                            />
+                                            <input
+                                                className="widget-input"
+                                                value={lead.amount}
+                                                onChange={(e) => handleLeadChange(lead.id, 'amount', e.target.value)}
+                                                placeholder="Monto"
+                                                style={{ width: '80px' }}
+                                            />
+                                            <button onClick={() => removeLead(lead.id)} className="widget-action-btn delete" style={{ background: 'rgba(255,59,48,0.1)' }}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <Link size={14} className="text-secondary" />
+                                            <input
+                                                className="widget-input"
+                                                value={lead.url || ''}
+                                                onChange={(e) => handleLeadChange(lead.id, 'url', e.target.value)}
+                                                placeholder="Enlace (Ej. /prospectos o https://...)"
+                                                style={{ flex: 1, fontSize: '12px' }}
+                                            />
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <Link size={14} className="text-secondary" />
-                                        <input
-                                            className="widget-input"
-                                            value={lead.url || ''}
-                                            onChange={(e) => handleLeadChange(lead.id, 'url', e.target.value)}
-                                            placeholder="Enlace (Ej. /prospectos o https://...)"
-                                            style={{ flex: 1, fontSize: '12px' }}
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="lead-info">
-                                        <span className="lead-name">{lead.name}</span>
-                                        <span className="lead-status">{lead.status}</span>
-                                    </div>
-                                    <div className="lead-action">
-                                        <span className="lead-amount">{lead.amount}</span>
-                                        <ArrowRight size={14} className="text-secondary" />
-                                    </div>
-                                </>
-                            )}
-                        </li>
-                    ))}
-                    {!isEditing && localLeads.length === 0 && (
-                        <p className="text-secondary text-sm">No tienes prospectos activos.</p>
-                    )}
-                </ul>
+                                ) : (
+                                    <>
+                                        <div className="lead-info">
+                                            <span className="lead-name">{lead.name}</span>
+                                            <span className="lead-status">{lead.status}</span>
+                                        </div>
+                                        <div className="lead-action">
+                                            <span className="lead-amount">{lead.amount}</span>
+                                            <ArrowRight size={14} className="text-secondary" />
+                                        </div>
+                                    </>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
         </div>
     );

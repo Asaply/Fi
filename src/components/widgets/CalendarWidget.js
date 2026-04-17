@@ -66,60 +66,63 @@ export default function CalendarWidget({ widgetId, data = {}, updateWidgetData, 
                 </div>
             </h4>
             <div className="widget-content">
-                <ul className="widget-list">
-                    {localEvents.map(event => (
-                        <li
-                            key={event.id}
-                            className={`widget-list-item ${!isEditing && event.url ? 'clickable' : ''}`}
-                            onClick={() => {
-                                if (!isEditing && event.url) {
-                                    router.push(event.url);
-                                }
-                            }}
-                        >
-                            {isEditing ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                                    <input
-                                        className="widget-input"
-                                        value={event.title}
-                                        onChange={(e) => handleEventChange(event.id, 'title', e.target.value)}
-                                        placeholder="Título del evento"
-                                    />
-                                    <div style={{ display: 'flex', gap: '8px' }}>
+                {!isEditing && localEvents.length === 0 ? (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <p className="text-secondary text-sm" style={{ margin: 0 }}>No hay eventos programados.</p>
+                    </div>
+                ) : (
+                    <ul className="widget-list">
+                        {localEvents.map(event => (
+                            <li
+                                key={event.id}
+                                className={`widget-list-item ${!isEditing && event.url ? 'clickable' : ''}`}
+                                onClick={() => {
+                                    if (!isEditing && event.url) {
+                                        router.push(event.url);
+                                    }
+                                }}
+                            >
+                                {isEditing ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                                         <input
                                             className="widget-input"
-                                            value={event.time}
-                                            onChange={(e) => handleEventChange(event.id, 'time', e.target.value)}
-                                            placeholder="Ej. 10:00 AM"
-                                            style={{ flex: 1 }}
+                                            value={event.title}
+                                            onChange={(e) => handleEventChange(event.id, 'title', e.target.value)}
+                                            placeholder="Título del evento"
                                         />
-                                        <button onClick={() => removeEvent(event.id)} className="widget-action-btn delete" style={{ background: 'rgba(255,59,48,0.1)' }}>
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input
+                                                className="widget-input"
+                                                value={event.time}
+                                                onChange={(e) => handleEventChange(event.id, 'time', e.target.value)}
+                                                placeholder="Ej. 10:00 AM"
+                                                style={{ flex: 1 }}
+                                            />
+                                            <button onClick={() => removeEvent(event.id)} className="widget-action-btn delete" style={{ background: 'rgba(255,59,48,0.1)' }}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <Link size={14} className="text-secondary" />
+                                            <input
+                                                className="widget-input"
+                                                value={event.url || ''}
+                                                onChange={(e) => handleEventChange(event.id, 'url', e.target.value)}
+                                                placeholder="Enlace (Ej. /airbnb o https://...)"
+                                                style={{ flex: 1, fontSize: '12px' }}
+                                            />
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <Link size={14} className="text-secondary" />
-                                        <input
-                                            className="widget-input"
-                                            value={event.url || ''}
-                                            onChange={(e) => handleEventChange(event.id, 'url', e.target.value)}
-                                            placeholder="Enlace (Ej. /airbnb o https://...)"
-                                            style={{ flex: 1, fontSize: '12px' }}
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <span className="event-title">{event.title}</span>
-                                    <span className="event-time text-secondary"><Clock size={12} /> {event.time}</span>
-                                </>
-                            )}
-                        </li>
-                    ))}
-                    {!isEditing && localEvents.length === 0 && (
-                        <p className="text-secondary text-sm">No hay eventos programados.</p>
-                    )}
-                </ul>
+                                ) : (
+                                    <>
+                                        <span className="event-title">{event.title}</span>
+                                        <span className="event-time text-secondary"><Clock size={12} /> {event.time}</span>
+                                    </>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
         </div>
     );

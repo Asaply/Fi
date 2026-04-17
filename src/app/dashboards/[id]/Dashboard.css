@@ -91,3 +91,91 @@
 .widget-option-btn:hover .text-secondary {
     color: var(--accent-color);
 }
+
+.widgets-grid-wrapper {
+    width: 100%;
+    min-height: 200px;
+    margin-top: 24px;
+}
+
+/* --- React Grid Layout Custom Overrides --- */
+
+/* Ensure grid items never overlap content from other items */
+.react-grid-item {
+    overflow: hidden;
+}
+
+/* widget-grid-item fills the cell; position:relative is the containing block for the abs drag handle */
+.react-grid-item > .widget-grid-item {
+    position: relative;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Disable hover lift inside the grid — the grid provides its own visual feedback */
+.react-grid-item .widget-card:hover {
+    transform: none;
+}
+
+/* Content wrapper takes all space below the drag handle */
+.widget-content-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.widget-content-wrapper > * {
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.layout.is-editing .react-grid-item {
+    cursor: grab;
+    outline: 2px dashed var(--border-color);
+    outline-offset: -2px;
+    border-radius: var(--radius-lg);
+    z-index: 10;
+}
+
+.layout.is-editing .react-grid-item:active,
+.layout.is-editing .react-grid-item.react-draggable-dragging {
+    cursor: grabbing;
+    z-index: 20;
+    outline-color: var(--accent-color);
+}
+
+/* Drag handle bar — absolutely positioned so it overlays the widget without stealing grid height */
+.drag-handle-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    user-select: none;
+    cursor: grab;
+}
+
+/* Resize is disabled (isResizable={false}) — hide the handle from react-resizable library styles */
+.react-resizable-handle {
+    display: none !important;
+}
+
+.react-grid-placeholder {
+    background: var(--brand-blue) !important;
+    opacity: 0.2 !important;
+    border-radius: var(--radius-lg);
+}

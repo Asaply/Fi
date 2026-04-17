@@ -1,7 +1,5 @@
 import { Inter } from "next/font/google";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
-import { TopbarProvider, TopbarLayout } from "@/components/TopbarContext";
+import ConditionalShell from "@/components/ConditionalShell";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,12 +34,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${inter.variable}`}>
         <div className="app-layout">
-          <TopbarProvider>
-            <Sidebar />
-            <TopbarLayout>
-              {children}
-            </TopbarLayout>
-          </TopbarProvider>
+          <ConditionalShell>{children}</ConditionalShell>
         </div>
       </body>
     </html>

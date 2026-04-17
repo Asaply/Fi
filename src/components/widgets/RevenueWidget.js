@@ -1,84 +1,105 @@
 'use client';
-import { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Edit2, Trash2, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, DollarSign, Trash2, Loader } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
-export default function RevenueWidget({ widgetId, data = {}, updateWidgetData, removeWidget }) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [localData, setLocalData] = useState({
-        title: data.title || 'Ingresos vs Egresos',
-        income: data.income || 45200,
-        expenses: data.expenses || 12450
-    });
+export default function RevenueWidget({ widgetId, removeWidget }) {
+    const [period, setPeriod] = useState('month');
+    const [income, setIncome] = useState(0);
+    const [expenses, setExpenses] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isError, setIsError] = useState(false);
 
-    const netBalance = localData.income - localData.expenses;
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            setIsError(false);
+            try {
+                const now = new Date();
+                let fromDate;
+                if (period === 'month') {
+                    fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                } else if (period === '3months') {
+                    fromDate = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().split('T')[0];
+                } else {
+                    fromDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+                }
+                const { data } = await supabase
+                    .from('transactions')
+                    .select('type, amount')
+                    .gte('date', fromDate);
 
-    const handleSave = () => {
-        updateWidgetData(widgetId, localData);
-        setIsEditing(false);
-    };
+                let inc = 0, exp = 0;
+                data?.forEach(tx => {
+                    const amt = parseFloat(tx.amount) || 0;
+                    if (tx.type === 'Ingreso') inc += amt;
+                    else if (tx.type === 'Egreso') exp += amt;
+                });
+                setIncome(inc);
+                setExpenses(exp);
+            } catch (e) {
+                console.error(e);
+                setIsError(true);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, [period]);
 
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-    };
+    const balance = income - expenses;
+    const fmt = (v) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(v);
 
     return (
-        <div className="widget-card revenue-widget">
-            <h4 className="widget-title">
-                {isEditing ? (
-                    <input
-                        className="widget-title-input"
-                        value={localData.title}
-                        onChange={(e) => setLocalData({ ...localData, title: e.target.value })}
-                    />
+        <div className="fnce-widget">
+            <div className="fnce-widget-header widget-drag-handle">
+                <span className="fnce-widget-title">Ingresos vs Egresos</span>
+                <span className="fnce-live-badge">LIVE</span>
+                <button onClick={() => removeWidget(widgetId)} className="fnce-widget-btn" title="Eliminar">
+                    <Trash2 size={13} />
+                </button>
+            </div>
+
+            <div className="fnce-widget-body">
+                <select
+                    className="fnce-period-select"
+                    value={period}
+                    onChange={e => setPeriod(e.target.value)}
+                >
+                    <option value="month">Este mes</option>
+                    <option value="3months">Últimos 3 meses</option>
+                    <option value="ytd">Este año</option>
+                </select>
+
+                {isLoading ? (
+                    <div className="fnce-loading">
+                        <Loader size={16} className="spin-anim" />
+                    </div>
+                ) : isError ? (
+                    <div className="fnce-error">Error al cargar datos. Verifica tu conexión.</div>
                 ) : (
-                    localData.title
+                    <>
+                        <div className="fnce-metric-row">
+                            <TrendingUp size={14} className="fnce-icon-positive" />
+                            <span className="fnce-metric-label">Ingresos</span>
+                            <span className="fnce-metric-value positive">{fmt(income)}</span>
+                        </div>
+                        <div className="fnce-divider" />
+                        <div className="fnce-metric-row">
+                            <TrendingDown size={14} className="fnce-icon-negative" />
+                            <span className="fnce-metric-label">Egresos</span>
+                            <span className="fnce-metric-value negative">{fmt(expenses)}</span>
+                        </div>
+                        <div className="fnce-divider dashed" />
+                        <div className="fnce-metric-row">
+                            <DollarSign size={14} className="fnce-icon-neutral" />
+                            <span className="fnce-metric-label"><strong>Balance Neto</strong></span>
+                            <span className={`fnce-metric-value ${balance >= 0 ? 'positive' : 'negative'}`}>
+                                {fmt(balance)}
+                            </span>
+                        </div>
+                    </>
                 )}
-                <div className="widget-header-actions">
-                    {isEditing ? (
-                        <button onClick={handleSave} className="widget-action-btn save" title="Guardar">
-                            <Check size={16} />
-                        </button>
-                    ) : (
-                        <button onClick={() => setIsEditing(true)} className="widget-action-btn edit" title="Editar">
-                            <Edit2 size={14} />
-                        </button>
-                    )}
-                    <button onClick={() => removeWidget(widgetId)} className="widget-action-btn delete" title="Eliminar Widget">
-                        <Trash2 size={14} />
-                    </button>
-                </div>
-            </h4>
-            <div className="widget-content">
-                <div className="stat-group">
-                    <div className="stat-label"><TrendingUp size={16} className="text-success" /> Ingresos este mes</div>
-                    {isEditing ? (
-                        <input
-                            type="number"
-                            className="widget-input"
-                            value={localData.income}
-                            onChange={(e) => setLocalData({ ...localData, income: Number(e.target.value) })}
-                        />
-                    ) : (
-                        <div className="stat-value text-success">{formatCurrency(localData.income)}</div>
-                    )}
-                </div>
-                <div className="stat-group">
-                    <div className="stat-label"><TrendingDown size={16} className="text-danger" /> Egresos este mes</div>
-                    {isEditing ? (
-                        <input
-                            type="number"
-                            className="widget-input"
-                            value={localData.expenses}
-                            onChange={(e) => setLocalData({ ...localData, expenses: Number(e.target.value) })}
-                        />
-                    ) : (
-                        <div className="stat-value text-danger">{formatCurrency(localData.expenses)}</div>
-                    )}
-                </div>
-                <div className="stat-group total">
-                    <div className="stat-label"><DollarSign size={16} className="text-primary" /> Balance Neto</div>
-                    <div className="stat-value">{formatCurrency(netBalance)}</div>
-                </div>
             </div>
         </div>
     );

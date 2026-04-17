@@ -142,17 +142,9 @@ export default function Airbnb() {
 
     return (
         <div className="airbnb-container">
-            <header className="airbnb-header">
-                <div>
-                    <h1 className="page-title">Airbnb Dashboard</h1>
-                    <p className="page-subtitle">Gestión de reservaciones y analíticas</p>
-                </div>
-                <button
-                    className="btn-primary"
-                    onClick={() => setIsNewBookingModalOpen(true)}
-                >
-                    Nueva Reservación
-                </button>
+            <header style={{ marginBottom: '24px' }}>
+                <h1 className="page-title" style={{ margin: 0 }}>Airbnb Dashboard</h1>
+                <p className="page-subtitle" style={{ marginTop: '4px' }}>Gestión de reservaciones y analíticas</p>
             </header>
 
             <section className="stats-grid">
@@ -193,7 +185,14 @@ export default function Airbnb() {
             <section className="reservations-section">
                 <div className="section-header">
                     <h2>Próximas Reservaciones</h2>
-                    <div className="filters">
+                    <div className="filters" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <button
+                            className="btn-primary"
+                            onClick={() => setIsNewBookingModalOpen(true)}
+                            style={{ padding: '8px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}
+                        >
+                            + Nueva Reservación
+                        </button>
                         <select
                             className="select-filter"
                             value={filter}

@@ -1,4 +1,214 @@
-/* src/components/widgets/Widgets.css */
+/* ============================================
+   FNCE Widget System — Widgets.css
+   New widgets use .fnce-widget classes.
+   Legacy widgets (calendar, notes, etc.) keep
+   the .widget-card classes below.
+   ============================================ */
+
+/* ─── NEW WIDGET SYSTEM ─────────────────────── */
+
+.fnce-widget {
+    background: #161616;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* No height: 100% — content defines height */
+}
+
+/* Header doubles as the drag handle */
+.fnce-widget-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: grab;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.fnce-widget-header:active {
+    cursor: grabbing;
+}
+
+.fnce-widget-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    flex: 1;
+}
+
+.fnce-live-badge {
+    font-size: 9px;
+    font-weight: 700;
+    color: #00d4aa;
+    background: rgba(0, 212, 170, 0.12);
+    border: 1px solid rgba(0, 212, 170, 0.2);
+    padding: 2px 5px;
+    border-radius: 4px;
+    letter-spacing: 0.6px;
+}
+
+.fnce-widget-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.fnce-widget-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Body — shrinks to content, no flex:1 */
+.fnce-widget-body {
+    padding: 10px 14px 14px;
+    flex-shrink: 0;
+}
+
+/* Period selector (revenue widget) */
+.fnce-period-select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 7px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
+    padding: 4px 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    outline: none;
+}
+
+/* Metric rows (revenue widget) */
+.fnce-metric-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 0;
+}
+
+.fnce-metric-label {
+    flex: 1;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.fnce-metric-value {
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.fnce-metric-value.positive { color: #4ade80; }
+.fnce-metric-value.negative { color: #f87171; }
+
+.fnce-icon-positive { color: #4ade80; flex-shrink: 0; }
+.fnce-icon-negative { color: #f87171; flex-shrink: 0; }
+.fnce-icon-neutral  { color: rgba(255,255,255,0.35); flex-shrink: 0; }
+
+.fnce-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 1px 0;
+}
+
+.fnce-divider.dashed {
+    background: none;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* 2×2 grid (summary widget) */
+.fnce-metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+}
+
+.fnce-metric-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 9px;
+    padding: 9px 11px;
+}
+
+.fnce-metric-card-icon {
+    color: rgba(255, 255, 255, 0.3);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.fnce-metric-card-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+}
+
+.fnce-metric-card-value {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: #4ade80;
+    font-variant-numeric: tabular-nums;
+}
+
+.fnce-metric-card-value.negative { color: #f87171; }
+.fnce-metric-card-value.accent   { color: #60a5fa; }
+
+/* Empty / loading / error states */
+.fnce-empty-state {
+    text-align: center;
+    padding: 18px 12px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.28);
+    line-height: 1.6;
+}
+
+.fnce-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.fnce-error {
+    text-align: center;
+    padding: 14px 12px;
+    font-size: 12px;
+    color: #f87171;
+}
+
+/* Hide resize handle */
+.react-resizable-handle {
+    display: none !important;
+}
+
+/* The old drag-handle-bar is used only by legacy widgets in edit mode */
+.drag-handle-bar {
+    /* Styles live in Dashboard.css — keep this rule empty so Dashboard.css wins */
+}
+
+
+/* ─── LEGACY WIDGET SYSTEM ──────────────────── */
+/* Used by: CalendarWidget, NotesWidget, LeadsWidget,
+   ClientsWidget, PipelineWidget, PortfolioWidget    */
 
 .widgets-grid {
     display: grid;
@@ -18,7 +228,8 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s, box-shadow 0.2s;
     height: 100%;
-    min-height: 250px;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .widget-card:hover {
@@ -86,19 +297,10 @@
     color: var(--text-primary);
 }
 
-.widget-action-btn.delete:hover {
-    color: var(--danger);
-}
+.widget-action-btn.delete:hover { color: var(--danger); }
+.widget-action-btn.save         { color: var(--success); }
+.widget-action-btn.save:hover   { background: rgba(52, 199, 89, 0.1); }
 
-.widget-action-btn.save {
-    color: var(--success);
-}
-
-.widget-action-btn.save:hover {
-    background: rgba(52, 199, 89, 0.1);
-}
-
-/* Edit Inputs */
 .widget-input {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid var(--border-color);
@@ -112,15 +314,15 @@
     transition: border-color 0.2s;
 }
 
-.widget-input:focus {
-    border-color: var(--accent-color);
-}
+.widget-input:focus { border-color: var(--accent-color); }
 
 .widget-content {
     display: flex;
     flex-direction: column;
     gap: 12px;
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .stat-group {
@@ -149,7 +351,6 @@
     font-size: 16px;
 }
 
-/* Lists (Calendar, Clients, Leads) */
 .widget-list {
     list-style: none;
     padding: 0;
@@ -157,6 +358,9 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .widget-list-item {
@@ -170,9 +374,7 @@
     transition: background-color 0.2s, transform 0.2s;
 }
 
-.widget-list-item.clickable {
-    cursor: pointer;
-}
+.widget-list-item.clickable { cursor: pointer; }
 
 .widget-list-item.clickable:hover {
     background: rgba(255, 255, 255, 0.05);
@@ -180,22 +382,17 @@
     border-color: var(--accent-color);
 }
 
-.event-title,
-.lead-name,
-.client-name {
+.event-title, .lead-name, .client-name {
     font-weight: 500;
     font-size: 14px;
     color: var(--text-primary);
 }
 
-.event-time,
-.lead-status,
-.client-project {
+.event-time, .lead-status, .client-project {
     font-size: 12px;
 }
 
-.lead-info,
-.client-info {
+.lead-info, .client-info {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -223,11 +420,10 @@
     border-radius: 12px;
 }
 
-/* Notes */
 .notes-textarea {
     width: 100%;
     flex: 1;
-    min-height: 150px;
+    min-height: 0;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -240,9 +436,7 @@
     box-sizing: border-box;
 }
 
-.notes-textarea:focus {
-    border-color: var(--accent-color);
-}
+.notes-textarea:focus { border-color: var(--accent-color); }
 
 .flex-between {
     display: flex;
@@ -262,25 +456,20 @@
     justify-content: center;
 }
 
-.action-btn:hover {
-    background: var(--border-color);
-}
+.action-btn:hover { background: var(--border-color); }
 
-.spin-anim {
-    animation: spin 1s linear infinite;
-}
+.spin-anim { animation: spin 1s linear infinite; }
 
 @keyframes spin {
-    100% {
-        transform: rotate(360deg);
-    }
+    100% { transform: rotate(360deg); }
 }
 
-/* Summary Grid */
 .summary-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
     gap: 16px;
+    align-content: stretch;
 }
 
 .summary-box {
@@ -299,14 +488,7 @@
     letter-spacing: 0.5px;
 }
 
-.summary-value {
-    font-weight: 700;
-}
+.summary-value { font-weight: 700; }
 
-.text-xl {
-    font-size: 20px;
-}
-
-.text-sm {
-    font-size: 12px;
-}
+.text-xl { font-size: 20px; }
+.text-sm { font-size: 12px; }

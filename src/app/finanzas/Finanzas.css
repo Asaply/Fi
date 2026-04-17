@@ -1,33 +1,56 @@
 .finanzas-header {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    gap: 16px;
+}
+
+.finanzas-header-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.finanzas-header-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.finanzas-header-actions {
+    display: flex;
+    gap: 8px;
     align-items: center;
-    margin-bottom: 32px;
+    flex-shrink: 0;
 }
 
 .summary-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-bottom: 32px;
+    gap: 14px;
+    margin-bottom: 20px;
 }
 
 .summary-card {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .summary-title {
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
 }
 
 .summary-amount {
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 700;
-    letter-spacing: -1px;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
 }
 
 .amount-positive {
@@ -112,18 +135,24 @@
 
 .data-table th,
 .data-table td {
-    padding: 16px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--bg-border-subtle);
 }
 
 .data-table th {
-    color: var(--text-secondary);
-    font-weight: 500;
-    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
 }
 
-.data-table tr:hover {
-    background: rgba(0, 0, 0, 0.02);
+.data-table td {
+    font-size: 13px;
+}
+
+.data-table tr:hover td {
+    background: var(--bg-surface);
 }
 
 .badge {
@@ -162,32 +191,65 @@
     color: var(--text-primary);
 }
 
-.badge-gasto-personal {
-    background: rgba(142, 142, 147, 0.1);
-    color: #8E8E93;
-}
-
 .badge-inversión {
-    background: rgba(10, 132, 255, 0.1);
-    color: #0A84FF;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
 }
 
-.amount-gasto {
-    color: #8E8E93;
+.badge-por-cobrar {
+    background: rgba(249, 115, 22, 0.1);
+    color: #f97316;
 }
 
 .amount-investment {
-    color: #0A84FF;
+    color: #3b82f6;
 }
 
-.bar-gasto {
-    background-color: #8E8E93;
-    opacity: 0.8;
+.amount-por-cobrar {
+    color: #f97316;
 }
 
 .bar-investment {
-    background-color: #0A84FF;
+    background-color: #3b82f6;
     opacity: 0.8;
+}
+
+.bar-por-cobrar {
+    background-color: #f97316;
+    opacity: 0.8;
+}
+
+/* Analysis section */
+.analysis-section {
+    margin-bottom: 32px;
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 20px;
+}
+
+.analysis-report {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analysis-report p {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.65);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.analysis-report strong {
+    color: rgba(255, 255, 255, 0.9);
 }
 
 /* Mobile Finanzas */
@@ -234,5 +296,8 @@
     }
     .bar-group {
         gap: 4px;
+    }
+    .analysis-grid {
+        grid-template-columns: 1fr;
     }
 }

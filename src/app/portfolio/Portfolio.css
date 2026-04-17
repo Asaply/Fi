@@ -5,6 +5,13 @@
     align-items: flex-start;
 }
 
+/* New single-column layout */
+.portfolio-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
 .portfolio-sidebar {
     width: 280px;
     background: var(--bg-surface);
@@ -126,24 +133,6 @@
     color: var(--text-primary);
 }
 
-.btn-primary {
-    background: var(--brand-blue);
-    color: #fff;
-    border: none;
-    padding: 10px 20px;
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: background 0.2s;
-}
-
-.btn-primary:hover {
-    background: #0070e0;
-}
 
 .dashboard-metrics {
     display: grid;
@@ -457,4 +446,153 @@
 
 .alerts-drawer.open {
     right: 0;
+}
+
+/* ---- Onboarding (empty state) ---- */
+.portfolio-onboarding {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 64px 32px;
+    gap: 16px;
+}
+
+.onboarding-icon {
+    font-size: 52px;
+    line-height: 1;
+}
+
+.portfolio-onboarding h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.portfolio-onboarding p {
+    margin: 0;
+}
+
+.onboarding-features {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    margin-top: 8px;
+    text-align: left;
+    width: 100%;
+    max-width: 420px;
+}
+
+.onboarding-feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* ---- Hero section ---- */
+.portfolio-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    padding: 28px 32px;
+}
+
+.hero-main {
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.hero-value {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.hero-pnl {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.hero-pnl-amount {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.hero-pnl-perc {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hero-secondary {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 100px;
+}
+
+/* ---- Category badge ---- */
+.category-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .portfolio-hero {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+    }
+    .hero-value { font-size: 32px; }
+    .risk-metrics-row { grid-template-columns: repeat(2, 1fr); }
+
+    /* Header — stack vertical */
+    .p-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+
+    /* Chart header — stack title + time selector */
+    .portfolio-chart-header {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .portfolio-chart-header h3 {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+    }
+
+    /* Time selector compact */
+    .time-selector {
+        align-self: flex-start;
+    }
+
+    .time-btn {
+        font-size: 11px !important;
+        padding: 5px 8px !important;
+    }
 }

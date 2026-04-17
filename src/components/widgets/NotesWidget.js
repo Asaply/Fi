@@ -46,7 +46,7 @@ export default function NotesWidget({ widgetId, data = {}, updateWidgetData, rem
             <div className="widget-content">
                 <textarea
                     className="notes-textarea"
-                    placeholder="Escribe tus ideas aquí..."
+                    placeholder="Escribe tus notas aquí..."
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                 />

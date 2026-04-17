@@ -1,0 +1,59 @@
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.dashboard-full-width {
+    grid-column: 1 / -1;
+}
+
+/* Period selector */
+.dashboard-topbar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.dashboard-periodo-selector {
+    display: inline-flex;
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-border);
+    border-radius: 9px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.dashboard-periodo-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.dashboard-periodo-btn:hover {
+    color: var(--text-secondary);
+}
+
+.dashboard-periodo-btn.active {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-topbar {
+        flex-wrap: wrap;
+    }
+}

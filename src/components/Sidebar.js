@@ -2,37 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Target, CircleDollarSign, Home, LayoutTemplate, LineChart, Activity } from "lucide-react";
-import { useTopbar } from "./TopbarContext";
+import { LayoutDashboard, Users, Target, CircleDollarSign, Home, LineChart, Activity, Wallet } from "lucide-react";
 import "./Sidebar.css";
+
+const showBeta = process.env.NEXT_PUBLIC_SHOW_BETA_FEATURES === 'true';
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const { customDashboards } = useTopbar();
 
     return (
         <aside className="sidebar">
             <div className="sidebar-brand">
-                <CircleDollarSign className="brand-icon" size={24} />
+                <div className="brand-icon-wrap">
+                    <CircleDollarSign className="brand-icon" size={16} />
+                </div>
                 <span className="brand-name">FNCE</span>
             </div>
 
             <nav className="sidebar-nav">
                 <Link href="/finanzas" className={`nav-item ${pathname === '/finanzas' ? 'active' : ''}`}>
-                    <LayoutDashboard size={20} />
+                    <Wallet size={20} />
                     <span>Finanzas</span>
-                </Link>
-                <Link href="/clientes" className={`nav-item ${pathname === '/clientes' ? 'active' : ''}`}>
-                    <Users size={20} />
-                    <span>Clientes</span>
-                </Link>
-                <Link href="/prospectos" className={`nav-item ${pathname === '/prospectos' ? 'active' : ''}`}>
-                    <Target size={20} />
-                    <span>Prospectos</span>
-                </Link>
-                <Link href="/airbnb" className={`nav-item ${pathname === '/airbnb' ? 'active' : ''}`}>
-                    <Home size={20} />
-                    <span>Airbnb</span>
                 </Link>
                 <Link href="/trading" className={`nav-item ${pathname === '/trading' ? 'active' : ''}`}>
                     <LineChart size={20} />
@@ -42,21 +32,26 @@ export default function Sidebar() {
                     <Activity size={20} />
                     <span>Portfolio Health</span>
                 </Link>
+                <Link href="/dashboard" className={`nav-item ${pathname === '/dashboard' ? 'active' : ''}`}>
+                    <LayoutDashboard size={20} />
+                    <span>Dashboard</span>
+                </Link>
 
-                {customDashboards && customDashboards.length > 0 && (
-                    <div className="sidebar-section">
-                        <span className="section-title">Mis Dashboards</span>
-                        {customDashboards.map(dashboard => (
-                            <Link
-                                key={dashboard.id}
-                                href={`/dashboards/${dashboard.id}`}
-                                className={`nav-item ${pathname === `/dashboards/${dashboard.id}` ? 'active' : ''}`}
-                            >
-                                <LayoutTemplate size={20} />
-                                <span>{dashboard.name}</span>
-                            </Link>
-                        ))}
-                    </div>
+                {showBeta && (
+                    <>
+                        <Link href="/clientes" className={`nav-item ${pathname === '/clientes' ? 'active' : ''}`}>
+                            <Users size={20} />
+                            <span>Clientes</span>
+                        </Link>
+                        <Link href="/prospectos" className={`nav-item ${pathname === '/prospectos' ? 'active' : ''}`}>
+                            <Target size={20} />
+                            <span>Prospectos</span>
+                        </Link>
+                        <Link href="/airbnb" className={`nav-item ${pathname === '/airbnb' ? 'active' : ''}`}>
+                            <Home size={20} />
+                            <span>Airbnb</span>
+                        </Link>
+                    </>
                 )}
             </nav>
         </aside>
