@@ -10,7 +10,15 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/categorias";
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
+import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import "./Finanzas.css";
+
+const FINANZAS_STEPS = [
+    { target: '[data-tour="btn-nueva-transaccion"]', title: 'Registra una transacción', description: 'Agrega ingresos, egresos o inversiones manualmente.', position: 'bottom' },
+    { target: '[data-tour="btn-importar-csv"]', title: 'Importa tu estado de cuenta', description: 'Soporta CSV de BBVA, Banorte y Santander. Tus transacciones se clasifican automáticamente.', position: 'bottom' },
+    { target: '[data-tour="filtros-tipo"]', title: 'Filtra por tipo', description: 'Separa entre Ingresos, Egresos, Inversiones o lo que está por cobrar.', position: 'bottom' },
+];
 
 const MOCK_DATA = [
     { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },
@@ -158,6 +166,7 @@ function getFechaInicioFin(periodo) {
 }
 
 export default function FinanzasPage() {
+    const { isActive: tourActive, currentStep: tourStep, next: tourNext, complete: tourComplete, skip: tourSkip, resetTour } = useOnboarding('finanzas');
     const [transactions, setTransactions] = useState([]);
     const [tradingOps, setTradingOps] = useState([]);
     const [portfolioAssets, setPortfolioAssets] = useState([]);
@@ -566,40 +575,46 @@ export default function FinanzasPage() {
 
     return (
         <div className="page-container">
-            <div className="finanzas-header">
+            <OnboardingTour
+                steps={FINANZAS_STEPS}
+                isActive={tourActive}
+                currentStep={tourStep}
+                onNext={() => tourNext(FINANZAS_STEPS.length)}
+                onComplete={tourComplete}
+                onSkip={tourSkip}
+            />
+            <div className="finanzas-header page-header">
                 <div className="finanzas-header-title">
                     <h1 className="page-title">Finanzas</h1>
-                    <p className="finanzas-header-subtitle">Control de ingresos y egresos</p>
+                    <p className="page-subtitle">Control de ingresos y egresos</p>
                 </div>
-                <div className="finanzas-header-actions">
-                    <button className="btn-secondary" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+                <div className="page-actions">
+                    <button className="btn-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
                         <Upload size={14} /> Importar CSV
                     </button>
-                    <button className="btn-primary" onClick={() => openModal("Ingreso")} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+                    <button className="btn-primary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
                         <Plus size={14} /> Nueva Transacción
                     </button>
                 </div>
             </div>
 
+            <button onClick={resetTour} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px', display: 'block' }}>
+                ¿Cómo usar esta sección?
+            </button>
+
             {/* Period selector */}
-            <div style={{ display: 'inline-flex', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '9px', padding: '3px', gap: '2px', marginBottom: '20px' }}>
+            <div className="time-filter-group" style={{ marginBottom: '20px' }} data-tour="filtros-periodo">
                 {PERIODOS_FIN.map(p => (
                     <button
                         key={p.value}
+                        className={`time-filter-btn${periodo === p.value ? ' active' : ''}`}
                         onClick={() => { setFilter('finanzas', p.value); setPeriodo(p.value); }}
-                        style={{
-                            background: periodo === p.value ? 'var(--bg-elevated)' : 'transparent',
-                            border: 'none', color: periodo === p.value ? 'var(--text-primary)' : 'var(--text-muted)',
-                            fontSize: '13px', fontWeight: 500, padding: '6px 16px', borderRadius: '6px',
-                            cursor: 'pointer', transition: 'all 0.15s',
-                            boxShadow: periodo === p.value ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
-                        }}
                     >{p.label}</button>
                 ))}
             </div>
 
             {/* Filter tabs */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '2px' }}>
+            <div data-tour="filtros-tipo" style={{ display: 'flex', gap: '4px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '2px' }}>
                 {[
                     { value: 'Todos', label: 'Todos', count: filteredTx.length },
                     { value: 'Ingreso', label: 'Ingreso', count: filteredTx.filter(t=>t.type==='Ingreso').length },

@@ -108,6 +108,11 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
     const currentYear = currentDate.getFullYear();
     const years = Array.from(new Array(5), (val, index) => currentYear - 2 + index);
 
+    const todayStr = (() => {
+        const t = new Date();
+        return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    })();
+
     return (
         <div className="pl-calendar-container">
             <div className="pl-calendar-header">
@@ -180,7 +185,7 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
                         }
 
                         return (
-                            <div key={d.dateStr} className={`pl-calendar-cell ${pnlClass}`}>
+                            <div key={d.dateStr} className={`pl-calendar-cell ${pnlClass}${d.dateStr === todayStr ? ' today' : ''}`}>
                                 <div className="pl-calendar-date">{d.day}</div>
                                 <div className="pl-calendar-amount">{displayPnl}</div>
                                 {d.hasData && (d.gastos > 0 || d.inversiones > 0) && (

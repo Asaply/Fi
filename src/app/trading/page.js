@@ -8,6 +8,14 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import "./Trading.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
+import OnboardingTour from '@/components/onboarding/OnboardingTour';
+import { useOnboarding } from '@/hooks/useOnboarding';
+
+const TRADING_STEPS = [
+    { target: '[data-tour="btn-nuevo-trade"]', title: 'Registra un trade', description: 'Agrega operaciones long o short. Cuando cierres la posición, FNCE calcula tu P&L automáticamente.', position: 'bottom' },
+    { target: '[data-tour="card-winrate"]', title: 'Win Rate', description: 'Porcentaje de trades ganadores sobre el total de operaciones cerradas.', position: 'bottom' },
+    { target: '[data-tour="pl-calendar"]', title: 'Calendario P&L', description: 'Vista día a día de tus resultados. Verde = día ganador, rojo = día perdedor.', position: 'top' },
+];
 
 const PERIODOS_TRAD = [
     { value: '1m', label: 'Este mes' },
@@ -28,6 +36,7 @@ function getFechaInicioTrad(periodo) {
 }
 
 export default function TradingPage() {
+    const { isActive: tourActive, currentStep: tourStep, next: tourNext, complete: tourComplete, skip: tourSkip, resetTour } = useOnboarding('trading');
     const [operations, setOperations] = useState([]);
     const [periodo, setPeriodo] = useState('1m');
     const [isLoading, setIsLoading] = useState(true);
@@ -204,29 +213,39 @@ export default function TradingPage() {
 
     return (
         <div className="page-container">
-            <div className="trading-header">
+            <OnboardingTour
+                steps={TRADING_STEPS}
+                isActive={tourActive}
+                currentStep={tourStep}
+                onNext={() => tourNext(TRADING_STEPS.length)}
+                onComplete={tourComplete}
+                onSkip={tourSkip}
+            />
+            <div className="trading-header page-header">
                 <div className="trading-header-title">
                     <h1 className="page-title">Trading</h1>
-                    <p className="trading-header-subtitle">Registro y bitácora de operaciones</p>
+                    <p className="page-subtitle">Registro y bitácora de operaciones</p>
                 </div>
-                <div className="filters-group" style={{ alignItems: 'center' }}>
-                    <div style={{ display: 'inline-flex', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '9px', padding: '3px', gap: '2px' }}>
+                <div className="page-actions">
+                    <div className="time-filter-group">
                         {PERIODOS_TRAD.map(p => (
-                            <button key={p.value} onClick={() => { setFilter('trading', p.value); setPeriodo(p.value); }} style={{
-                                background: periodo === p.value ? 'var(--bg-elevated)' : 'transparent',
-                                border: 'none', color: periodo === p.value ? 'var(--text-primary)' : 'var(--text-muted)',
-                                fontSize: '12px', fontWeight: 500, padding: '5px 12px', borderRadius: '6px',
-                                cursor: 'pointer', transition: 'all 0.15s',
-                                boxShadow: periodo === p.value ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
-                            }}>{p.label}</button>
+                            <button
+                                key={p.value}
+                                className={`time-filter-btn${periodo === p.value ? ' active' : ''}`}
+                                onClick={() => { setFilter('trading', p.value); setPeriodo(p.value); }}
+                            >{p.label}</button>
                         ))}
                     </div>
-                    <button className="btn-primary" onClick={() => openModal()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button className="btn-primary" data-tour="btn-nuevo-trade" onClick={() => openModal()}>
                         <Plus size={15} />
                         <span>Nuevo Trade</span>
                     </button>
                 </div>
             </div>
+
+            <button onClick={resetTour} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px', display: 'block' }}>
+                ¿Cómo usar esta sección?
+            </button>
 
             {isLoading ? (
                 <div className="summary-cards">
@@ -242,29 +261,41 @@ export default function TradingPage() {
                             <span className={`summary-amount ${totalPnL > 0 ? 'amount-positive' : totalPnL < 0 ? 'amount-negative' : 'amount-neutral'}`}>
                                 {totalPnL > 0 ? '+' : ''}{formatCurrency(totalPnL)}
                             </span>
+                            {totalPnL === 0 && closedTrades.length === 0 && (
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Sin operaciones en este período</span>
+                            )}
                         </div>
-                        <div className="card summary-card">
+                        <div className="card summary-card" data-tour="card-winrate">
                             <span className="summary-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Target size={16} /> Win Rate (Cerradas)
                             </span>
                             <span className={`summary-amount ${Number(winRate) >= 60 ? 'amount-positive' : Number(winRate) >= 40 ? 'amount-warning' : closedTrades.length === 0 ? 'amount-neutral' : 'amount-negative'}`}>{winRate}%</span>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '12px', marginTop: '4px' }}>
-                                <span style={{ color: "var(--success)" }}>W: {wonTrades}</span>
-                                <span style={{ color: "var(--danger)" }}>L: {lostTrades}</span>
-                                {closedTrades.length - wonTrades - lostTrades > 0 && (
-                                    <span style={{ color: "var(--text-secondary)" }}>BE: {closedTrades.length - wonTrades - lostTrades}</span>
-                                )}
-                            </div>
+                            {closedTrades.length === 0 ? (
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Sin operaciones en este período</span>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '8px', fontSize: '12px', marginTop: '4px' }}>
+                                    <span style={{ color: "var(--success)" }}>W: {wonTrades}</span>
+                                    <span style={{ color: "var(--danger)" }}>L: {lostTrades}</span>
+                                    {closedTrades.length - wonTrades - lostTrades > 0 && (
+                                        <span style={{ color: "var(--text-secondary)" }}>BE: {closedTrades.length - wonTrades - lostTrades}</span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="card summary-card">
                             <span className="summary-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <LineChart size={16} /> Trades Abiertos
                             </span>
                             <span className="summary-amount">{openTradesCount}</span>
+                            {openTradesCount === 0 && (
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Sin operaciones en este período</span>
+                            )}
                         </div>
                     </div>
 
-                    <PLCalendar transactions={filteredOps} mode="trading" />
+                    <div data-tour="pl-calendar">
+                        <PLCalendar transactions={filteredOps} mode="trading" />
+                    </div>
 
                     <div className="card table-section">
                         <div className="table-header">

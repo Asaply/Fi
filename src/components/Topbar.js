@@ -42,9 +42,7 @@ export default function Topbar() {
     return (
         <>
             <header className="topbar">
-                <div className="topbar-left">
-                    <span className="current-month">{ROUTE_LABELS[pathname] ?? 'FNCE'}</span>
-                </div>
+                <div className="topbar-left" />
 
                 <div className="topbar-right">
                     <div className="profile-dropdown-container" ref={profileRef} style={{ position: 'relative' }}>

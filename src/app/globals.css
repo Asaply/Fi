@@ -1,21 +1,25 @@
 :root {
   /* ─── Dark palette (always dark) ─────────────────────────── */
-  --bg-base:           #0a0a0a;   /* app background */
-  --bg-surface:        #141414;   /* cards, modals */
-  --bg-elevated:       #1c1c1c;   /* hover, inputs */
-  --bg-hover:          #1c1c1c;
-  --bg-border:         #242424;   /* card borders */
-  --bg-border-subtle:  #1a1a1a;   /* separators */
+  --bg-base:           #0c0c0e;
+  --bg-surface:        #141416;
+  --bg-elevated:       #1c1c1c;   /* inputs */
+  --bg-surface-hover:  #1a1a1e;   /* hover states */
+  --bg-hover:          #1a1a1e;
+  --bg-border:         #242428;
+  --bg-border-subtle:  #1a1a1a;
 
   /* Legacy aliases — keep for backward compat */
   --bg-primary:        var(--bg-base);
   --bg-card:           var(--bg-surface);
 
-  /* ─── Brand ──────────────────────────────────────────────── */
-  --brand:             #2563eb;
-  --brand-hover:       #1d4ed8;
-  --accent-color:      var(--brand);
-  --accent-hover:      var(--brand-hover);
+  /* ─── Accent (indigo — unified CTA color) ─────────────────── */
+  --accent:            #6366f1;
+  --accent-hover:      #4f51d8;
+
+  /* ─── Brand (legacy alias) ────────────────────────────────── */
+  --brand:             var(--accent);
+  --brand-hover:       var(--accent-hover);
+  --accent-color:      var(--accent);
 
   /* ─── Semantic colors ────────────────────────────────────── */
   --positive:          #22c55e;
@@ -23,14 +27,20 @@
   --warning:           #f59e0b;
   --info:              #3b82f6;
 
+  /* Design spec semantic aliases */
+  --color-gain:        #22c55e;
+  --color-loss:        #ef4444;
+  --color-warning:     #f59e0b;
+  --color-neutral:     #6366f1;
+
   /* Legacy aliases */
   --success:           var(--positive);
   --danger:            var(--negative);
 
   /* ─── Text ───────────────────────────────────────────────── */
-  --text-primary:      #f5f5f5;
-  --text-secondary:    #a1a1aa;
-  --text-muted:        #52525b;
+  --text-primary:      #f0f0f2;
+  --text-secondary:    #8a8a9a;
+  --text-muted:        #4a4a5a;
   --text-tertiary:     var(--text-muted);
 
   /* ─── Border ─────────────────────────────────────────────── */
@@ -46,6 +56,14 @@
   --shadow-sm:         0 1px 3px rgba(0,0,0,0.4);
   --shadow-md:         0 4px 12px rgba(0,0,0,0.5);
   --shadow-lg:         0 8px 24px rgba(0,0,0,0.6);
+
+  /* ─── Typography ─────────────────────────────────────────── */
+  --font-mono:         var(--font-geist-mono), 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ─── Card tokens ────────────────────────────────────────── */
+  --card-padding:      1.5rem;
+  --card-radius:       12px;
+  --card-border:       1px solid var(--bg-border);
 }
 
 html,
@@ -233,37 +251,137 @@ button {
 
 .mt-4 { margin-top: 24px; }
 
-.btn-secondary {
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-border);
-  color: var(--text-secondary);
-  padding: 9px 18px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  font-size: 14px;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-
-.btn-secondary:hover {
-  color: var(--text-primary);
-  background: #222;
-}
-
 .btn-primary {
-  background: var(--brand);
+  background: var(--accent);
   color: #fff;
   border: none;
   padding: 9px 18px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
   transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-primary:hover {
-  background: var(--brand-hover);
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: var(--card-border);
+  color: var(--text-secondary);
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-secondary:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-hover);
+}
+
+/* ── Metric cards ──────────────────────────────────────────────── */
+.metric-card {
+  background: var(--bg-surface);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric-card .label {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.metric-card .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+/* ── Page header ───────────────────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Time filter group ─────────────────────────────────────────── */
+.time-filter-group {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg-surface);
+  border: var(--card-border);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.time-filter-btn {
+  padding: 0.4rem 0.875rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.time-filter-btn.active {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* ── Table enhancements ────────────────────────────────────────── */
+.data-table thead th {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.data-table tbody tr:hover {
+  background: var(--bg-surface-hover);
 }
 
 /* ── Mobile ────────────────────────────────────────────────────── */

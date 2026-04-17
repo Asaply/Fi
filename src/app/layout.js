@@ -1,10 +1,15 @@
-import { Inter } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import ConditionalShell from "@/components/ConditionalShell";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
 });
 
 export const metadata = {
@@ -32,7 +37,7 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable}`}>
+      <body className={`${inter.variable} ${geistMono.variable}`}>
         <div className="app-layout">
           <ConditionalShell>{children}</ConditionalShell>
         </div>

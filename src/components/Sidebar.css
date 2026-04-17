@@ -17,7 +17,7 @@
 .brand-icon-wrap {
     width: 30px;
     height: 30px;
-    background: var(--brand);
+    background: var(--accent);
     border-radius: 7px;
     display: flex;
     align-items: center;
@@ -63,9 +63,9 @@
 }
 
 .nav-item.active {
-    background: #161616;
+    background: var(--bg-surface);
     color: var(--text-primary);
-    border-left-color: var(--brand);
+    border-left-color: var(--accent);
 }
 
 .sidebar-section {
@@ -123,7 +123,7 @@
 
     .nav-item.active {
         border-left: none;
-        border-bottom-color: var(--brand);
+        border-bottom-color: var(--accent);
         background: transparent;
     }
 

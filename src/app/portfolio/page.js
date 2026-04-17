@@ -7,6 +7,13 @@ import Modal from "@/components/Modal";
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";
 import "./Portfolio.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
+import OnboardingTour from '@/components/onboarding/OnboardingTour';
+import { useOnboarding } from '@/hooks/useOnboarding';
+
+const PORTFOLIO_STEPS = [
+    { target: '[data-tour="btn-agregar-activo"]', title: 'Agrega tus inversiones', description: 'Registra acciones, ETFs o crypto con tu precio de compra promedio.', position: 'bottom' },
+    { target: '[data-tour="tabla-activos"]', title: 'Precio en tiempo real', description: 'Los precios se actualizan via Yahoo Finance y CoinGecko. El P&L se calcula automáticamente.', position: 'top' },
+];
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -104,6 +111,7 @@ function Tooltip({ text }) {
 }
 
 export default function PortfolioHealth() {
+    const { isActive: tourActive, currentStep: tourStep, next: tourNext, complete: tourComplete, skip: tourSkip, resetTour } = useOnboarding('portfolio');
     const { data, isLoading, mutate } = useSWR('portfolio_data', fetchPortfolioData, { refreshInterval: 60000 });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -284,6 +292,14 @@ export default function PortfolioHealth() {
 
     return (
         <div className="portfolio-page page-container">
+            <OnboardingTour
+                steps={PORTFOLIO_STEPS}
+                isActive={tourActive}
+                currentStep={tourStep}
+                onNext={() => tourNext(PORTFOLIO_STEPS.length)}
+                onComplete={tourComplete}
+                onSkip={tourSkip}
+            />
 
             {/* HEADER */}
             <div className="p-header">
@@ -310,11 +326,15 @@ export default function PortfolioHealth() {
                             }}>{p.label}</button>
                         ))}
                     </div>
-                    <button className="btn-primary" onClick={() => openModal()}>
+                    <button className="btn-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
                         <Plus size={16} /> Agregar Activo
                     </button>
                 </div>
             </div>
+
+            <button onClick={resetTour} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px', display: 'block' }}>
+                ¿Cómo usar esta sección?
+            </button>
 
             {isLoading && !data ? (
                 <div className="dashboard-metrics">
@@ -378,7 +398,7 @@ export default function PortfolioHealth() {
                     </div>
 
                     {/* 2. TABLA DE ACTIVOS */}
-                    <div className="table-section">
+                    <div className="table-section" data-tour="tabla-activos">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 600 }}>Mis Activos</h3>
                             <div className="search-input-wrapper">

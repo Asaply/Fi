@@ -35,6 +35,26 @@ CREATE POLICY "users_own_portfolio_assets"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+-- 4. Reminders and user_config tables
+ALTER TABLE reminders   ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id);
+ALTER TABLE user_config ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id);
+
+ALTER TABLE reminders   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_config ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "users_own_reminders"   ON reminders;
+DROP POLICY IF EXISTS "users_own_user_config" ON user_config;
+
+CREATE POLICY "users_own_reminders"
+  ON reminders FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "users_own_user_config"
+  ON user_config FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- ============================================================
 -- Also enable in Supabase Dashboard (manual steps):
 --   Authentication > Providers > Email  → Enable Email/Password

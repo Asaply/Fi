@@ -1,0 +1,299 @@
+{
+  "main": {
+    "id": "867fb4c576cb7af6",
+    "type": "split",
+    "children": [
+      {
+        "id": "d1e2bcf269e54af1",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "10c625389e9d754f",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "node_modules/eslint-module-utils/node_modules/debug/README.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "README"
+            }
+          },
+          {
+            "id": "94afe248353321b0",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docsprompt-widgets-rewrite.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "docsprompt-widgets-rewrite"
+            }
+          },
+          {
+            "id": "7fa75d7e4a655922",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docsprompt-finanzas-tipo-pdf.md.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "docsprompt-finanzas-tipo-pdf.md"
+            }
+          },
+          {
+            "id": "c30f0850f0ed8410",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docsprompt-pdf-parser-fix.md.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "docsprompt-pdf-parser-fix.md"
+            }
+          },
+          {
+            "id": "2a5a3121d35ce775",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docsprompt-pdf-parser-debug.md.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "docsprompt-pdf-parser-debug.md"
+            }
+          },
+          {
+            "id": "23040b8aaad1b6a3",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Vista gráfica"
+            }
+          }
+        ],
+        "currentTab": 5
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "328954a85b0adcd4",
+    "type": "split",
+    "children": [
+      {
+        "id": "387e84311a240093",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8888d8616d55eb4d",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de archivos"
+            }
+          },
+          {
+            "id": "2b29e1e3cebb9e16",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Buscar"
+            }
+          },
+          {
+            "id": "915dfc833d2579b2",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "9e58b5b2dce5ac51",
+    "type": "split",
+    "children": [
+      {
+        "id": "c06d2ebc37644268",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "be77e94f5cb3a81f",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Enlaces entrantes"
+            }
+          },
+          {
+            "id": "83d4fed3a1fb50a7",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Enlaces salientes"
+            }
+          },
+          {
+            "id": "b2d4833383694b2e",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "e905eadae00d14d5",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas las propiedades"
+            }
+          },
+          {
+            "id": "dd8973bc3f0e67a5",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Esquema"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir selector rápido": false,
+      "graph:Abrir vista gráfica": false,
+      "canvas:Crear nuevo lienzo": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Crear nueva base": false
+    }
+  },
+  "active": "23040b8aaad1b6a3",
+  "lastOpenFiles": [
+    "sprint5-auth.md",
+    "src/components/onboarding/OnboardingTour.jsx",
+    "src/hooks/useOnboarding.js",
+    "src/components/onboarding",
+    "src/hooks",
+    "design-03-onboarding.md",
+    "design-02-typography.md",
+    "design-01-tokens.md",
+    "files/design-03-onboarding.md",
+    "files/design-02-typography.md",
+    "files/design-01-tokens.md",
+    "files",
+    "files.zip",
+    "fix-finanzas-import-categorias.md",
+    "CONTEXT.md",
+    "CONTEXT-DB.md",
+    "CONTEXT-AUTH.md",
+    "files/CONTEXT.md",
+    "files/CONTEXT-DB.md",
+    "files/CONTEXT-AUTH.md",
+    "fix-auth-email-google.md",
+    "feature-dashboard-upgrade.md",
+    "docsprompt-pdf-parser-fix.md.md",
+    "docsprompt-nu-parser.md.md",
+    "node_modules/eslint-plugin-react/README.md",
+    "fix-mobile-v2.md",
+    "fix-mobile-v2.css",
+    "fix-mobile-optimization.md",
+    "fix-tooltip-chart.md",
+    "src/components/ReporteMensual.jsx",
+    "fix-dashboard-gastos-reporte.md",
+    "fix-gastos-categoria-hydration.md",
+    "src/components/Recordatorios.jsx",
+    "src/components/GastosPorCategoria.jsx",
+    "feature-gastos-categoria-recordatorios.md",
+    "feature-finanzas-v2.md",
+    "node_modules/@supabase/phoenix/priv/static/phoenix.png",
+    "node_modules/@supabase/phoenix/priv/static/phoenix-orange.png",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/toolbarButton-menuArrow.svg",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/toolbarButton-menuArrow.svg",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/toolbarButton-editorHighlight.svg",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/toolbarButton-editorHighlight.svg",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/messageBar_warning.svg",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/messageBar_warning.svg",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/messageBar_info.svg",
+    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/messageBar_info.svg"
+  ]
+}
