@@ -3,13 +3,7 @@ import { useState, useEffect } from 'react';
 import { getFilter, setFilter } from '@/lib/filterMemory';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import { useOnboarding } from '@/hooks/useOnboarding';
-
-const DASHBOARD_STEPS = [
-    { target: '[data-tour="time-filter"]', title: 'Filtra por período', description: 'Cambia el rango de tiempo para ver tus datos por mes, trimestre o año.', position: 'bottom' },
-    { target: '[data-tour="resumen-finanzas"]', title: 'Resumen de Finanzas', description: 'Aquí ves tus ingresos, egresos y ganancia neta del período seleccionado.', position: 'bottom' },
-    { target: '[data-tour="resumen-trading"]', title: 'Resumen de Trading', description: 'Tu P&L total y win rate de operaciones cerradas en el período.', position: 'bottom' },
-    { target: '[data-tour="gastos-categoria"]', title: 'Gastos por categoría', description: 'Visualiza en qué estás gastando y en qué proporción.', position: 'top' },
-];
+import { DASHBOARD_STEPS } from '@/components/onboarding/tourSteps';
 import CardFinanzas from './components/CardFinanzas';
 import CardTrading from './components/CardTrading';
 import CardPortfolio from './components/CardPortfolio';
@@ -42,7 +36,7 @@ function getFechaInicio(periodo) {
 }
 
 export default function DashboardPage() {
-    const { isActive: tourActive, currentStep: tourStep, next: tourNext, complete: tourComplete, skip: tourSkip, resetTour } = useOnboarding('dashboard');
+    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('dashboard');
     const [periodo, setPeriodo] = useState('3m');
 
     useEffect(() => {
@@ -57,8 +51,6 @@ export default function DashboardPage() {
             <OnboardingTour
                 steps={DASHBOARD_STEPS}
                 isActive={tourActive}
-                currentStep={tourStep}
-                onNext={() => tourNext(DASHBOARD_STEPS.length)}
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />

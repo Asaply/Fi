@@ -10,12 +10,7 @@ import "./Trading.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import { useOnboarding } from '@/hooks/useOnboarding';
-
-const TRADING_STEPS = [
-    { target: '[data-tour="btn-nuevo-trade"]', title: 'Registra un trade', description: 'Agrega operaciones long o short. Cuando cierres la posición, FNCE calcula tu P&L automáticamente.', position: 'bottom' },
-    { target: '[data-tour="card-winrate"]', title: 'Win Rate', description: 'Porcentaje de trades ganadores sobre el total de operaciones cerradas.', position: 'bottom' },
-    { target: '[data-tour="pl-calendar"]', title: 'Calendario P&L', description: 'Vista día a día de tus resultados. Verde = día ganador, rojo = día perdedor.', position: 'top' },
-];
+import { TRADING_STEPS } from '@/components/onboarding/tourSteps';
 
 const PERIODOS_TRAD = [
     { value: '1m', label: 'Este mes' },
@@ -36,7 +31,7 @@ function getFechaInicioTrad(periodo) {
 }
 
 export default function TradingPage() {
-    const { isActive: tourActive, currentStep: tourStep, next: tourNext, complete: tourComplete, skip: tourSkip, resetTour } = useOnboarding('trading');
+    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('trading');
     const [operations, setOperations] = useState([]);
     const [periodo, setPeriodo] = useState('1m');
     const [isLoading, setIsLoading] = useState(true);
@@ -216,8 +211,6 @@ export default function TradingPage() {
             <OnboardingTour
                 steps={TRADING_STEPS}
                 isActive={tourActive}
-                currentStep={tourStep}
-                onNext={() => tourNext(TRADING_STEPS.length)}
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />

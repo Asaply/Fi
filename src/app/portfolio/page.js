@@ -9,11 +9,7 @@ import "./Portfolio.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import { useOnboarding } from '@/hooks/useOnboarding';
-
-const PORTFOLIO_STEPS = [
-    { target: '[data-tour="btn-agregar-activo"]', title: 'Agrega tus inversiones', description: 'Registra acciones, ETFs o crypto con tu precio de compra promedio.', position: 'bottom' },
-    { target: '[data-tour="tabla-activos"]', title: 'Precio en tiempo real', description: 'Los precios se actualizan via Yahoo Finance y CoinGecko. El P&L se calcula automáticamente.', position: 'top' },
-];
+import { PORTFOLIO_STEPS } from '@/components/onboarding/tourSteps';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -111,7 +107,7 @@ function Tooltip({ text }) {
 }
 
 export default function PortfolioHealth() {
-    const { isActive: tourActive, currentStep: tourStep, next: tourNext, complete: tourComplete, skip: tourSkip, resetTour } = useOnboarding('portfolio');
+    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('portfolio');
     const { data, isLoading, mutate } = useSWR('portfolio_data', fetchPortfolioData, { refreshInterval: 60000 });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -295,8 +291,6 @@ export default function PortfolioHealth() {
             <OnboardingTour
                 steps={PORTFOLIO_STEPS}
                 isActive={tourActive}
-                currentStep={tourStep}
-                onNext={() => tourNext(PORTFOLIO_STEPS.length)}
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />

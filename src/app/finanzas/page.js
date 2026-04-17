@@ -12,13 +12,8 @@ import { getFilter, setFilter } from "@/lib/filterMemory";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { FINANZAS_STEPS } from "@/components/onboarding/tourSteps";
 import "./Finanzas.css";
-
-const FINANZAS_STEPS = [
-    { target: '[data-tour="btn-nueva-transaccion"]', title: 'Registra una transacción', description: 'Agrega ingresos, egresos o inversiones manualmente.', position: 'bottom' },
-    { target: '[data-tour="btn-importar-csv"]', title: 'Importa tu estado de cuenta', description: 'Soporta CSV de BBVA, Banorte y Santander. Tus transacciones se clasifican automáticamente.', position: 'bottom' },
-    { target: '[data-tour="filtros-tipo"]', title: 'Filtra por tipo', description: 'Separa entre Ingresos, Egresos, Inversiones o lo que está por cobrar.', position: 'bottom' },
-];
 
 const MOCK_DATA = [
     { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },
@@ -166,7 +161,7 @@ function getFechaInicioFin(periodo) {
 }
 
 export default function FinanzasPage() {
-    const { isActive: tourActive, currentStep: tourStep, next: tourNext, complete: tourComplete, skip: tourSkip, resetTour } = useOnboarding('finanzas');
+    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('finanzas');
     const [transactions, setTransactions] = useState([]);
     const [tradingOps, setTradingOps] = useState([]);
     const [portfolioAssets, setPortfolioAssets] = useState([]);
@@ -578,8 +573,6 @@ export default function FinanzasPage() {
             <OnboardingTour
                 steps={FINANZAS_STEPS}
                 isActive={tourActive}
-                currentStep={tourStep}
-                onNext={() => tourNext(FINANZAS_STEPS.length)}
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />

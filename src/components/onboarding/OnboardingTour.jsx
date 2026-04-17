@@ -1,153 +1,150 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
-function getTargetRect(selector) {
-    try {
-        const el = document.querySelector(selector);
-        if (!el) return null;
-        return el.getBoundingClientRect();
-    } catch {
-        return null;
-    }
-}
-
-function isMobile() {
-    return typeof window !== 'undefined' && window.innerWidth < 768;
-}
-
-function TooltipArrow({ position }) {
-    const base = { position: 'absolute', width: 0, height: 0 };
-    const styles = {
-        bottom: { ...base, top: -12, left: '50%', transform: 'translateX(-50%)', borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: '12px solid #242428' },
-        top:    { ...base, bottom: -12, left: '50%', transform: 'translateX(-50%)', borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '12px solid #242428' },
-        left:   { ...base, right: -12, top: '50%', transform: 'translateY(-50%)', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderLeft: '12px solid #242428' },
-        right:  { ...base, left: -12, top: '50%', transform: 'translateY(-50%)', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderRight: '12px solid #242428' },
-    };
-    return <div style={styles[position] || styles.bottom} />;
-}
-
-function positionTooltip(rect, position, tooltipW = 280, tooltipH = 160) {
-    const gap = 16;
-    if (!rect) return { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' };
-
-    switch (position) {
-        case 'bottom':
-            return { top: rect.bottom + gap, left: Math.min(Math.max(rect.left + rect.width / 2 - tooltipW / 2, 16), window.innerWidth - tooltipW - 16) };
-        case 'top':
-            return { top: rect.top - tooltipH - gap, left: Math.min(Math.max(rect.left + rect.width / 2 - tooltipW / 2, 16), window.innerWidth - tooltipW - 16) };
-        case 'left':
-            return { top: rect.top + rect.height / 2 - tooltipH / 2, left: rect.left - tooltipW - gap };
-        case 'right':
-            return { top: rect.top + rect.height / 2 - tooltipH / 2, left: rect.right + gap };
-        default:
-            return { top: rect.bottom + gap, left: rect.left };
-    }
-}
-
-export default function OnboardingTour({ steps, isActive, currentStep, onNext, onComplete, onSkip }) {
+export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) {
+    const [current, setCurrent] = useState(0);
+    const [tooltipStyle, setTooltipStyle] = useState({});
+    const [highlightStyle, setHighlightStyle] = useState({});
     const [visible, setVisible] = useState(false);
-    const [tooltipPos, setTooltipPos] = useState({});
-    const [mobile, setMobile] = useState(false);
-    const [targetRect, setTargetRect] = useState(null);
-    const tooltipRef = useRef(null);
-
-    const step = steps[currentStep];
-    const isLast = currentStep === steps.length - 1;
 
     useEffect(() => {
-        if (!isActive) { setVisible(false); return; }
-        setMobile(isMobile());
+        if (!isActive) { setCurrent(0); setVisible(false); return; }
+        positionTooltip(current);
+        const t = setTimeout(() => setVisible(true), 80);
+        return () => clearTimeout(t);
+    }, [isActive, current]);
 
-        const update = () => {
-            if (!step) return;
-            const rect = getTargetRect(step.target);
-            setTargetRect(rect);
-            if (!isMobile() && rect) {
-                const pos = positionTooltip(rect, step.position);
-                setTooltipPos(pos);
-            }
-        };
+    function positionTooltip(index) {
+        const step = steps[index];
+        if (!step) return;
+        const el = document.querySelector(step.target);
+        if (!el) return;
 
-        update();
-        const timer = setTimeout(() => { update(); setVisible(true); }, 120);
-        window.addEventListener('resize', update);
-        return () => { clearTimeout(timer); window.removeEventListener('resize', update); };
-    }, [isActive, currentStep, step]);
+        const rect = el.getBoundingClientRect();
+        const pos = step.position || 'bottom';
+        const gap = 12;
 
-    if (!isActive || !step) return null;
+        setHighlightStyle({
+            position: 'fixed',
+            top: rect.top - 6,
+            left: rect.left - 6,
+            width: rect.width + 12,
+            height: rect.height + 12,
+            borderRadius: 8,
+            boxShadow: '0 0 0 9999px rgba(0,0,0,0.75)',
+            zIndex: 9998,
+            pointerEvents: 'none',
+        });
 
-    const highlightStyle = targetRect && !mobile ? {
-        position: 'fixed',
-        top: targetRect.top - 4,
-        left: targetRect.left - 4,
-        width: targetRect.width + 8,
-        height: targetRect.height + 8,
-        borderRadius: 8,
-        boxShadow: '0 0 0 9999px rgba(0,0,0,0.72)',
-        zIndex: 9998,
-        pointerEvents: 'none',
-    } : null;
+        const tooltipW = 280;
+        let top = 0, left = 0;
 
-    const tooltipStyle = {
-        position: 'fixed',
-        zIndex: 9999,
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--bg-border)',
-        borderRadius: 12,
-        padding: '1.25rem',
-        width: 280,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(4px)',
-        transition: 'opacity 0.2s, transform 0.2s',
-        ...(mobile
-            ? { top: '50%', left: '50%', transform: visible ? 'translate(-50%,-50%)' : 'translate(-50%,-48%)', width: 'min(320px, calc(100vw - 32px))' }
-            : tooltipPos),
-    };
+        if (pos === 'bottom') { top = rect.bottom + gap; left = rect.left + rect.width / 2 - tooltipW / 2; }
+        if (pos === 'top')    { top = rect.top - gap - 160; left = rect.left + rect.width / 2 - tooltipW / 2; }
+        if (pos === 'right')  { top = rect.top + rect.height / 2 - 80; left = rect.right + gap; }
+        if (pos === 'left')   { top = rect.top + rect.height / 2 - 80; left = rect.left - tooltipW - gap; }
+
+        // Mobile: center as modal
+        if (window.innerWidth < 768) {
+            setTooltipStyle({
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: visible ? 'translate(-50%,-50%)' : 'translate(-50%,-48%)',
+                width: 'min(320px, calc(100vw - 32px))',
+                zIndex: 9999,
+            });
+            return;
+        }
+
+        left = Math.max(12, Math.min(left, window.innerWidth - tooltipW - 12));
+        top = Math.max(12, Math.min(top, window.innerHeight - 200));
+
+        setTooltipStyle({ position: 'fixed', top, left, width: tooltipW, zIndex: 9999 });
+    }
+
+    if (!isActive || steps.length === 0) return null;
+
+    const step = steps[current];
+    if (!step) return null;
+    const isLast = current === steps.length - 1;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     return (
         <>
-            {/* Overlay — only show if no specific target highlight */}
-            {(!targetRect || mobile) && (
+            {/* Overlay for mobile or when target not found */}
+            {(isMobile || !document.querySelector(step.target)) && (
                 <div
-                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 9997 }}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9997 }}
                     onClick={onSkip}
                 />
             )}
 
-            {/* Target highlight cutout */}
-            {highlightStyle && <div style={highlightStyle} />}
+            {/* Spotlight highlight */}
+            {!isMobile && <div style={highlightStyle} />}
 
             {/* Tooltip */}
-            <div ref={tooltipRef} style={tooltipStyle}>
-                {!mobile && <TooltipArrow position={step.position} />}
-
-                {/* Step counter */}
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    {currentStep + 1} / {steps.length}
+            <div style={{
+                ...tooltipStyle,
+                background: '#1a1a1e',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 12,
+                padding: '1.25rem',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                opacity: visible ? 1 : 0,
+                transition: 'opacity 0.2s, transform 0.2s',
+            }}>
+                {/* Header row: step indicator + skip */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#6366f1', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        {current + 1} / {steps.length}
+                    </span>
+                    <button onClick={onSkip} style={{ fontSize: '0.7rem', color: '#4a4a5a', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}>
+                        Saltar tour
+                    </button>
                 </div>
 
-                <p style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                <p style={{ fontWeight: 700, color: '#f0f0f2', marginBottom: '0.4rem', fontSize: '0.95rem', margin: '0 0 6px 0' }}>
                     {step.title}
                 </p>
-                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.8rem', color: '#8a8a9a', lineHeight: 1.5, margin: '0 0 1rem 0' }}>
                     {step.description}
                 </p>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <button
-                        onClick={onSkip}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0 }}
-                    >
-                        Saltar tour
-                    </button>
-                    <button
-                        onClick={isLast ? onComplete : onNext}
-                        style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                        {isLast ? '¡Entendido!' : 'Siguiente →'}
-                    </button>
+                {/* Progress dots */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: '1rem' }}>
+                    {steps.map((_, i) => (
+                        <div key={i} style={{
+                            width: i === current ? 16 : 6,
+                            height: 6,
+                            borderRadius: 3,
+                            background: i === current ? '#6366f1' : '#2a2a2e',
+                            transition: 'all 0.2s',
+                        }} />
+                    ))}
                 </div>
+
+                <button
+                    onClick={() => {
+                        setVisible(false);
+                        setTimeout(() => {
+                            if (isLast) { onComplete(); } else { setCurrent(c => c + 1); }
+                        }, 150);
+                    }}
+                    style={{
+                        width: '100%',
+                        padding: '0.6rem',
+                        background: '#6366f1',
+                        color: 'white',
+                        borderRadius: 8,
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        border: 'none',
+                        cursor: 'pointer',
+                    }}
+                >
+                    {isLast ? '¡Entendido!' : 'Siguiente →'}
+                </button>
             </div>
         </>
     );
