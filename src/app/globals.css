@@ -5,8 +5,8 @@
   --bg-elevated:       #1c1c1c;   /* inputs */
   --bg-surface-hover:  #1a1a1e;   /* hover states */
   --bg-hover:          #1a1a1e;
-  --bg-border:         #242428;
-  --bg-border-subtle:  #1a1a1a;
+  --bg-border:         rgba(255,255,255,0.08);
+  --bg-border-subtle:  rgba(255,255,255,0.05);
 
   /* Legacy aliases — keep for backward compat */
   --bg-primary:        var(--bg-base);
@@ -170,11 +170,12 @@ button {
 }
 
 .page-title {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
   letter-spacing: -0.3px;
   margin: 0 0 4px;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 /* ── Forms & Modals ────────────────────────────────────────────── */
@@ -302,7 +303,8 @@ button {
   gap: 0.5rem;
 }
 
-.metric-card .label {
+.metric-card .label,
+.metric-label {
   font-size: 0.65rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -310,7 +312,8 @@ button {
   font-weight: 500;
 }
 
-.metric-card .value {
+.metric-card .value,
+.metric-value {
   font-size: 1.75rem;
   font-weight: 700;
   font-family: var(--font-mono);
@@ -382,6 +385,30 @@ button {
 
 .data-table tbody tr:hover {
   background: var(--bg-surface-hover);
+}
+
+.table-header-cell {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.table-row {
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.table-row:hover {
+  background: var(--bg-surface-hover);
+}
+
+.category-chip {
+  background: var(--bg-surface-hover);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  display: inline-block;
 }
 
 /* ── Mobile ────────────────────────────────────────────────────── */
