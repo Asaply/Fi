@@ -511,6 +511,37 @@ button {
 
 /* ── Mobile ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Page headers — stack vertically */
+  .page-header,
+  .finanzas-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .page-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  /* Period filter pills — scrollable on narrow screens */
+  .period-filter-wrap {
+    overflow-x: auto;
+    max-width: 100%;
+    flex-shrink: 1;
+  }
+
+  /* Action buttons — don't shrink */
+  .btn-action-primary,
+  .btn-action-secondary {
+    flex-shrink: 0;
+  }
+
+  /* Metrics grid — 2 cols on mobile */
+  .metrics-grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
   .app-layout {
     flex-direction: column;
     height: 100dvh;

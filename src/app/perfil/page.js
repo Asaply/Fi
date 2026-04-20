@@ -1,35 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Globe, Clock, Camera, CheckCircle } from 'lucide-react';
 import { useTopbar } from '@/components/TopbarContext';
+import { supabase } from '@/lib/supabaseClient';
 import './Perfil.css';
 
-const STORAGE_KEY = 'fnce_profile_data';
+const PREFS_KEY = 'fnce_profile_prefs';
 
 export default function PerfilPage() {
     const { profilePic, setProfilePic } = useTopbar();
     const [saved, setSaved] = useState(false);
-    const [formData, setFormData] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) return JSON.parse(stored);
-        }
-        return {
-            name: "Leonardo",
-            email: "leonardo@example.com",
-            currency: "MXN",
-            timezone: "America/Mexico_City",
-            language: "es"
-        };
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        currency: 'MXN',
+        timezone: 'America/Mexico_City',
+        language: 'es',
     });
+
+    useEffect(() => {
+        const prefs = (() => {
+            try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
+        })();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                const displayName = user.user_metadata?.full_name
+                    || user.user_metadata?.name
+                    || user.email?.split('@')[0]
+                    || '';
+                setFormData({
+                    name: displayName,
+                    email: user.email || '',
+                    currency: prefs.currency || 'MXN',
+                    timezone: prefs.timezone || 'America/Mexico_City',
+                    language: prefs.language || 'es',
+                });
+            }
+        });
+    }, []);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleSave = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+        const { currency, timezone, language } = formData;
+        localStorage.setItem(PREFS_KEY, JSON.stringify({ currency, timezone, language }));
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
     };

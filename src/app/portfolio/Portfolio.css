@@ -574,6 +574,18 @@
         gap: 12px !important;
     }
 
+    /* Controls row (filters + button) — wrap and take full width */
+    .p-header > div:last-child {
+        flex-wrap: wrap !important;
+        width: 100%;
+        gap: 8px !important;
+    }
+
+    .p-header .period-filter-wrap {
+        overflow-x: auto;
+        max-width: calc(100vw - 48px);
+    }
+
     /* Chart header — stack title + time selector */
     .portfolio-chart-header {
         flex-direction: column !important;
