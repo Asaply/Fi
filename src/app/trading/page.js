@@ -217,36 +217,33 @@ export default function TradingPage() {
             <div className="trading-header page-header">
                 <div className="trading-header-title">
                     <h1 className="page-title">Trading</h1>
-                    <p className="page-subtitle">Registro y bitácora de operaciones</p>
                 </div>
                 <div className="page-actions">
-                    <div className="time-filter-group">
+                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
+                    <div className="period-filter-wrap" style={{ display: 'inline-flex' }}>
                         {PERIODOS_TRAD.map(p => (
                             <button
                                 key={p.value}
-                                className={`time-filter-btn${periodo === p.value ? ' active' : ''}`}
+                                className={`period-filter-btn ${periodo === p.value ? 'active' : ''}`}
+                                style={{ border: 'none', cursor: 'pointer' }}
                                 onClick={() => { setFilter('trading', p.value); setPeriodo(p.value); }}
                             >{p.label}</button>
                         ))}
                     </div>
-                    <button className="btn-primary" data-tour="btn-nuevo-trade" onClick={() => openModal()}>
+                    <button className="btn-action-primary" data-tour="btn-nuevo-trade" onClick={() => openModal()}>
                         <Plus size={15} />
                         <span>Nuevo Trade</span>
                     </button>
                 </div>
             </div>
 
-            <button onClick={resetTour} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px', display: 'block' }}>
-                ¿Cómo usar esta sección?
-            </button>
-
             {isLoading ? (
-                <div className="summary-cards">
+                <div className="metrics-grid-3">
                     <SkeletonCard /><SkeletonCard /><SkeletonCard />
                 </div>
             ) : (
                 <>
-                    <div className="summary-cards">
+                    <div className="metrics-grid-3" style={{ marginBottom: '20px' }}>
                         <div className="card summary-card glass">
                             <span className="summary-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <DollarSign size={16} /> Total P&L Realizado
@@ -319,7 +316,7 @@ export default function TradingPage() {
                                 </thead>
                                 <tbody>
                                     {filteredOps.map(t => (
-                                        <tr key={t.id}>
+                                        <tr key={t.id} className="table-row">
                                             <td>{t.date}</td>
                                             <td style={{ fontWeight: 600 }}>{t.asset}</td>
                                             <td>
@@ -327,8 +324,8 @@ export default function TradingPage() {
                                                     {t.type || 'Long'}
                                                 </span>
                                             </td>
-                                            <td>{t.lot_size}</td>
-                                            <td>{formatCurrency(t.invested_amount)}</td>
+                                            <td className="font-mono">{t.lot_size}</td>
+                                            <td className="font-mono">{formatCurrency(t.invested_amount)}</td>
                                             <td>
                                                 <span className={`badge badge-${t.status.toLowerCase()}`}>
                                                     {t.status}
@@ -342,7 +339,7 @@ export default function TradingPage() {
                                                 ) : <span className="badge badge-pendiente">-</span>}
                                             </td>
                                             <td className={
-                                                t.status === 'Cerrado' ? (t.pnl > 0 ? 'amount-positive font-bold' : t.pnl < 0 ? 'amount-negative font-bold' : '') : ''
+                                                (t.status === 'Cerrado' ? (t.pnl > 0 ? 'amount-positive font-bold' : t.pnl < 0 ? 'amount-negative font-bold' : '') : '') + ' font-mono'
                                             }>
                                                 {t.status === 'Cerrado' ? formatCurrency(t.pnl) : '--'}
                                             </td>

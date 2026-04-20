@@ -121,11 +121,6 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
                         <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)", margin: 0 }}>P&L Calendar</h2>
                         <span className="info-icon" title="Profit and Loss Calendar">i</span>
                     </div>
-                    {porCobrar !== undefined && porCobrar > 0 && (
-                        <div style={{ background: 'rgba(245, 166, 35, 0.1)', padding: '4px 12px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: '#f5a623', fontWeight: 600 }}>⏳ Por Cobrar: {formatCurrency(porCobrar)}</span>
-                        </div>
-                    )}
                 </div>
 
                 <div className="pl-calendar-controls">

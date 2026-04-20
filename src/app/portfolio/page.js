@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
-import { Activity, TrendingUp, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, Info } from "lucide-react";
+import { Activity, TrendingUp, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, Info, ArrowUpRight, ArrowDownRight, Wallet, LayoutGrid } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Modal from "@/components/Modal";
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";
@@ -299,36 +299,27 @@ export default function PortfolioHealth() {
             <div className="p-header">
                 <div>
                     <h1 className="page-title" style={{ marginBottom: '4px' }}>Portfolio Health</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                        Rastrea tus activos, rendimiento histórico y salud financiera
-                    </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ display: 'inline-flex', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '9px', padding: '3px', gap: '2px' }}>
+                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
+                    <div className="period-filter-wrap" style={{ display: 'inline-flex' }}>
                         {[
                             { label: 'Este mes', range: '1M' },
                             { label: '3 meses', range: '3M' },
                             { label: '6 meses', range: '6M' },
                             { label: 'Este año', range: '1A' },
                         ].map(p => (
-                            <button key={p.range} onClick={() => { setFilter('portfolio', p.range); setActiveRange(p.range); }} style={{
-                                background: activeRange === p.range ? 'var(--bg-elevated)' : 'transparent',
-                                border: 'none', color: activeRange === p.range ? 'var(--text-primary)' : 'var(--text-muted)',
-                                fontSize: '12px', fontWeight: 500, padding: '5px 12px', borderRadius: '6px',
-                                cursor: 'pointer', transition: 'all 0.15s',
-                                boxShadow: activeRange === p.range ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
-                            }}>{p.label}</button>
+                            <button key={p.range} onClick={() => { setFilter('portfolio', p.range); setActiveRange(p.range); }}
+                                className={`period-filter-btn ${activeRange === p.range ? 'active' : ''}`}
+                                style={{ border: 'none', cursor: 'pointer' }}
+                            >{p.label}</button>
                         ))}
                     </div>
-                    <button className="btn-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
+                    <button className="btn-action-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
                         <Plus size={16} /> Agregar Activo
                     </button>
                 </div>
             </div>
-
-            <button onClick={resetTour} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px', display: 'block' }}>
-                ¿Cómo usar esta sección?
-            </button>
 
             {isLoading && !data ? (
                 <div className="dashboard-metrics">
@@ -349,7 +340,7 @@ export default function PortfolioHealth() {
                         <div className="onboarding-feature"><Target size={20} style={{ color: 'var(--success)' }} /><span>Puntuación de salud de tu portafolio</span></div>
                         <div className="onboarding-feature"><TrendingUp size={20} style={{ color: '#8b5cf6' }} /><span>Comparativa vs S&amp;P 500 y Nasdaq</span></div>
                     </div>
-                    <button className="btn-primary" style={{ marginTop: '8px' }} onClick={() => openModal()}>
+                    <button className="btn-action-primary" style={{ marginTop: '8px' }} onClick={() => openModal()}>
                         <Plus size={16} /> Agregar primer activo
                     </button>
                 </div>
@@ -370,22 +361,22 @@ export default function PortfolioHealth() {
                             </div>
                         </div>
                         <div className="hero-secondary">
-                            <div className="hero-stat">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Mejor activo</span>
+                            <div className="hero-stat" style={{ borderRight: '1px solid #1c1c1c', paddingRight: '16px' }}>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowUpRight size={14} color="#22c55e" />Mejor activo</span>
                                 <span style={{ fontWeight: 700, color: 'var(--success)' }}>{bestAsset.ticker}</span>
                                 <span style={{ fontSize: '12px', color: 'var(--success)' }}>{bestAsset.pnlPerc === -Infinity ? '-' : `+${bestAsset.pnlPerc.toFixed(1)}%`}</span>
                             </div>
-                            <div className="hero-stat">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Peor activo</span>
+                            <div className="hero-stat" style={{ borderRight: '1px solid #1c1c1c', paddingRight: '16px' }}>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowDownRight size={14} color="#ef4444" />Peor activo</span>
                                 <span style={{ fontWeight: 700, color: 'var(--danger)' }}>{worstAsset.ticker}</span>
                                 <span style={{ fontSize: '12px', color: 'var(--danger)' }}>{worstAsset.pnlPerc === Infinity ? '-' : `${worstAsset.pnlPerc.toFixed(1)}%`}</span>
                             </div>
-                            <div className="hero-stat">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Capital invertido</span>
+                            <div className="hero-stat" style={{ borderRight: '1px solid #1c1c1c', paddingRight: '16px' }}>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><Wallet size={14} />Capital invertido</span>
                                 <span style={{ fontWeight: 700 }}>{formatCurrency(totalCost)}</span>
                             </div>
                             <div className="hero-stat">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Número de activos</span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><LayoutGrid size={14} />Número de activos</span>
                                 <span style={{ fontWeight: 700 }}>{assets.length}</span>
                             </div>
                         </div>

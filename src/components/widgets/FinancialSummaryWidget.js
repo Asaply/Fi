@@ -4,7 +4,7 @@ import { Trash2, Loader, Activity } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function FinancialSummaryWidget({ widgetId, removeWidget }) {
-    const [metrics, setMetrics] = useState({ capital: 0, income: 0, expenses: 0, receivables: 0, margin: 0 });
+    const [metrics, setMetrics] = useState({ capital: 0, income: 0, expenses: 0, margin: 0 });
     const [isLoading, setIsLoading] = useState(false);
     const [isError, setIsError] = useState(false);
 
@@ -15,25 +15,23 @@ export default function FinancialSummaryWidget({ widgetId, removeWidget }) {
             try {
                 const now = new Date();
                 const fromDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-                const [txRes, clientsRes] = await Promise.all([
-                    supabase.from('transactions').select('type, amount').gte('date', fromDate),
-                    supabase.from('clients').select('total_price, status'),
-                ]);
+                const { data: { user } } = await supabase.auth.getUser();
+                const { data: txData } = await supabase
+                    .from('transactions')
+                    .select('type, amount')
+                    .eq('user_id', user?.id)
+                    .gte('date', fromDate);
 
                 let income = 0, expenses = 0;
-                txRes.data?.forEach(tx => {
+                txData?.forEach(tx => {
                     const amt = parseFloat(tx.amount) || 0;
                     if (tx.type === 'Ingreso') income += amt;
                     else if (tx.type === 'Egreso') expenses += amt;
                 });
 
-                const receivables = clientsRes.data
-                    ?.filter(c => ['propuesta', 'desarrollo'].includes(c.status))
-                    .reduce((s, c) => s + (parseFloat(c.total_price) || 0), 0) || 0;
-
                 const capital = income - expenses;
                 const margin = income > 0 ? ((income - expenses) / income) * 100 : 0;
-                setMetrics({ capital, income, expenses, receivables, margin });
+                setMetrics({ capital, income, expenses, margin });
             } catch (e) {
                 console.error(e);
                 setIsError(true);
@@ -79,10 +77,6 @@ export default function FinancialSummaryWidget({ widgetId, removeWidget }) {
                         <div className="fnce-metric-card">
                             <span className="fnce-metric-card-label">Total Ingresos</span>
                             <span className="fnce-metric-card-value">{fmt(metrics.income)}</span>
-                        </div>
-                        <div className="fnce-metric-card">
-                            <span className="fnce-metric-card-label">C. por Cobrar</span>
-                            <span className="fnce-metric-card-value accent">{fmt(metrics.receivables)}</span>
                         </div>
                     </div>
                 )}

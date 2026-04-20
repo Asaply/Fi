@@ -165,7 +165,6 @@ export default function FinanzasPage() {
     const [transactions, setTransactions] = useState([]);
     const [tradingOps, setTradingOps] = useState([]);
     const [portfolioAssets, setPortfolioAssets] = useState([]);
-    const [clients, setClients] = useState([]);
     const [userConfig, setUserConfig] = useState({ concepto_custom_label: 'Por Cobrar', concepto_custom_total: 0 });
     const [periodo, setPeriodo] = useState('1m');
     const [mesFilter, setMesFilter] = useState('');
@@ -190,9 +189,8 @@ export default function FinanzasPage() {
         setIsLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            const [txRes, clientsRes, tradingRes, portfolioRes, configRes] = await Promise.all([
+            const [txRes, tradingRes, portfolioRes, configRes] = await Promise.all([
                 supabase.from('transactions').select('*').eq('user_id', user?.id).order('date', { ascending: false }),
-                supabase.from('clients').select('id, name, total_price, status'),
                 supabase.from('trading_operations').select('date, pnl, status').eq('user_id', user?.id),
                 supabase.from('portfolio_assets').select('quantity, avg_buy_price').eq('user_id', user?.id),
                 supabase.from('user_config').select('concepto_custom_label, concepto_custom_total').eq('user_id', user?.id).maybeSingle(),
@@ -206,9 +204,6 @@ export default function FinanzasPage() {
                 }));
                 setTransactions(formattedData);
             }
-
-            if (clientsRes.error) console.error("Error fetching clients:", clientsRes.error);
-            else setClients(clientsRes.data || []);
 
             setTradingOps((tradingRes.data || []).map(t => ({
                 ...t,
@@ -377,16 +372,6 @@ export default function FinanzasPage() {
 
     const gananciaNeta = totalIngresos - totalEgresos;
 
-    // Por Cobrar: sum of (total_price - paid) for all active clients
-    const porCobrar = clients
-        .filter(c => c.status !== 'entregado')
-        .reduce((sum, c) => {
-            const paid = transactions
-                .filter(t => t.type === 'Ingreso' && t.client?.toLowerCase() === c.name?.toLowerCase())
-                .reduce((s, t) => s + (t.amount || 0), 0);
-            return sum + Math.max((c.total_price || 0) - paid, 0);
-        }, 0);
-
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
     };
@@ -499,7 +484,6 @@ export default function FinanzasPage() {
                 ingresos: 0,
                 egresos: 0,
                 inversiones: 0,
-                porCobrar: 0,
             };
 
             transactions.forEach(t => {
@@ -509,7 +493,6 @@ export default function FinanzasPage() {
                     if (ttype === 'ingreso') monthData.ingresos += (Number(t.amount) || 0);
                     if (ttype === 'egreso') monthData.egresos += (Number(t.amount) || 0);
                     if (ttype === 'inversión') monthData.inversiones += (Number(t.amount) || 0);
-                    if (ttype === 'por cobrar') monthData.porCobrar += (Number(t.amount) || 0);
                 }
             });
 
@@ -519,7 +502,7 @@ export default function FinanzasPage() {
     };
 
     const chartData = getLast3MonthsData();
-    const maxAmount = Math.max(...chartData.flatMap(d => [d.ingresos, d.egresos, d.inversiones, d.porCobrar]), 100);
+    const maxAmount = Math.max(...chartData.flatMap(d => [d.ingresos, d.egresos, d.inversiones]), 100);
 
     // ── Analysis section ──────────────────────────────────────────────────────
     const now = new Date();
@@ -579,28 +562,25 @@ export default function FinanzasPage() {
             <div className="finanzas-header page-header">
                 <div className="finanzas-header-title">
                     <h1 className="page-title">Finanzas</h1>
-                    <p className="page-subtitle">Control de ingresos y egresos</p>
                 </div>
                 <div className="page-actions">
-                    <button className="btn-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
+                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
+                    <button className="btn-action-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
                         <Upload size={14} /> Importar CSV
                     </button>
-                    <button className="btn-primary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
+                    <button className="btn-action-primary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
                         <Plus size={14} /> Nueva Transacción
                     </button>
                 </div>
             </div>
 
-            <button onClick={resetTour} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px', display: 'block' }}>
-                ¿Cómo usar esta sección?
-            </button>
-
             {/* Period selector */}
-            <div className="time-filter-group" style={{ marginBottom: '20px' }} data-tour="filtros-periodo">
+            <div className="period-filter-wrap" style={{ marginBottom: '20px' }} data-tour="filtros-periodo">
                 {PERIODOS_FIN.map(p => (
                     <button
                         key={p.value}
-                        className={`time-filter-btn${periodo === p.value ? ' active' : ''}`}
+                        className={`period-filter-btn ${periodo === p.value ? 'active' : ''}`}
+                        style={{ border: 'none', cursor: 'pointer' }}
                         onClick={() => { setFilter('finanzas', p.value); setPeriodo(p.value); }}
                     >{p.label}</button>
                 ))}
@@ -662,7 +642,7 @@ export default function FinanzasPage() {
                             <span className="summary-title">Ganancia Neta</span>
                             <span className={`summary-amount ${gananciaNeta > 0 ? 'amount-positive' : gananciaNeta < 0 ? 'amount-negative' : ''}`}>{formatCurrency(gananciaNeta)}</span>
                         </div>
-                        <div className="card summary-card" style={{ borderLeft: "3px solid #f5a623", position: 'relative' }}>
+                        <div className="card summary-card border-l-2 border-l-[#f59e0b]" style={{ position: 'relative' }}>
                             <button
                                 onClick={() => { setCustomCardForm({ label: userConfig.concepto_custom_label, monto: String(userConfig.concepto_custom_total) }); setIsEditingCustomCard(true); }}
                                 style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', lineHeight: 1 }}
@@ -670,8 +650,8 @@ export default function FinanzasPage() {
                             >
                                 <Edit2 size={13} />
                             </button>
-                            <span className="summary-title">{userConfig.concepto_custom_label}</span>
-                            <span className="summary-amount" style={{ color: "#f5a623" }}>{formatCurrency(userConfig.concepto_custom_total)}</span>
+                            <span className="summary-title" style={{ color: '#f59e0b' }}>{userConfig.concepto_custom_label}</span>
+                            <span className="summary-amount" style={{ color: "#f59e0b" }}>{formatCurrency(userConfig.concepto_custom_total)}</span>
                         </div>
                         <div className="card summary-card" style={{ borderLeft: "3px solid #3b82f6" }}>
                             <span className="summary-title">Portafolio (invertido)</span>
@@ -687,13 +667,11 @@ export default function FinanzasPage() {
                                 const incomeHeight = Math.max((data.ingresos / maxAmount) * 180, data.ingresos > 0 ? 10 : 0);
                                 const expenseHeight = Math.max((data.egresos / maxAmount) * 180, data.egresos > 0 ? 10 : 0);
                                 const invHeight = Math.max((data.inversiones / maxAmount) * 180, data.inversiones > 0 ? 10 : 0);
-                                const porCobrarHeight = Math.max((data.porCobrar / maxAmount) * 180, data.porCobrar > 0 ? 10 : 0);
                                 return (
-                                    <div className="bar-group" key={index} title={`${data.label}: Ingresos ${formatCurrency(data.ingresos)} | Egresos ${formatCurrency(data.egresos)} | Inversiones ${formatCurrency(data.inversiones)} | Por Cobrar ${formatCurrency(data.porCobrar)}`}>
+                                    <div className="bar-group" key={index} title={`${data.label}: Ingresos ${formatCurrency(data.ingresos)} | Egresos ${formatCurrency(data.egresos)} | Inversiones ${formatCurrency(data.inversiones)}`}>
                                         <div className="bar bar-income" style={{ height: `${incomeHeight}px` }}></div>
                                         <div className="bar bar-expense" style={{ height: `${expenseHeight}px` }}></div>
                                         <div className="bar bar-investment" style={{ height: `${invHeight}px` }}></div>
-                                        <div className="bar bar-por-cobrar" style={{ height: `${porCobrarHeight}px` }}></div>
                                     </div>
                                 );
                             })}
@@ -702,7 +680,7 @@ export default function FinanzasPage() {
 
                     <GastosPorCategoria startDate={fechaInicio} />
 
-                    <PLCalendar transactions={transactions} porCobrar={porCobrar} />
+                    <PLCalendar transactions={transactions} />
 
                     <div className="card table-section">
                         <div className="table-header">
@@ -740,7 +718,7 @@ export default function FinanzasPage() {
                                     {(mesFilter ? filteredTx.filter(t => t.date?.startsWith(mesFilter)) : filteredTx)
                                         .filter(t => activeFilter === 'Todos' || t.type === activeFilter)
                                         .map(t => (
-                                        <tr key={t.id}>
+                                        <tr key={t.id} className="table-row">
                                             <td>{t.date}</td>
                                             <td>{t.client}</td>
                                             <td>{t.concept}</td>
@@ -750,10 +728,10 @@ export default function FinanzasPage() {
                                                 </span>
                                             </td>
                                             <td className={
-                                                t.type === 'Ingreso' ? 'amount-positive' :
+                                                (t.type === 'Ingreso' ? 'amount-positive' :
                                                 t.type === 'Egreso' ? 'amount-negative' :
                                                 t.type === 'Inversión' ? 'amount-investment' :
-                                                t.type === 'Por Cobrar' ? 'amount-por-cobrar' : ''
+                                                t.type === 'Por Cobrar' ? 'amount-por-cobrar' : '') + ' font-mono'
                                             }>
                                                 {formatCurrency(t.amount)}
                                             </td>

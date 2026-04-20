@@ -111,7 +111,7 @@
     .nav-item {
         flex-direction: column;
         gap: 3px;
-        padding: 6px 4px;
+        padding: 8px 4px;
         font-size: 10px;
         flex: 1;
         justify-content: center;
@@ -123,7 +123,8 @@
 
     .nav-item.active {
         border-left: none;
-        border-bottom-color: var(--accent);
+        border-bottom-color: var(--purple-light);
+        color: var(--purple-light);
         background: transparent;
     }
 
@@ -134,6 +135,7 @@
     }
 
     .nav-item span {
-        display: none;
+        display: block;
+        font-size: 10px;
     }
 }

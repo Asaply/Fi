@@ -40,14 +40,15 @@ export default function PipelineWidget({ widgetId, data = {}, updateWidgetData, 
         setIsLoading(true);
         setIsError(false);
         try {
+            const { data: { user } } = await supabase.auth.getUser();
             if (source === 'prospects') {
-                const { data: rows } = await supabase.from('prospects').select('stage');
+                const { data: rows } = await supabase.from('prospects').select('stage').eq('user_id', user?.id);
                 const counts = {};
                 PROSPECT_STAGES.forEach(s => { counts[s.id] = 0; });
                 rows?.forEach(r => { if (counts[r.stage] !== undefined) counts[r.stage]++; });
                 setChartData(PROSPECT_STAGES.map(s => ({ step: s.title, leads: counts[s.id] })));
             } else {
-                const { data: rows } = await supabase.from('clients').select('status');
+                const { data: rows } = await supabase.from('clients').select('status').eq('user_id', user?.id);
                 const counts = {};
                 CLIENT_STAGES.forEach(s => { counts[s.id] = 0; });
                 rows?.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });

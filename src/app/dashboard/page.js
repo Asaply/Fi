@@ -58,24 +58,23 @@ export default function DashboardPage() {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Dashboard</h1>
-                    <p className="page-subtitle">Resumen financiero del período</p>
                 </div>
-                <div className="time-filter-group" data-tour="time-filter">
-                    {PERIODOS.map(p => (
-                        <button
-                            key={p.value}
-                            className={`time-filter-btn${periodo === p.value ? ' active' : ''}`}
-                            onClick={() => { setFilter('dashboard', p.value); setPeriodo(p.value); }}
-                        >
-                            {p.label}
-                        </button>
-                    ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
+                    <div className="period-filter-wrap" style={{ display: 'inline-flex' }} data-tour="time-filter">
+                        {PERIODOS.map(p => (
+                            <button
+                                key={p.value}
+                                className={`period-filter-btn ${periodo === p.value ? 'active' : ''}`}
+                                style={{ border: 'none', cursor: 'pointer' }}
+                                onClick={() => { setFilter('dashboard', p.value); setPeriodo(p.value); }}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
-
-            <button onClick={resetTour} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px', display: 'block' }}>
-                ¿Cómo usar esta sección?
-            </button>
 
             {/* Cards grid */}
             <div className="dashboard-grid">
