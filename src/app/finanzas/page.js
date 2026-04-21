@@ -311,9 +311,46 @@ export default function FinanzasPage() {
         }
 
         if (!rawText || rawText.trim() === '') {
-            toast.error("El banco generó este PDF como una imagen plana o vector (texto no seleccionable). Debes obtener un archivo digital crudo o usar importación CSV.", { duration: 6000 });
-            setIsParsing(false);
-            return;
+            const toastId = toast.loading("Analizando imagen con Visión Artificial... por favor espera.", { duration: 25000 });
+            try {
+                if (!window.Tesseract) {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+                
+                rawText = '';
+                const pdfjsLib = window.pdfjsLib;
+                const buffer = await file.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument({ data: buffer, password: password || undefined });
+                const pdfDoc = await loadingTask.promise;
+                
+                for (let i = 1; i <= pdfDoc.numPages; i++) {
+                    const page = await pdfDoc.getPage(i);
+                    const viewport = page.getViewport({ scale: 2.0 }); // HiDPI para nitidez
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    
+                    const result = await window.Tesseract.recognize(canvas, 'spa');
+                    rawText += result.data.text + '\n\n';
+                }
+                toast.dismiss(toastId);
+                toast.success("Análisis óptico completado.");
+            } catch (ocrErr) {
+                console.error("OCR Error:", ocrErr);
+                toast.dismiss(toastId);
+                toast.error("Imposible procesar la imagen (baja resolución o encriptación bloqueante).");
+                setIsParsing(false);
+                return;
+            }
         }
 
         // Parseamos 100% locamente en el cliente
