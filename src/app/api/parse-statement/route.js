@@ -213,29 +213,35 @@ function parseMexicanStatement(text) {
 export async function POST(req) {
     try {
         const formData = await req.formData();
-        const file = formData.get('file');
-        if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-
-        const password = formData.get('password') || '';
-        const buffer = Buffer.from(await file.arrayBuffer());
-
+        const textFromClient = formData.get('rawText');
         let rawText;
-        try {
-            rawText = await extractPdfText(buffer, password);
-        } catch (err) {
-            if (err.code === 'PASSWORD_REQUIRED') {
-                return NextResponse.json(
-                    { error: 'Este PDF está protegido con contraseña.', code: 'PASSWORD_REQUIRED' },
-                    { status: 422 }
-                );
+
+        if (textFromClient) {
+            rawText = textFromClient;
+        } else {
+            const file = formData.get('file');
+            if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+
+            const password = formData.get('password') || '';
+            const buffer = Buffer.from(await file.arrayBuffer());
+
+            try {
+                rawText = await extractPdfText(buffer, password);
+            } catch (err) {
+                if (err.code === 'PASSWORD_REQUIRED') {
+                    return NextResponse.json(
+                        { error: 'Este PDF está protegido con contraseña.', code: 'PASSWORD_REQUIRED' },
+                        { status: 422 }
+                    );
+                }
+                if (err.code === 'INCORRECT_PASSWORD') {
+                    return NextResponse.json(
+                        { error: 'Contraseña incorrecta. Intenta de nuevo.', code: 'INCORRECT_PASSWORD' },
+                        { status: 422 }
+                    );
+                }
+                throw err;
             }
-            if (err.code === 'INCORRECT_PASSWORD') {
-                return NextResponse.json(
-                    { error: 'Contraseña incorrecta. Intenta de nuevo.', code: 'INCORRECT_PASSWORD' },
-                    { status: 422 }
-                );
-            }
-            throw err;
         }
 
         const text = normalizarMeses(rawText);

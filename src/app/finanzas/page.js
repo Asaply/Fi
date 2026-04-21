@@ -245,8 +245,57 @@ export default function FinanzasPage() {
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
         const fd = new FormData();
-        fd.append('file', file);
-        if (password) fd.append('password', password);
+        
+        let rawText = null;
+        if (password) {
+            try {
+                // Cargamos pdf.js por CDN puro para evitar problemas de Webpack en build/Vercel
+                if (!window.pdfjsLib) {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                }
+
+                const pdfjsLib = window.pdfjsLib;
+                const buffer = await file.arrayBuffer();
+
+                const loadingTask = pdfjsLib.getDocument({
+                    data: buffer,
+                    password: password
+                });
+                const pdfDoc = await loadingTask.promise;
+                rawText = '';
+                for (let i = 1; i <= pdfDoc.numPages; i++) {
+                    const page = await pdfDoc.getPage(i);
+                    const content = await page.getTextContent();
+                    rawText += content.items.map(item => item.str).join(' ') + '\n';
+                }
+            } catch (err) {
+                console.warn("Client PDF error:", err);
+                if (err.name === 'PasswordException' || err.message?.includes('Password') || err.message?.includes('contraseña')) {
+                    setPdfPasswordError(true);
+                    setIsParsing(false);
+                    return;
+                }
+                // Si la extracción falla por cualquier otro motivo, abortamos para no tumbar el servidor en Vercel
+                toast.error("No se pudo descifrar el documento en este dispositivo.");
+                setIsParsing(false);
+                return;
+            }
+        }
+
+        if (rawText) {
+            fd.append('rawText', rawText);
+        } else {
+            fd.append('file', file);
+            if (password) fd.append('password', password); // Esto ya no debería ejecutarse con archivos encriptados
+        }
+
         try {
             const res = await fetch('/api/parse-statement', { method: 'POST', body: fd });
             const json = await res.json();
@@ -297,6 +346,19 @@ export default function FinanzasPage() {
             setShowPdfPassword(false);
             setPdfPassword('');
             setPdfPasswordError(false);
+
+            try {
+                const buffer = await file.arrayBuffer();
+                const text = new TextDecoder('iso-8859-1').decode(new Uint8Array(buffer));
+                if (text.includes('/Encrypt')) {
+                    setPendingPdfFile(file);
+                    setShowPdfPassword(true);
+                    return;
+                }
+            } catch (err) {
+                console.warn('Error pre-chequeo PDF:', err);
+            }
+
             await parsePdfFile(file);
         } else {
             const reader = new FileReader();
