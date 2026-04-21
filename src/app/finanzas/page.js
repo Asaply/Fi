@@ -274,7 +274,31 @@ export default function FinanzasPage() {
                 for (let i = 1; i <= pdfDoc.numPages; i++) {
                     const page = await pdfDoc.getPage(i);
                     const content = await page.getTextContent();
-                    rawText += content.items.map(item => item.str).join(' ') + '\n';
+                    
+                    // Filtramos items vacíos
+                    const items = content.items.filter(item => item.str.trim().length > 0);
+                    
+                    // Ordenamos: Top-to-Bottom (Y descendente), Left-to-Right (X ascendente)
+                    items.sort((a, b) => {
+                        const yA = a.transform[5];
+                        const yB = b.transform[5];
+                        if (Math.abs(yA - yB) > 5) return yB - yA;
+                        return a.transform[4] - b.transform[4];
+                    });
+
+                    let lastY;
+                    let pageText = '';
+                    for (const item of items) {
+                        const y = item.transform[5];
+                        if (lastY !== undefined && Math.abs(lastY - y) > 5) {
+                            pageText += '\n';
+                        } else if (lastY !== undefined) {
+                            pageText += ' ';
+                        }
+                        pageText += item.str.trim();
+                        lastY = y;
+                    }
+                    rawText += pageText + '\n\n';
                 }
             } catch (err) {
                 console.warn("Client PDF error:", err);
