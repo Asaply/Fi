@@ -311,7 +311,7 @@ export default function FinanzasPage() {
         }
 
         if (!rawText || rawText.trim() === '') {
-            toast.error("El PDF fue procesado, pero no se encontró texto extraíble en él.");
+            toast.error("El banco generó este PDF como una imagen plana o vector (texto no seleccionable). Debes obtener un archivo digital crudo o usar importación CSV.", { duration: 6000 });
             setIsParsing(false);
             return;
         }
