@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/categorias";
 import { getFilter, setFilter } from "@/lib/filterMemory";
+import { parseStatementText } from "@/lib/statementParser";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -295,10 +296,35 @@ export default function FinanzasPage() {
                 setIsParsing(false);
                 return;
             }
-            fd.append('rawText', rawText);
-        } else {
-            fd.append('file', file);
+            // Parseamos 100% locamente en el cliente para evitar el crash del server de Vercel
+            const transacciones = parseStatementText(rawText);
+            
+            if (transacciones.length === 0) {
+                toast.error("No se encontraron transacciones. Formato no reconocido.");
+                setIsParsing(false);
+                return;
+            }
+
+            const rows = transacciones.map((tx, i) => ({
+                _idx: i,
+                date: tx.fecha,
+                concept: tx.concepto,
+                amount: tx.monto,
+                type: tx.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
+                client: 'N/A',
+                categoria: tx.categoria || 'Otros',
+            }));
+
+            setShowPdfPassword(false);
+            setPendingPdfFile(null);
+            setPdfPassword('');
+            setPendingRows(rows);
+            setImportStep(2);
+            setIsParsing(false);
+            return;
         }
+
+        fd.append('file', file);
 
         try {
             const res = await fetch('/api/parse-statement', { method: 'POST', body: fd });
