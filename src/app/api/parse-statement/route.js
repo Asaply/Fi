@@ -20,9 +20,32 @@ function normalizarMeses(text) {
     );
 }
 
+// ── PDF encryption detection ──────────────────────────────────────────────────
+// Scans the raw PDF binary for the /Encrypt dictionary marker.
+// This avoids calling pdfjs-dist on encrypted PDFs (which throws unpredictable
+// errors on Vercel serverless before PasswordException is raised).
+
+function isPdfEncrypted(buffer) {
+    // Search in chunks to avoid converting the whole file to a string
+    const chunkSize = 4096;
+    const needle = Buffer.from('/Encrypt');
+    for (let i = 0; i < buffer.length - needle.length; i += chunkSize) {
+        const chunk = buffer.slice(i, Math.min(i + chunkSize + needle.length, buffer.length));
+        if (chunk.includes(needle)) return true;
+    }
+    return false;
+}
+
 // ── PDF text extraction (with password support) ───────────────────────────────
 
 async function extractPdfText(buffer, password) {
+    // Fast path: detect encryption before attempting to parse.
+    // On Vercel, pdfjs-dist throws "the string did not match the expected pattern"
+    // when hitting an encrypted PDF — before it can raise PasswordException.
+    if (!password && isPdfEncrypted(buffer)) {
+        throw Object.assign(new Error('PASSWORD_REQUIRED'), { code: 'PASSWORD_REQUIRED' });
+    }
+
     const options = { data: buffer };
     if (password) options.password = password;
 
@@ -32,9 +55,12 @@ async function extractPdfText(buffer, password) {
         return result.text;
     } catch (err) {
         if (err instanceof PasswordException || err.name === 'PasswordException') {
-            // If we supplied a password it was wrong; otherwise it's required
             const code = password ? 'INCORRECT_PASSWORD' : 'PASSWORD_REQUIRED';
             throw Object.assign(new Error(code), { code });
+        }
+        // Fallback: treat pdfjs pattern-mismatch errors on encrypted PDFs as wrong password
+        if (password && /did not match|pattern/i.test(err.message)) {
+            throw Object.assign(new Error('INCORRECT_PASSWORD'), { code: 'INCORRECT_PASSWORD' });
         }
         throw err;
     } finally {
