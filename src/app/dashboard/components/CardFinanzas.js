@@ -73,16 +73,16 @@ export default function CardFinanzas({ fechaInicio }) {
                 <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                         <div>
-                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Ingresos</p>
-                            <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--success)', margin: 0 }}>{formatMXN(totals.ingresos)}</p>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Ingresos</p>
+                            <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--success)', margin: 0, fontFamily: 'var(--font-mono)' }}>{formatMXN(totals.ingresos)}</p>
                         </div>
                         <div>
-                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Egresos</p>
-                            <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--danger)', margin: 0 }}>{formatMXN(totals.egresos)}</p>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Egresos</p>
+                            <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--danger)', margin: 0, fontFamily: 'var(--font-mono)' }}>{formatMXN(totals.egresos)}</p>
                         </div>
                         <div>
-                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Neto</p>
-                            <p style={{ fontSize: '18px', fontWeight: 700, color: neta >= 0 ? 'var(--success)' : 'var(--danger)', margin: 0 }}>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Neto</p>
+                            <p style={{ fontSize: '18px', fontWeight: 700, color: neta >= 0 ? 'var(--success)' : 'var(--danger)', margin: 0, fontFamily: 'var(--font-mono)' }}>
                                 {neta >= 0 ? '+' : ''}{formatMXN(neta)}
                             </p>
                         </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Globe, Clock, Camera, CheckCircle } from 'lucide-react';
 import { useTopbar } from '@/components/TopbarContext';
 import { supabase } from '@/lib/supabaseClient';
+import { toast } from 'sonner';
 import './Perfil.css';
 
 const PREFS_KEY = 'fnce_profile_prefs';
@@ -56,7 +57,7 @@ export default function PerfilPage() {
         if (!file) return;
         
         if (file.size > 5 * 1024 * 1024) {
-            alert('La imagen debe pesar menos de 5MB');
+            toast.error('La imagen debe pesar menos de 5MB.');
             return;
         }
 
@@ -157,7 +158,7 @@ export default function PerfilPage() {
                         
                         <h3 className="section-title">Seguridad</h3>
                         <div className="form-group" style={{ maxWidth: '300px' }}>
-                            <button className="btn-secondary" style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px' }} onClick={() => alert('Cambio de contraseña no disponible en esta versión.')}>
+                            <button className="btn-secondary" style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px' }} onClick={() => toast.info('El cambio de contraseña se enviará a tu correo.', { action: { label: 'Enviar', onClick: async () => { const { data: { user } } = await supabase.auth.getUser(); await supabase.auth.resetPasswordForEmail(user?.email); toast.success('Revisa tu correo.'); } } })}>
                                 <Lock size={16} /> Cambiar Contraseña
                             </button>
                         </div>

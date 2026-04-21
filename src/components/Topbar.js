@@ -27,6 +27,7 @@ export default function Topbar() {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
     const [supportMessage, setSupportMessage] = useState("");
+    const [userDisplay, setUserDisplay] = useState({ name: '', email: '' });
     const profileRef = useRef(null);
 
     useEffect(() => {
@@ -37,6 +38,15 @@ export default function Topbar() {
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
+                setUserDisplay({ name, email: user.email || '' });
+            }
+        });
     }, []);
 
     return (
@@ -62,8 +72,8 @@ export default function Topbar() {
                                 minWidth: '220px', boxShadow: 'var(--shadow-lg)', zIndex: 100
                             }}>
                                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
-                                    <div style={{ fontSize: '14px', fontWeight: 600 }}>Usuario FNCE</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>admin@fnce.app</div>
+                                    <div style={{ fontSize: '14px', fontWeight: 600 }}>{userDisplay.name}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{userDisplay.email}</div>
                                 </div>
 
                                 <div className="dropdown-item" onClick={() => { setIsProfileOpen(false); router.push('/perfil'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '14px', borderRadius: '4px' }}>

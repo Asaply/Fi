@@ -1,5 +1,6 @@
 import { Inter, Geist_Mono } from "next/font/google";
 import ConditionalShell from "@/components/ConditionalShell";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -14,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "FNCE",
-  description: "Internal agency management dashboard",
+  description: "Tus finanzas personales en un solo lugar.",
   manifest: "/manifest.json",
   icons: {
     icon: '/favicon.png',
@@ -36,11 +37,12 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className={`${inter.variable} ${geistMono.variable}`}>
         <div className="app-layout">
           <ConditionalShell>{children}</ConditionalShell>
         </div>
+        <Toaster position="bottom-right" theme="dark" richColors />
       </body>
     </html>
   );

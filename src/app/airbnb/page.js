@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BedDouble, CalendarDays, Wallet, TrendingUp, Users } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { supabase } from '@/lib/supabaseClient';
+import { toast } from 'sonner';
 import './Airbnb.css';
 
 export default function Airbnb() {
@@ -47,7 +48,7 @@ export default function Airbnb() {
         const { error } = await supabase.from('airbnb_reservations').delete().eq('id', id);
         if (error) {
             console.error("Error deleting", error);
-            alert("Hubo un error al eliminar.");
+            toast.error("Error al eliminar la reservación.");
         } else {
             setReservations(reservations.filter(r => r.id !== id));
             setSelectedBooking(null);
@@ -67,7 +68,7 @@ export default function Airbnb() {
         let finalDates = editForm.dates;
         if (editForm.checkIn && editForm.checkOut) {
             if (new Date(editForm.checkOut) <= new Date(editForm.checkIn)) {
-                alert("El Check-out debe ser posterior al Check-in.");
+                toast.error("El Check-out debe ser posterior al Check-in.");
                 return;
             }
             finalDates = `${editForm.checkIn} a ${editForm.checkOut}`;
@@ -83,7 +84,7 @@ export default function Airbnb() {
 
         if (error) {
             console.error("Error updating reservation", error);
-            alert("Hubo un error al actualizar.");
+            toast.error("Error al actualizar la reservación.");
         } else if (data && data[0]) {
             setReservations(reservations.map(r => r.id === editForm.id ? data[0] : r));
             setSelectedBooking(data[0]);
@@ -97,11 +98,11 @@ export default function Airbnb() {
 
     const handleSaveNew = async () => {
         if (!newForm.checkIn || !newForm.checkOut) {
-            alert("Las fechas de Check-in y Check-out son requeridas.");
+            toast.error("Las fechas de Check-in y Check-out son requeridas.");
             return;
         }
         if (new Date(newForm.checkOut) <= new Date(newForm.checkIn)) {
-            alert("El Check-out debe ser posterior al Check-in.");
+            toast.error("El Check-out debe ser posterior al Check-in.");
             return;
         }
 
@@ -119,7 +120,7 @@ export default function Airbnb() {
 
         if (error) {
             console.error("Error creating reservation", error);
-            alert("Hubo un error al crear la reservación.");
+            toast.error("Error al crear la reservación.");
         } else if (data && data[0]) {
             setReservations([data[0], ...reservations]);
         }

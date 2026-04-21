@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Bell, LayoutTemplate, Shield, Database, Download, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
+import { toast } from 'sonner';
 import './Configuracion.css';
 
 export default function ConfiguracionPage() {
@@ -27,19 +29,20 @@ export default function ConfiguracionPage() {
     const handleExport = async () => {
         setIsExporting(true);
         try {
-            // Emulate data fetching loop for 1 second UX
-            await new Promise(r => setTimeout(r, 1000));
-            
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Sin sesión');
+
+            const [{ data: transactions }, { data: clients }] = await Promise.all([
+                supabase.from('transactions').select('*').eq('user_id', user.id),
+                supabase.from('clients').select('*'),
+            ]);
+
             const data = {
                 exportDate: new Date().toISOString(),
                 version: '1.0.0',
-                userConfig: { ...notifState, ...modulesState },
+                transactions: transactions || [],
+                clients: clients || [],
                 dashboards: JSON.parse(localStorage.getItem('fnce_custom_dashboards') || '[]'),
-                mocked_transactions: [
-                    { id: 1, type: "Income", amount: 5000, date: "2023-10-01" },
-                    { id: 2, type: "Expense", amount: 1200, date: "2023-10-02" }
-                ],
-                mocked_clients: [{ name: "Acme Corp", status: "Active" }]
             };
 
             const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
@@ -49,8 +52,10 @@ export default function ConfiguracionPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            toast.success('Datos exportados correctamente.');
         } catch (e) {
             console.error(e);
+            toast.error('Error al exportar los datos.');
         } finally {
             setIsExporting(false);
         }

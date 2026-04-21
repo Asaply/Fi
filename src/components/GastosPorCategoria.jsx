@@ -49,11 +49,12 @@ export default function GastosPorCategoria({ startDate, endDate }) {
                 .from('transactions')
                 .select('categoria, amount, type, concept')
                 .eq('user_id', user?.id)
+                .in('type', ['Egreso', 'egreso', 'Gasto Personal', 'gasto personal'])
                 .gte('date', from)
                 .lte('date', to);
 
             const egresos = (rows || []).filter(t =>
-                ['egreso', 'gasto personal'].includes(t.type?.toLowerCase().trim())
+                ['egreso', 'gasto personal'].includes(t.type?.toLowerCase().trim() ?? '')
             );
 
             const totalAmt = egresos.reduce((s, t) => s + (Number(t.amount) || 0), 0);

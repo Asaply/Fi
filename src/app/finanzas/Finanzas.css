@@ -50,6 +50,7 @@
     font-size: 24px;
     font-weight: 700;
     letter-spacing: -0.5px;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
 }
 
@@ -152,7 +153,7 @@
 }
 
 .data-table tr:hover td {
-    background: var(--bg-surface);
+    background: var(--bg-card-hover);
 }
 
 .badge {

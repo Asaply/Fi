@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Plus, Calendar, Mail, Phone, Link as LinkIcon, Edit2, Trash2 } from "lucide-react";
 import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 import "./Clientes.css";
 
 const COLUMNS = [
@@ -142,7 +143,7 @@ export default function ClientesPage() {
             const { error } = await supabase.from('clients').delete().eq('id', itemToDelete);
             if (error) {
                 console.error("Error deleting client:", error);
-                alert("Hubo un error al eliminar el cliente.");
+                toast.error("Error al eliminar el cliente.");
             } else {
                 setClients(clients.filter(c => c.id !== itemToDelete));
             }
@@ -154,7 +155,7 @@ export default function ClientesPage() {
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.service) {
-            alert("Por favor ingresa al menos el nombre y el servicio.");
+            toast.error("Por favor ingresa al menos el nombre y el servicio.");
             return;
         }
 
@@ -172,14 +173,14 @@ export default function ClientesPage() {
 
         if (editingClient) {
             const { data, error } = await supabase.from('clients').update(payload).eq('id', editingClient.id).select();
-            if (error) { console.error("Error updating client:", error); alert("Hubo un error al actualizar."); }
+            if (error) { console.error("Error updating client:", error); toast.error("Error al actualizar el cliente."); }
             else if (data?.[0]) {
                 const formatted = { ...data[0], startDate: data[0].start_date, contactPerson: data[0].contact_person, total_price: data[0].total_price || 0 };
                 setClients(clients.map(c => c.id === editingClient.id ? formatted : c));
             }
         } else {
             const { data, error } = await supabase.from('clients').insert([payload]).select();
-            if (error) { console.error("Error creating client:", error); alert("Hubo un error al crear."); }
+            if (error) { console.error("Error creating client:", error); toast.error("Error al crear el cliente."); }
             else if (data?.[0]) {
                 const formatted = { ...data[0], startDate: data[0].start_date, contactPerson: data[0].contact_person, total_price: data[0].total_price || 0 };
                 setClients([formatted, ...clients]);

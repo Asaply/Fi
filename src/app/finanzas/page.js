@@ -13,6 +13,7 @@ import GastosPorCategoria from "@/components/GastosPorCategoria";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { FINANZAS_STEPS } from "@/components/onboarding/tourSteps";
+import { toast } from "sonner";
 import "./Finanzas.css";
 
 const MOCK_DATA = [
@@ -183,6 +184,10 @@ export default function FinanzasPage() {
     const [isImporting, setIsImporting] = useState(false);
     const [importResult, setImportResult] = useState(null); // { ok, count }
     const [isParsing, setIsParsing] = useState(false);
+    const [pendingPdfFile, setPendingPdfFile] = useState(null);
+    const [showPdfPassword, setShowPdfPassword] = useState(false);
+    const [pdfPassword, setPdfPassword] = useState('');
+    const [pdfPasswordError, setPdfPasswordError] = useState(false);
     const fileInputRef = useRef(null);
 
     const fetchData = async () => {
@@ -237,6 +242,50 @@ export default function FinanzasPage() {
     }, []);
 
     // ── Import handlers ──────────────────────────────────────────────────────
+    const parsePdfFile = async (file, password = '') => {
+        setIsParsing(true);
+        const fd = new FormData();
+        fd.append('file', file);
+        if (password) fd.append('password', password);
+        try {
+            const res = await fetch('/api/parse-statement', { method: 'POST', body: fd });
+            const json = await res.json();
+
+            if (json.code === 'PASSWORD_REQUIRED') {
+                setPendingPdfFile(file);
+                setShowPdfPassword(true);
+                setPdfPassword('');
+                setPdfPasswordError(false);
+                return;
+            }
+            if (json.code === 'INCORRECT_PASSWORD') {
+                setPdfPasswordError(true);
+                return;
+            }
+            if (json.error) throw new Error(json.error);
+
+            const rows = (json.transactions || []).map((tx, i) => ({
+                _idx: i,
+                date: tx.fecha,
+                concept: tx.concepto,
+                amount: tx.monto,
+                type: tx.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
+                client: 'N/A',
+                categoria: tx.categoria || 'Otros',
+            }));
+            setShowPdfPassword(false);
+            setPendingPdfFile(null);
+            setPdfPassword('');
+            setPendingRows(rows);
+            setImportStep(2);
+        } catch (err) {
+            console.error(err);
+            setImportResult({ ok: false, count: 0, errorMsg: err?.message || 'Error al procesar el archivo' });
+        } finally {
+            setIsParsing(false);
+        }
+    };
+
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -245,30 +294,10 @@ export default function FinanzasPage() {
         const isPDF = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
 
         if (isPDF) {
-            setIsParsing(true);
-            const fd = new FormData();
-            fd.append('file', file);
-            try {
-                const res = await fetch('/api/parse-statement', { method: 'POST', body: fd });
-                const json = await res.json();
-                if (json.error) throw new Error(json.error);
-                const rows = (json.transactions || []).map((tx, i) => ({
-                    _idx: i,
-                    date: tx.fecha,
-                    concept: tx.concepto,
-                    amount: tx.monto,
-                    type: tx.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
-                    client: 'N/A',
-                    categoria: tx.categoria || 'Otros', // displayed in preview only, not sent to Supabase
-                }));
-                setPendingRows(rows);
-                setImportStep(2);
-            } catch (err) {
-                console.error(err);
-                setImportResult({ ok: false, count: 0 });
-            } finally {
-                setIsParsing(false);
-            }
+            setShowPdfPassword(false);
+            setPdfPassword('');
+            setPdfPasswordError(false);
+            await parsePdfFile(file);
         } else {
             const reader = new FileReader();
             reader.onload = (ev) => {
@@ -334,6 +363,10 @@ export default function FinanzasPage() {
         setCsvMapping({ date: '', concept: '', amount: '', charge: '', credit: '' });
         setPendingRows([]);
         setImportResult(null);
+        setShowPdfPassword(false);
+        setPendingPdfFile(null);
+        setPdfPassword('');
+        setPdfPasswordError(false);
     };
 
     const [modalType, setModalType] = useState("Ingreso"); // Ingreso or Egreso
@@ -415,7 +448,7 @@ export default function FinanzasPage() {
 
             if (error) {
                 console.error("Error deleting transaction:", error);
-                alert("Hubo un error al eliminar la transacción.");
+                toast.error("Error al eliminar la transacción.");
             } else {
                 setTransactions(transactions.filter(t => t.id !== itemToDelete));
             }
@@ -426,7 +459,7 @@ export default function FinanzasPage() {
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         if (!formData.concept || !formData.amount || !formData.date) {
-            alert("Por favor completa los campos requeridos.");
+            toast.error("Por favor completa los campos requeridos.");
             return;
         }
 
@@ -450,7 +483,7 @@ export default function FinanzasPage() {
 
             if (error) {
                 console.error("Error updating transaction:", error);
-                alert("Hubo un error al actualizar.");
+                toast.error("Error al actualizar la transacción.");
             } else if (data?.[0]) {
                 const updated = transactions.map(t => t.id === editingTransaction.id ? data[0] : t);
                 setTransactions(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -463,7 +496,7 @@ export default function FinanzasPage() {
 
             if (error) {
                 console.error("Error creating transaction:", error);
-                alert("Hubo un error al crear.");
+                toast.error("Error al crear la transacción.");
             } else if (data?.[0]) {
                 const updated = [data[0], ...transactions];
                 setTransactions(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -642,7 +675,7 @@ export default function FinanzasPage() {
                             <span className="summary-title">Ganancia Neta</span>
                             <span className={`summary-amount ${gananciaNeta > 0 ? 'amount-positive' : gananciaNeta < 0 ? 'amount-negative' : ''}`}>{formatCurrency(gananciaNeta)}</span>
                         </div>
-                        <div className="card summary-card border-l-2 border-l-[#f59e0b]" style={{ position: 'relative' }}>
+                        <div className="card summary-card" style={{ position: 'relative', borderLeft: '2px solid var(--amber)' }}>
                             <button
                                 onClick={() => { setCustomCardForm({ label: userConfig.concepto_custom_label, monto: String(userConfig.concepto_custom_total) }); setIsEditingCustomCard(true); }}
                                 style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', lineHeight: 1 }}
@@ -898,15 +931,57 @@ export default function FinanzasPage() {
                             Sube tu estado de cuenta en PDF o CSV. Los PDF de BBVA, Banorte, Santander, HSBC, Citibanamex y Nu se procesan automáticamente.
                         </p>
 
-                        <button
-                            className="btn-secondary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', padding: '12px', border: '2px dashed var(--border-color)', borderRadius: '8px', width: '100%' }}
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isParsing}
-                        >
-                            <Upload size={18} />
-                            {isParsing ? 'Procesando PDF...' : csvHeaders.length > 0 ? `Archivo cargado (${csvRawRows.length} filas)` : 'Seleccionar archivo .pdf o .csv'}
-                        </button>
+                        {!showPdfPassword ? (
+                            <button
+                                className="btn-secondary"
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', padding: '12px', border: '2px dashed var(--border-color)', borderRadius: '8px', width: '100%' }}
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isParsing}
+                            >
+                                <Upload size={18} />
+                                {isParsing ? 'Procesando PDF...' : csvHeaders.length > 0 ? `Archivo cargado (${csvRawRows.length} filas)` : 'Seleccionar archivo .pdf o .csv'}
+                            </button>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '18px' }}>🔒</span>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>PDF protegido con contraseña</p>
+                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>Ingresa la contraseña para continuar</p>
+                                    </div>
+                                </div>
+                                <input
+                                    type="password"
+                                    className="select-filter"
+                                    style={{ width: '100%', fontSize: '14px', padding: '8px 12px', borderColor: pdfPasswordError ? 'var(--danger)' : undefined }}
+                                    placeholder="Contraseña del PDF"
+                                    value={pdfPassword}
+                                    onChange={e => { setPdfPassword(e.target.value); setPdfPasswordError(false); }}
+                                    onKeyDown={e => e.key === 'Enter' && !isParsing && pdfPassword && parsePdfFile(pendingPdfFile, pdfPassword)}
+                                    autoFocus
+                                />
+                                {pdfPasswordError && (
+                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--danger)' }}>Contraseña incorrecta. Intenta de nuevo.</p>
+                                )}
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        className="btn-secondary"
+                                        style={{ flex: 1 }}
+                                        onClick={() => { setShowPdfPassword(false); setPendingPdfFile(null); setPdfPassword(''); setPdfPasswordError(false); }}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        className="btn-primary"
+                                        style={{ flex: 1 }}
+                                        disabled={isParsing || !pdfPassword}
+                                        onClick={() => parsePdfFile(pendingPdfFile, pdfPassword)}
+                                    >
+                                        {isParsing ? 'Procesando...' : 'Continuar'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {csvHeaders.length > 0 && (
                             <>

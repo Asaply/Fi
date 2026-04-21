@@ -65,7 +65,7 @@
 .nav-item.active {
     background: var(--bg-surface);
     color: var(--text-primary);
-    border-left-color: var(--accent);
+    border-left-color: var(--purple-light);
 }
 
 .sidebar-section {
@@ -117,13 +117,14 @@
         justify-content: center;
         text-align: center;
         border-left: none;
-        border-bottom: 2px solid transparent;
+        border-top: 2px solid transparent;
         border-radius: 0;
+        position: relative;
     }
 
     .nav-item.active {
         border-left: none;
-        border-bottom-color: var(--purple-light);
+        border-top-color: var(--purple-light);
         color: var(--purple-light);
         background: transparent;
     }

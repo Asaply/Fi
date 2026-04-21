@@ -11,6 +11,7 @@ import { getFilter, setFilter } from '@/lib/filterMemory';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { TRADING_STEPS } from '@/components/onboarding/tourSteps';
+import { toast } from 'sonner';
 
 const PERIODOS_TRAD = [
     { value: '1m', label: 'Este mes' },
@@ -127,7 +128,7 @@ export default function TradingPage() {
 
             if (error) {
                 console.error("Error deleting trade:", error);
-                alert("Hubo un error al eliminar el trade. ¿Creaste la tabla trading_operations en Supabase?");
+                toast.error("Error al eliminar el trade.");
             } else {
                 setOperations(operations.filter(t => t.id !== itemToDelete));
             }
@@ -169,7 +170,7 @@ export default function TradingPage() {
 
             if (error) {
                 console.error("Error updating trade:", error);
-                alert("Hubo un error al actualizar. Verifica que la tabla exista.");
+                toast.error("Error al actualizar el trade.");
             } else if (data?.[0]) {
                 const updated = operations.map(t => t.id === editingTrade.id ? data[0] : t);
                 setOperations(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -182,7 +183,7 @@ export default function TradingPage() {
 
             if (error) {
                 console.error("Error creating trade:", error);
-                alert("Hubo un error al crear. ¿Creaste la tabla trading_operations en Supabase con las columnas correctas?");
+                toast.error("Error al crear el trade.");
             } else if (data?.[0]) {
                 const updated = [data[0], ...operations];
                 setOperations(updated.sort((a, b) => new Date(b.date) - new Date(a.date)));

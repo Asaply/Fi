@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Plus, UserPlus, Mail, Phone, Clock, Target, ArrowRight, Trash2 } from "lucide-react";
 import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 import "./Prospectos.css";
 
 const STAGES = [
@@ -147,7 +148,7 @@ export default function ProspectosPage() {
 
             if (error) {
                 console.error("Error deleting prospect:", error);
-                alert("Hubo un error al eliminar el prospecto.");
+                toast.error("Error al eliminar el prospecto.");
             } else {
                 setProspects(prospects.filter(p => p.id !== itemToDelete));
             }
@@ -159,7 +160,7 @@ export default function ProspectosPage() {
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.company) {
-            alert("Por favor ingresa al menos el nombre y la empresa.");
+            toast.error("Por favor ingresa al menos el nombre y la empresa.");
             return;
         }
 
@@ -184,7 +185,7 @@ export default function ProspectosPage() {
 
             if (error) {
                 console.error("Error updating prospect:", error);
-                alert("Hubo un error al actualizar.");
+                toast.error("Error al actualizar el prospecto.");
             } else if (data?.[0]) {
                 setProspects(prospects.map(p => p.id === editingProspect.id ? data[0] : p));
             }
@@ -196,7 +197,7 @@ export default function ProspectosPage() {
 
             if (error) {
                 console.error("Error creating prospect:", error);
-                alert("Hubo un error al crear.");
+                toast.error("Error al crear el prospecto.");
             } else if (data?.[0]) {
                 setProspects([data[0], ...prospects]);
             }
@@ -361,7 +362,7 @@ export default function ProspectosPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
                         {editingProspect ? (
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <button type="button" className="convert-btn" onClick={() => alert("Simulando conversión a Cliente...")}>
+                                <button type="button" className="convert-btn" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
                                     <UserPlus size={16} />
                                     Convertir a Cliente
                                 </button>
