@@ -264,7 +264,10 @@ export default function FinanzasPage() {
 
             const loadingTask = pdfjsLib.getDocument({
                 data: buffer,
-                password: password || undefined
+                password: password || undefined,
+                cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                cMapPacked: true,
+                standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
             });
             const pdfDoc = await loadingTask.promise;
             
