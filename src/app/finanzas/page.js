@@ -289,11 +289,15 @@ export default function FinanzasPage() {
             }
         }
 
-        if (rawText) {
+        if (password) {
+            if (!rawText || rawText.trim() === '') {
+                toast.error("El PDF fue desencriptado, pero no se encontró texto extraíble en él.");
+                setIsParsing(false);
+                return;
+            }
             fd.append('rawText', rawText);
         } else {
             fd.append('file', file);
-            if (password) fd.append('password', password); // Esto ya no debería ejecutarse con archivos encriptados
         }
 
         try {
