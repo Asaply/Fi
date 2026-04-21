@@ -64,25 +64,41 @@ function parsearNu(texto) {
 }
 
 // ── Generic parser
-const CARGO_RE  = /CARGO|RETIRO|D[EÉ]BITO|COMPRA/i;
-const ABONO_RE  = /ABONO|DEP[OÓ]SITO|TRANSFERENCIA\s+RECIBIDA|CR[EÉ]DITO/i;
-const DATE_SLASH = /\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/;
-const DATE_DASH  = /\b(\d{1,2})-(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)-(\d{4})\b/i;
+const CARGO_RE  = /CARGO|RETIRO|D[EÉ]BITO|COMPRA|PAGO\sA|SPEI\sENVIADO|ENV[IÍ]O|COMISI[OÓ]N/i;
+const ABONO_RE  = /ABONO|DEP[OÓ]SITO|TRANSFERENCIA\s+RECIBIDA|CR[EÉ]DITO|SPEI\sRECIBIDO|RECIBISTE/i;
+const DATE_SLASH = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/;
+const DATE_DASH  = /\b(\d{1,2})[\s\-]+(?:de\s+)?(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)(?:\.?\s+de)?[\s\-]*(\d{2,4})?\b/i;
 const DATE_ISO   = /\b(\d{4})-(\d{2})-(\d{2})\b/;
-const AMOUNT_RE  = /(?:^|[\s,])([-+]?\d{1,3}(?:,\d{3})*(?:\.\d{2}))/g;
+
+// Permite importes como "$1,000", "-$ 10.00", "500.00"
+const AMOUNT_RE  = /(?:^|[\s,])([-+]?\s*\$?\s*\d{1,3}(?:,\d{3})*(?:\.\d{2}))/g;
 
 function parseFecha(linea) {
     let m;
+    const currentYear = new Date().getFullYear();
+
     if ((m = linea.match(DATE_SLASH))) {
-        const y = m[3].length === 2 ? `20${m[3]}` : m[3];
-        return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+        const y = m[3] ? (m[3].length === 2 ? `20${m[3]}` : m[3]) : currentYear;
+        return { 
+            fecha: `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`,
+            endIdx: m.index + m[0].length 
+        };
     }
     if ((m = linea.match(DATE_DASH))) {
         const mo = MESES[m[2].toUpperCase()];
-        if (mo) return `${m[3]}-${mo}-${m[1].padStart(2, '0')}`;
+        const y = m[3] ? (m[3].length === 2 ? `20${m[3]}` : m[3]) : currentYear;
+        if (mo) {
+            return { 
+                fecha: `${y}-${mo}-${m[1].padStart(2, '0')}`,
+                endIdx: m.index + m[0].length 
+            };
+        }
     }
     if ((m = linea.match(DATE_ISO))) {
-        return `${m[1]}-${m[2]}-${m[3]}`;
+        return { 
+            fecha: `${m[1]}-${m[2]}-${m[3]}`,
+            endIdx: m.index + m[0].length 
+        };
     }
     return null;
 }
@@ -92,27 +108,31 @@ function parseMexicanStatement(text) {
     for (const line of text.split('\n')) {
         const trimmed = line.trim();
         if (trimmed.length < 8) continue;
-        const fecha = parseFecha(trimmed);
-        if (!fecha) continue;
+        const dateMatch = parseFecha(trimmed);
+        if (!dateMatch) continue;
+        const { fecha, endIdx: dateEnd } = dateMatch;
 
         const amounts = [];
         AMOUNT_RE.lastIndex = 0;
         let m;
+        let firstAmtIdx = -1;
         while ((m = AMOUNT_RE.exec(trimmed)) !== null) {
-            const v = parseFloat(m[1].replace(/,/g, ''));
+            if (firstAmtIdx === -1) firstAmtIdx = m.index;
+            const v = parseFloat(m[1].replace(/[,$\s]/g, ''));
             if (!isNaN(v) && Math.abs(v) >= 1) amounts.push(v);
         }
         if (amounts.length === 0) continue;
 
         const rawMonto = amounts[amounts.length - 1];
         const monto = Math.abs(rawMonto);
+        
         let tipo = 'egreso';
         if (ABONO_RE.test(trimmed)) tipo = 'ingreso';
         else if (CARGO_RE.test(trimmed)) tipo = 'egreso';
-        else if (rawMonto > 0 && amounts.length > 1) tipo = 'ingreso';
+        else if (rawMonto < 0) tipo = 'egreso';
+        else if (rawMonto > 0 && amounts.length > 1) tipo = 'ingreso'; // Asume que si es positivo y hay múltiples, es abono (Banorte/BBVA)
+        else if (rawMonto > 0 && amounts.length === 1) tipo = 'ingreso';
 
-        const dateEnd = trimmed.search(/\d{1,2}[\/\-]\d/) + (trimmed.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)?.[0]?.length || 0);
-        const firstAmtIdx = trimmed.search(/\s\d{1,3}(?:,\d{3})*\.\d{2}/);
         const conceptRaw = trimmed.substring(dateEnd, firstAmtIdx > dateEnd ? firstAmtIdx : undefined);
         const concepto = conceptRaw.replace(/\s+/g, ' ').trim() || trimmed.substring(0, 60);
 
