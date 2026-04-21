@@ -43,11 +43,26 @@ function buildNuTx(day, mon, year, concepto, montoStr) {
 
 function parsearNu(texto) {
     const transacciones = [];
+    let lastTx = null;
+    let lineasSigue = 0;
+
     for (const linea of texto.split('\n')) {
-        const m = linea.trim().match(NU_LINE_RE);
-        if (!m) continue;
+        const trimmed = linea.trim();
+        const m = trimmed.match(NU_LINE_RE);
+        if (!m) {
+            if (lastTx && lineasSigue < 2 && trimmed.length > 3 && !/p[aá]gina|hoja|saldo|total/i.test(trimmed)) {
+                lastTx.concepto += ' ' + trimmed;
+                lastTx.categoria = inferirCategoria(lastTx.concepto);
+                lineasSigue++;
+            }
+            continue;
+        }
         const tx = buildNuTx(m[1], m[2], m[3], m[4], m[5]);
-        if (tx) transacciones.push(tx);
+        if (tx) {
+            transacciones.push(tx);
+            lastTx = tx;
+            lineasSigue = 0;
+        }
     }
     if (transacciones.length < 3) {
         const seen = new Set();
@@ -105,11 +120,23 @@ function parseFecha(linea) {
 
 function parseMexicanStatement(text) {
     const transactions = [];
+    let lastTx = null;
+    let lineasSigue = 0;
+
     for (const line of text.split('\n')) {
         const trimmed = line.trim();
-        if (trimmed.length < 8) continue;
+        if (trimmed.length < 5) continue;
+        
         const dateMatch = parseFecha(trimmed);
-        if (!dateMatch) continue;
+        if (!dateMatch) {
+            // Línea huérfana sin fecha: se asume que es el detalle/concepto de la transacción anterior
+            if (lastTx && lineasSigue < 4 && !/p[aá]gina|hoja|saldo|total|rfc/i.test(trimmed)) {
+                lastTx.concepto += ' ' + trimmed;
+                lastTx.categoria = inferirCategoria(lastTx.concepto);
+                lineasSigue++;
+            }
+            continue;
+        }
         const { fecha, endIdx: dateEnd } = dateMatch;
 
         const amounts = [];
@@ -137,7 +164,10 @@ function parseMexicanStatement(text) {
         const concepto = conceptRaw.replace(/\s+/g, ' ').trim() || trimmed.substring(0, 60);
 
         if (monto > 0) {
-            transactions.push({ fecha, concepto, monto, tipo, categoria: inferirCategoria(concepto) });
+            const tx = { fecha, concepto, monto, tipo, categoria: inferirCategoria(concepto) };
+            transactions.push(tx);
+            lastTx = tx;
+            lineasSigue = 0;
         }
     }
     return transactions;
