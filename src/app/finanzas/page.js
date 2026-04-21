@@ -245,148 +245,99 @@ export default function FinanzasPage() {
     // ── Import handlers ──────────────────────────────────────────────────────
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
-        const fd = new FormData();
-        
         let rawText = null;
-        if (password) {
-            try {
-                // Cargamos pdf.js por CDN puro para evitar problemas de Webpack en build/Vercel
-                if (!window.pdfjsLib) {
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                }
-
-                const pdfjsLib = window.pdfjsLib;
-                const buffer = await file.arrayBuffer();
-
-                const loadingTask = pdfjsLib.getDocument({
-                    data: buffer,
-                    password: password
+        try {
+            // Cargamos pdf.js por CDN puro para evitar problemas de Webpack en build/Vercel
+            if (!window.pdfjsLib) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
                 });
-                const pdfDoc = await loadingTask.promise;
-                rawText = '';
-                for (let i = 1; i <= pdfDoc.numPages; i++) {
-                    const page = await pdfDoc.getPage(i);
-                    const content = await page.getTextContent();
-                    
-                    // Filtramos items vacíos
-                    const items = content.items.filter(item => item.str.trim().length > 0);
-                    
-                    // Ordenamos: Top-to-Bottom (Y descendente), Left-to-Right (X ascendente)
-                    items.sort((a, b) => {
-                        const yA = a.transform[5];
-                        const yB = b.transform[5];
-                        if (Math.abs(yA - yB) > 5) return yB - yA;
-                        return a.transform[4] - b.transform[4];
-                    });
-
-                    let lastY;
-                    let pageText = '';
-                    for (const item of items) {
-                        const y = item.transform[5];
-                        if (lastY !== undefined && Math.abs(lastY - y) > 5) {
-                            pageText += '\n';
-                        } else if (lastY !== undefined) {
-                            pageText += ' ';
-                        }
-                        pageText += item.str.trim();
-                        lastY = y;
-                    }
-                    rawText += pageText + '\n\n';
-                }
-            } catch (err) {
-                console.warn("Client PDF error:", err);
-                if (err.name === 'PasswordException' || err.message?.includes('Password') || err.message?.includes('contraseña')) {
-                    setPdfPasswordError(true);
-                    setIsParsing(false);
-                    return;
-                }
-                // Si la extracción falla por cualquier otro motivo, abortamos para no tumbar el servidor en Vercel
-                toast.error("No se pudo descifrar el documento en este dispositivo.");
-                setIsParsing(false);
-                return;
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
             }
-        }
 
-        if (password) {
-            if (!rawText || rawText.trim() === '') {
-                toast.error("El PDF fue desencriptado, pero no se encontró texto extraíble en él.");
-                setIsParsing(false);
-                return;
-            }
-            // Parseamos 100% locamente en el cliente para evitar el crash del server de Vercel
-            const transacciones = parseStatementText(rawText);
+            const pdfjsLib = window.pdfjsLib;
+            const buffer = await file.arrayBuffer();
+
+            const loadingTask = pdfjsLib.getDocument({
+                data: buffer,
+                password: password || undefined
+            });
+            const pdfDoc = await loadingTask.promise;
             
-            if (transacciones.length === 0) {
-                toast.error("No se encontraron transacciones. Formato no reconocido.");
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const content = await page.getTextContent();
+                
+                const items = content.items.filter(item => item.str.trim().length > 0);
+                
+                items.sort((a, b) => {
+                    const yA = a.transform[5];
+                    const yB = b.transform[5];
+                    if (Math.abs(yA - yB) > 5) return yB - yA;
+                    return a.transform[4] - b.transform[4];
+                });
+
+                let lastY;
+                let pageText = '';
+                for (const item of items) {
+                    const y = item.transform[5];
+                    if (lastY !== undefined && Math.abs(lastY - y) > 5) {
+                        pageText += '\n';
+                    } else if (lastY !== undefined) {
+                        pageText += ' ';
+                    }
+                    pageText += item.str.trim();
+                    lastY = y;
+                }
+                rawText = (rawText || '') + pageText + '\n\n';
+            }
+        } catch (err) {
+            console.warn("Client PDF error:", err);
+            if (err.name === 'PasswordException' || err.message?.includes('Password') || err.message?.includes('contraseña')) {
+                setPdfPasswordError(true);
                 setIsParsing(false);
                 return;
             }
-
-            const rows = transacciones.map((tx, i) => ({
-                _idx: i,
-                date: tx.fecha,
-                concept: tx.concepto,
-                amount: tx.monto,
-                type: tx.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
-                client: 'N/A',
-                categoria: tx.categoria || 'Otros',
-            }));
-
-            setShowPdfPassword(false);
-            setPendingPdfFile(null);
-            setPdfPassword('');
-            setPendingRows(rows);
-            setImportStep(2);
+            toast.error("No se pudo descifrar o leer el documento en este dispositivo.");
             setIsParsing(false);
             return;
         }
 
-        fd.append('file', file);
-
-        try {
-            const res = await fetch('/api/parse-statement', { method: 'POST', body: fd });
-            const json = await res.json();
-
-            if (json.code === 'PASSWORD_REQUIRED') {
-                setPendingPdfFile(file);
-                setShowPdfPassword(true);
-                setPdfPassword('');
-                setPdfPasswordError(false);
-                return;
-            }
-            if (json.code === 'INCORRECT_PASSWORD') {
-                setPdfPasswordError(true);
-                return;
-            }
-            if (json.error) throw new Error(json.error);
-
-            const rows = (json.transactions || []).map((tx, i) => ({
-                _idx: i,
-                date: tx.fecha,
-                concept: tx.concepto,
-                amount: tx.monto,
-                type: tx.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
-                client: 'N/A',
-                categoria: tx.categoria || 'Otros',
-            }));
-            setShowPdfPassword(false);
-            setPendingPdfFile(null);
-            setPdfPassword('');
-            setPendingRows(rows);
-            setImportStep(2);
-        } catch (err) {
-            console.error(err);
-            setImportResult({ ok: false, count: 0, errorMsg: err?.message || 'Error al procesar el archivo' });
-        } finally {
+        if (!rawText || rawText.trim() === '') {
+            toast.error("El PDF fue procesado, pero no se encontró texto extraíble en él.");
             setIsParsing(false);
+            return;
         }
+
+        // Parseamos 100% locamente en el cliente
+        const transacciones = parseStatementText(rawText);
+        
+        if (transacciones.length === 0) {
+            toast.error("No se encontraron transacciones. Formato no reconocido.");
+            setIsParsing(false);
+            return;
+        }
+
+        const rows = transacciones.map((tx, i) => ({
+            _idx: i,
+            date: tx.fecha,
+            concept: tx.concepto,
+            amount: tx.monto,
+            type: tx.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
+            client: 'N/A',
+            categoria: tx.categoria || 'Otros',
+        }));
+
+        setShowPdfPassword(false);
+        setPendingPdfFile(null);
+        setPdfPassword('');
+        setPendingRows(rows);
+        setImportStep(2);
+        setIsParsing(false);
     };
 
     const handleFileUpload = async (e) => {
