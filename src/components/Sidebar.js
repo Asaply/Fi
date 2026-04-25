@@ -34,7 +34,7 @@ export default function Sidebar() {
                 </Link>
                 <Link href="/dashboard" className={`nav-item ${pathname === '/dashboard' ? 'active' : ''}`}>
                     <LayoutDashboard size={20} />
-                    <span>Dashboard</span>
+                    <span>Resumen</span>
                 </Link>
 
                 {showBeta && (

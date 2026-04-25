@@ -120,10 +120,7 @@
     gap: 24px;
 }
 
-.p-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.portfolio-header {
     margin-bottom: 8px;
 }
 
@@ -143,8 +140,8 @@
 .metric-card {
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
-    padding: 20px;
-    border-radius: var(--radius-md);
+    padding: 24px;
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -174,7 +171,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     padding: 24px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     min-height: 300px;
 }
 
@@ -187,7 +184,7 @@
 .health-card {
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 24px;
 }
 
@@ -340,7 +337,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     padding: 16px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -568,20 +565,20 @@
     .risk-metrics-row { grid-template-columns: repeat(2, 1fr); }
 
     /* Header — stack vertical */
-    .p-header {
+    .portfolio-header {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 12px !important;
     }
 
     /* Controls row (filters + button) — wrap and take full width */
-    .p-header > div:last-child {
+    .portfolio-header > div:last-child {
         flex-wrap: wrap !important;
         width: 100%;
         gap: 8px !important;
     }
 
-    .p-header .period-filter-wrap {
+    .portfolio-header .period-filter-wrap {
         overflow-x: auto;
         max-width: calc(100vw - 48px);
     }

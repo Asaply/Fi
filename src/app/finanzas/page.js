@@ -15,7 +15,9 @@ import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { FINANZAS_STEPS } from "@/components/onboarding/tourSteps";
 import { toast } from "sonner";
+import BankConnectWidget from "@/components/BankConnectWidget";
 import "./Finanzas.css";
+import { API_BASE } from "@/lib/apiBase";
 
 const MOCK_DATA = [
     { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },
@@ -243,6 +245,42 @@ export default function FinanzasPage() {
     }, []);
 
     // ── Import handlers ──────────────────────────────────────────────────────
+    const handleBankConnected = async (link, institution) => {
+        setIsLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/belvo/transactions`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ link_id: link })
+            });
+            const data = await res.json();
+            
+            if (data.success && data.transactions && data.transactions.length > 0) {
+                const { data: { user } } = await supabase.auth.getUser();
+                const toInsert = data.transactions.map(tx => ({
+                    ...tx,
+                    user_id: user.id
+                }));
+                // Usamos upsert o insert para evitar duplicados en schema (requiere UNIQUE constraint external_id)
+                const { error } = await supabase.from('transactions').insert(toInsert);
+                if (error) {
+                    console.error("DB Error:", error);
+                    toast.error("Las transacciones fueron bajadas pero hubo un problema guardándolas.");
+                } else {
+                    toast.success(`Se importaron ${data.count} transacciones de ${institution.name}.`);
+                    fetchData();
+                }
+            } else {
+                toast.info("No se encontraron transacciones nuevas en esta cuenta.");
+            }
+        } catch (error) {
+            console.error("Belvo logic error:", error);
+            toast.error("Ocurrió un error sincronizando con el banco.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
         let rawText = null;
@@ -690,6 +728,24 @@ export default function FinanzasPage() {
 
     const monthIngresos = monthTx.filter(t => t.type?.toLowerCase().trim() === 'ingreso').reduce((s, t) => s + (Number(t.amount) || 0), 0);
     const monthEgresos  = monthTx.filter(t => t.type?.toLowerCase().trim() === 'egreso').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const monthNeta = monthIngresos - monthEgresos;
+
+    const prevMonthNeta = useMemo(() => {
+        const prev = new Date(currentYear, currentMonth - 2, 1);
+        const prevStart = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-01`;
+        const prevEnd = new Date(currentYear, currentMonth - 1, 0).toISOString().split('T')[0];
+        const prevTx = transactions.filter(t => t.date >= prevStart && t.date <= prevEnd);
+        const prevIn = prevTx.filter(t => t.type?.toLowerCase().trim() === 'ingreso').reduce((s, t) => s + Number(t.amount || 0), 0);
+        const prevOut = prevTx.filter(t => t.type?.toLowerCase().trim() === 'egreso').reduce((s, t) => s + Number(t.amount || 0), 0);
+        return prevIn - prevOut;
+    }, [transactions, currentMonth, currentYear]);
+
+    const heroBadgePct = prevMonthNeta !== 0
+        ? ((monthNeta - prevMonthNeta) / Math.abs(prevMonthNeta)) * 100
+        : null;
+
+    const heroAbs = formatCurrency(Math.abs(gananciaNeta));
+    const [heroInt, heroDec] = heroAbs.split('.');
 
     return (
         <div className="page-container">
@@ -699,35 +755,103 @@ export default function FinanzasPage() {
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />
-            <div className="finanzas-header page-header">
-                <div className="finanzas-header-title">
-                    <h1 className="page-title">Finanzas</h1>
+            {/* Hero Balance */}
+            {isLoading ? (
+                <div className="fin-hero">
+                    <div className="skeleton" style={{ height: '14px', width: '90px', margin: '0 auto 12px', borderRadius: '4px' }} />
+                    <div className="skeleton" style={{ height: '52px', width: '220px', margin: '0 auto 12px', borderRadius: '8px' }} />
+                    <div className="skeleton" style={{ height: '24px', width: '120px', margin: '0 auto', borderRadius: '20px' }} />
                 </div>
-                <div className="page-actions">
-                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
-                    <button className="btn-action-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
-                        <Upload size={14} /> Importar CSV
+            ) : (
+                <div className="fin-hero">
+                    <p className="fin-hero-label">Balance Total</p>
+                    <div className="fin-hero-amount">
+                        <span className={`fin-hero-int${gananciaNeta < 0 ? ' negative' : ''}`}>{heroInt}</span>
+                        <span className="fin-hero-dec">.{heroDec}</span>
+                    </div>
+                    {heroBadgePct !== null && (
+                        <div className={`fin-hero-badge ${heroBadgePct >= 0 ? 'positive' : 'negative'}`}>
+                            {heroBadgePct >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                            {Math.abs(heroBadgePct).toFixed(1)}% vs mes anterior
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 2x2 Metric grid */}
+            {isLoading ? (
+                <div className="fin-metric-grid">
+                    <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
+                </div>
+            ) : (
+                <div className="fin-metric-grid">
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
+                            <ArrowUpRight size={14} />
+                        </div>
+                        <span className="fin-metric-label">Ingresos</span>
+                        <span className="fin-metric-value amount-positive">{formatCurrency(totalIngresos)}</span>
+                        {tradingIncome > 0 && <span className="fin-metric-hint">Trading +{formatCurrency(tradingIncome)}</span>}
+                    </div>
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171' }}>
+                            <ArrowDownRight size={14} />
+                        </div>
+                        <span className="fin-metric-label">Egresos</span>
+                        <span className="fin-metric-value amount-negative">{formatCurrency(totalEgresos)}</span>
+                    </div>
+                    <div className="fin-metric-card" style={{ position: 'relative' }}>
+                        <button
+                            className="fin-metric-edit"
+                            onClick={() => { setCustomCardForm({ label: userConfig.concepto_custom_label, monto: String(userConfig.concepto_custom_total) }); setIsEditingCustomCard(true); }}
+                            title="Editar"
+                        >
+                            <Edit2 size={12} />
+                        </button>
+                        <div className="fin-metric-icon" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
+                            <Wallet size={14} />
+                        </div>
+                        <span className="fin-metric-label">{userConfig.concepto_custom_label}</span>
+                        <span className="fin-metric-value" style={{ color: '#f59e0b' }}>{formatCurrency(userConfig.concepto_custom_total)}</span>
+                    </div>
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}>
+                            <TrendingUp size={14} />
+                        </div>
+                        <span className="fin-metric-label">Portafolio</span>
+                        <span className="fin-metric-value" style={{ color: '#60a5fa' }}>{formatCurrency(totalPortfolioInvested)}</span>
+                        <span className="fin-metric-hint">Costo base</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="fin-actions-col">
+                <BankConnectWidget onSuccess={handleBankConnected} />
+                <div className="fin-actions-row">
+                    <button className="btn-cta-secondary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
+                        <Plus size={14} /> Nueva
                     </button>
-                    <button className="btn-action-primary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
-                        <Plus size={14} /> Nueva Transacción
+                    <button className="btn-cta-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
+                        <Upload size={14} /> Importar
                     </button>
+                    <button className="btn-cta-tertiary" onClick={resetTour} title="¿Cómo usar esta sección?">?</button>
                 </div>
             </div>
 
-            {/* Period selector */}
-            <div className="period-filter-wrap" style={{ marginBottom: '20px' }} data-tour="filtros-periodo">
+            {/* Period filter */}
+            <div className="period-filter-wrap fin-period-filter" data-tour="filtros-periodo">
                 {PERIODOS_FIN.map(p => (
                     <button
                         key={p.value}
                         className={`period-filter-btn ${periodo === p.value ? 'active' : ''}`}
-                        style={{ border: 'none', cursor: 'pointer' }}
                         onClick={() => { setFilter('finanzas', p.value); setPeriodo(p.value); }}
                     >{p.label}</button>
                 ))}
             </div>
 
-            {/* Filter tabs */}
-            <div data-tour="filtros-tipo" style={{ display: 'flex', gap: '4px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {/* Type filter tabs */}
+            <div data-tour="filtros-tipo" className="fin-type-tabs">
                 {[
                     { value: 'Todos', label: 'Todos', count: filteredTx.length },
                     { value: 'Ingreso', label: 'Ingreso', count: filteredTx.filter(t=>t.type==='Ingreso').length },
@@ -737,87 +861,19 @@ export default function FinanzasPage() {
                 ].map(tab => (
                     <button
                         key={tab.value}
+                        className={`period-filter-btn ${activeFilter === tab.value ? 'active' : ''}`}
                         onClick={() => setActiveFilter(tab.value)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '5px',
-                            padding: '6px 12px', borderRadius: '7px', border: 'none',
-                            fontSize: '12px', fontWeight: 500, cursor: 'pointer',
-                            whiteSpace: 'nowrap', transition: 'all 0.15s',
-                            background: activeFilter === tab.value ? 'var(--bg-elevated)' : 'transparent',
-                            color: activeFilter === tab.value ? 'var(--text-primary)' : 'var(--text-secondary)',
-                            outline: activeFilter === tab.value ? '1px solid var(--bg-border)' : 'none',
-                        }}
                     >
                         {tab.label}
                         {tab.count > 0 && (
-                            <span style={{ background: 'var(--bg-border)', color: 'var(--text-secondary)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>
-                                {tab.count}
-                            </span>
+                            <span className="fin-tab-count">{tab.count}</span>
                         )}
                     </button>
                 ))}
             </div>
 
-            {isLoading ? (
-                <div className="summary-cards" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-                    <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
-                </div>
-            ) : (
+            {!isLoading && (
                 <>
-                    <div className="summary-cards" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-                        <div className="card summary-card">
-                            <span className="summary-title">Total Ingresos</span>
-                            <span className="summary-amount amount-positive">{formatCurrency(totalIngresos)}</span>
-                            {tradingIncome > 0 && (
-                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                    Transacciones {formatCurrency(totalIngresosBase)} · Trading {formatCurrency(tradingIncome)}
-                                </span>
-                            )}
-                        </div>
-                        <div className="card summary-card">
-                            <span className="summary-title">Total Egresos</span>
-                            <span className="summary-amount amount-negative">{formatCurrency(totalEgresos)}</span>
-                        </div>
-                        <div className="card summary-card">
-                            <span className="summary-title">Ganancia Neta</span>
-                            <span className={`summary-amount ${gananciaNeta > 0 ? 'amount-positive' : gananciaNeta < 0 ? 'amount-negative' : ''}`}>{formatCurrency(gananciaNeta)}</span>
-                        </div>
-                        <div className="card summary-card" style={{ position: 'relative', borderLeft: '2px solid var(--amber)' }}>
-                            <button
-                                onClick={() => { setCustomCardForm({ label: userConfig.concepto_custom_label, monto: String(userConfig.concepto_custom_total) }); setIsEditingCustomCard(true); }}
-                                style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', lineHeight: 1 }}
-                                title="Editar"
-                            >
-                                <Edit2 size={13} />
-                            </button>
-                            <span className="summary-title" style={{ color: '#f59e0b' }}>{userConfig.concepto_custom_label}</span>
-                            <span className="summary-amount" style={{ color: "#f59e0b" }}>{formatCurrency(userConfig.concepto_custom_total)}</span>
-                        </div>
-                        <div className="card summary-card" style={{ borderLeft: "3px solid #3b82f6" }}>
-                            <span className="summary-title">Portafolio (invertido)</span>
-                            <span className="summary-amount" style={{ color: '#3b82f6' }}>{formatCurrency(totalPortfolioInvested)}</span>
-                            <span style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "4px" }}>Costo base · ver Portfolio</span>
-                        </div>
-                    </div>
-
-                    <div className="card chart-section">
-                        <span className="summary-title">Resumen (Últimos 3 meses)</span>
-                        <div className="chart-placeholder">
-                            {chartData.map((data, index) => {
-                                const incomeHeight = Math.max((data.ingresos / maxAmount) * 180, data.ingresos > 0 ? 10 : 0);
-                                const expenseHeight = Math.max((data.egresos / maxAmount) * 180, data.egresos > 0 ? 10 : 0);
-                                const invHeight = Math.max((data.inversiones / maxAmount) * 180, data.inversiones > 0 ? 10 : 0);
-                                return (
-                                    <div className="bar-group" key={index} title={`${data.label}: Ingresos ${formatCurrency(data.ingresos)} | Egresos ${formatCurrency(data.egresos)} | Inversiones ${formatCurrency(data.inversiones)}`}>
-                                        <div className="bar bar-income" style={{ height: `${incomeHeight}px` }}></div>
-                                        <div className="bar bar-expense" style={{ height: `${expenseHeight}px` }}></div>
-                                        <div className="bar bar-investment" style={{ height: `${invHeight}px` }}></div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
                     <GastosPorCategoria startDate={fechaInicio} />
 
                     <PLCalendar transactions={transactions} />

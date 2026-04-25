@@ -57,16 +57,15 @@ export default function DashboardPage() {
             {/* Page header */}
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Dashboard</h1>
+                    <h1 className="page-title">Resumen</h1>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
-                    <div className="period-filter-wrap" style={{ display: 'inline-flex' }} data-tour="time-filter">
+                <div className="page-actions">
+                    <button onClick={resetTour} className="btn-tour" title="¿Cómo usar esta sección?">?</button>
+                    <div className="period-filter-wrap" data-tour="time-filter">
                         {PERIODOS.map(p => (
                             <button
                                 key={p.value}
                                 className={`period-filter-btn ${periodo === p.value ? 'active' : ''}`}
-                                style={{ border: 'none', cursor: 'pointer' }}
                                 onClick={() => { setFilter('dashboard', p.value); setPeriodo(p.value); }}
                             >
                                 {p.label}

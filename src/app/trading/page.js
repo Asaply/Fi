@@ -220,18 +220,17 @@ export default function TradingPage() {
                     <h1 className="page-title">Trading</h1>
                 </div>
                 <div className="page-actions">
-                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
-                    <div className="period-filter-wrap" style={{ display: 'inline-flex' }}>
+                    <button onClick={resetTour} className="btn-tour" title="¿Cómo usar esta sección?">?</button>
+                    <div className="period-filter-wrap">
                         {PERIODOS_TRAD.map(p => (
                             <button
                                 key={p.value}
                                 className={`period-filter-btn ${periodo === p.value ? 'active' : ''}`}
-                                style={{ border: 'none', cursor: 'pointer' }}
                                 onClick={() => { setFilter('trading', p.value); setPeriodo(p.value); }}
                             >{p.label}</button>
                         ))}
                     </div>
-                    <button className="btn-action-primary" data-tour="btn-nuevo-trade" onClick={() => openModal()}>
+                    <button className="btn-cta-primary" data-tour="btn-nuevo-trade" onClick={() => openModal()}>
                         <Plus size={15} />
                         <span>Nuevo Trade</span>
                     </button>

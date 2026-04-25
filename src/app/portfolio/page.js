@@ -7,6 +7,7 @@ import Modal from "@/components/Modal";
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";
 import "./Portfolio.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
+import { API_BASE } from '@/lib/apiBase';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { PORTFOLIO_STEPS } from '@/components/onboarding/tourSteps';
@@ -65,8 +66,8 @@ const fetchPrices = async (assets) => {
     await Promise.all(uniqueAssets.map(async (asset) => {
         let endpoint = '';
         const cat = asset.category.toLowerCase();
-        if (cat === 'crypto') endpoint = `/api/crypto?ticker=${asset.ticker}&range=7d`;
-        else if (['stock', 'etf', 'bond', 'bono', 'acciones'].includes(cat)) endpoint = `/api/price?ticker=${asset.ticker}&range=7d`;
+        if (cat === 'crypto') endpoint = `${API_BASE}/api/crypto?ticker=${asset.ticker}&range=7d`;
+        else if (['stock', 'etf', 'bond', 'bono', 'acciones'].includes(cat)) endpoint = `${API_BASE}/api/price?ticker=${asset.ticker}&range=7d`;
         if (!endpoint) return;
         try {
             const res = await fetch(endpoint);
@@ -296,13 +297,13 @@ export default function PortfolioHealth() {
             />
 
             {/* HEADER */}
-            <div className="p-header">
+            <div className="portfolio-header page-header">
                 <div>
-                    <h1 className="page-title" style={{ marginBottom: '4px' }}>Portfolio Health</h1>
+                    <h1 className="page-title">Portfolio Health</h1>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button onClick={resetTour} style={{ background: 'none', border: '1px solid #222222', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '50%', lineHeight: 1, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="¿Cómo usar esta sección?">?</button>
-                    <div className="period-filter-wrap" style={{ display: 'inline-flex' }}>
+                <div className="page-actions">
+                    <button onClick={resetTour} className="btn-tour" title="¿Cómo usar esta sección?">?</button>
+                    <div className="period-filter-wrap">
                         {[
                             { label: 'Este mes', range: '1M' },
                             { label: '3 meses', range: '3M' },
@@ -311,11 +312,10 @@ export default function PortfolioHealth() {
                         ].map(p => (
                             <button key={p.range} onClick={() => { setFilter('portfolio', p.range); setActiveRange(p.range); }}
                                 className={`period-filter-btn ${activeRange === p.range ? 'active' : ''}`}
-                                style={{ border: 'none', cursor: 'pointer' }}
                             >{p.label}</button>
                         ))}
                     </div>
-                    <button className="btn-action-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
+                    <button className="btn-cta-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
                         <Plus size={16} /> Agregar Activo
                     </button>
                 </div>

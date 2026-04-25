@@ -61,11 +61,11 @@
   /* ─── Border ─────────────────────────────────────────────── */
   --border-color:      var(--bg-border);
 
-  /* ─── Radius ─────────────────────────────────────────────── */
-  --radius-sm:         8px;
-  --radius-md:         14px;
-  --radius-lg:         20px;
-  --radius-xl:         20px;
+  /* ─── Radius (Extremos para ANZ Plus) ───────────────────────── */
+  --radius-sm:         14px;
+  --radius-md:         24px;
+  --radius-lg:         36px;
+  --radius-xl:         48px;
 
   /* ─── Shadow ─────────────────────────────────────────────── */
   --shadow-sm:         0 1px 3px rgba(0,0,0,0.4);
@@ -77,8 +77,8 @@
 
   /* ─── Card tokens ────────────────────────────────────────── */
   --card-padding:      1.5rem;
-  --card-radius:       12px;
-  --card-border:       1px solid var(--bg-border);
+  --card-radius:       var(--radius-lg);
+  --card-border:       none;
 }
 
 html,
@@ -123,20 +123,23 @@ button {
 .card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 20px;
-  border: 1px solid var(--border);
-  transition: border-color 0.2s ease;
+  padding: 24px;
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .card:hover {
-  border-color: #2e2e2e;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
 }
 
 .fnce-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 20px;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 /* ── Layout shell ──────────────────────────────────────────────── */
@@ -352,10 +355,7 @@ button {
 }
 
 .page-subtitle {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  margin-top: 0.25rem;
-  margin-bottom: 0;
+  display: none;
 }
 
 .page-actions {
@@ -363,6 +363,83 @@ button {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.btn-tour {
+  background: none;
+  border: 1px solid #222222;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 50%;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── CTA hierarchy ─────────────────────────────────────────────── */
+.btn-cta-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 24px;
+  background: var(--purple-light);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: 0.3px;
+}
+.btn-cta-primary:hover { opacity: 0.88; }
+.btn-cta-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* In header context — shrink to content */
+.page-actions .btn-cta-primary { width: auto; }
+
+.btn-cta-secondary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 14px;
+  background: #1c1c1e;
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-cta-secondary:hover { background: #242428; }
+
+.btn-cta-tertiary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 14px;
+  background: #1c1c1e;
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-cta-tertiary:hover {
+  background: #242428;
+  color: var(--text-secondary);
 }
 
 /* ── Time filter group ─────────────────────────────────────────── */
@@ -403,11 +480,13 @@ button {
 }
 
 .data-table tbody tr {
-  border-bottom: 1px solid var(--bg-border);
+  border-bottom: 1px solid var(--bg-border-subtle);
+  transition: all 0.2s;
 }
 
 .data-table tbody tr:hover {
-  background: var(--bg-surface-hover);
+  background: #141416;
+  transform: scale(1.002);
 }
 
 .table-header-cell {
@@ -418,11 +497,13 @@ button {
 }
 
 .table-row {
-  border-bottom: 1px solid var(--bg-border);
+  border-bottom: 1px solid var(--bg-border-subtle);
+  transition: all 0.2s;
 }
 
 .table-row:hover {
-  background: var(--bg-surface-hover);
+  background: #141416;
+  transform: scale(1.002);
 }
 
 .category-chip {
@@ -439,68 +520,73 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #7c3aed;
+  background: var(--purple, #7c3aed);
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  padding: 10px 16px;
+  padding: 12px 24px;
   border-radius: 9999px;
   border: none;
   cursor: pointer;
-  transition: background 0.15s;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+  transition: all 0.15s;
 }
 
 .btn-action-primary:hover {
-  background: #8b5cf6;
+  background: var(--purple-light, #8b5cf6);
+  transform: translateY(-1px);
 }
 
 .btn-action-secondary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
-  color: #888888;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 10px 16px;
+  background: #1c1c1c;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 24px;
   border-radius: 9999px;
-  border: 1px solid #222222;
+  border: 1px solid var(--bg-border-subtle);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: all 0.15s;
 }
 
 .btn-action-secondary:hover {
-  color: #f5f5f5;
+  background: #252525;
 }
 
 /* ── Period filter pills ────────────────────────────────────────── */
 .period-filter-wrap {
   display: inline-flex;
   gap: 4px;
-  background: #1a1a1a;
-  padding: 4px;
+  background: #1c1c1e;
+  padding: 6px;
   border-radius: 9999px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  border: none;
 }
 
 .period-filter-btn {
-  padding: 6px 16px;
+  padding: 10px 24px;
   border-radius: 9999px;
   font-size: 14px;
-  font-weight: 500;
-  color: #555555;
+  font-weight: 600;
+  color: var(--text-secondary);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .period-filter-btn:hover {
-  color: #888888;
+  color: var(--text-primary);
 }
 
 .period-filter-btn.active {
-  background: #111111;
-  color: #f5f5f5;
+  background: #2c2c2e;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 /* ── 3-column metrics grid ──────────────────────────────────────── */
@@ -584,7 +670,8 @@ button {
   }
 
   .card {
-    padding: 16px !important;
+    padding: 24px;
+    border: none;
   }
 
   .table-responsive {
@@ -597,7 +684,7 @@ button {
   }
 
   .summary-amount {
-    font-size: 22px !important;
+    font-size: 32px;
   }
 
   .donut-layout {

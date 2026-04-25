@@ -41,17 +41,18 @@
 .summary-title {
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-tertiary, #666);
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 1.5px;
 }
 
 .summary-amount {
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+    margin-top: 4px;
 }
 
 .amount-positive {
@@ -136,7 +137,7 @@
 
 .data-table th,
 .data-table td {
-    padding: 11px 14px;
+    padding: 16px 14px;
     border-bottom: 1px solid var(--bg-border-subtle);
 }
 
@@ -150,6 +151,7 @@
 
 .data-table td {
     font-size: 13px;
+    color: var(--text-primary);
 }
 
 .data-table tr:hover td {
@@ -301,4 +303,176 @@
     .analysis-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* ── Wallet Hero ──────────────────────────────────────────────────── */
+.fin-hero {
+    text-align: center;
+    padding: 24px 16px 16px;
+    margin-bottom: 16px;
+}
+
+.fin-hero-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 0 0 10px;
+}
+
+.fin-hero-amount {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1px;
+    margin-bottom: 12px;
+}
+
+.fin-hero-int {
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1.5px;
+    color: var(--text-primary);
+}
+
+.fin-hero-int.negative { color: var(--danger); }
+
+.fin-hero-dec {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    margin-bottom: 3px;
+}
+
+.fin-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.fin-hero-badge.positive {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+}
+
+.fin-hero-badge.negative {
+    background: rgba(248, 113, 113, 0.12);
+    color: #f87171;
+}
+
+/* ── Metric 2x2 grid ─────────────────────────────────────────────── */
+.fin-metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.fin-metric-card {
+    background: var(--bg-card);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.fin-metric-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2px;
+}
+
+.fin-metric-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fin-metric-value {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+
+.fin-metric-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 1px;
+}
+
+.fin-metric-edit {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 2px;
+    line-height: 1;
+}
+
+.fin-metric-edit:hover { color: var(--text-secondary); }
+
+/* ── Action column + row ─────────────────────────────────────────── */
+.fin-actions-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.fin-actions-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+/* ── Period + type filters ───────────────────────────────────────── */
+.fin-period-filter { margin-bottom: 12px; }
+
+.fin-type-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.fin-tab-count {
+    background: var(--bg-border);
+    color: var(--text-secondary);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-left: 2px;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .fin-hero-int { font-size: 2.25rem; }
+    .fin-hero-dec { font-size: 1.25rem; }
+    .fin-metric-grid { gap: 8px; }
+    .fin-metric-card { padding: 12px; }
+    .fin-metric-value { font-size: 14px; }
 }
