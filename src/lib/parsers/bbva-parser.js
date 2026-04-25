@@ -1,10 +1,18 @@
-import { inferirCategoria } from '../categorias';
+import { categorize } from './categories';
 
 // BBVA — Tarjeta de Crédito Oro
-// Formato: FECHA OP.  FECHA CARGO  DESCRIPCIÓN  MONTO
-// "23-mar-2026  23-mar-2026  MERPAGO*CARNESMAJOS   + $258.65"
-// "13-abr-2026  13-abr-2026  PGO SPEI RECIB/...    - $115,000.00"
-// TDC: "+" = cargo, "-" = pago/abono
+// REAL FORMAT (line-by-line from pdf-parse):
+//   08-abr-2026
+//   09-abr-2026
+//   NETFLIX COM 1
+//   + $329.00
+//
+//   13-abr-2026
+//   13-abr-2026
+//   PGO SPEI RECIB/0187338163
+//   - $115,000.00
+//
+// SIGN RULE (TDC): "+" = cargo al usuario (EGRESO), "-" = pago a la deuda (INGRESO).
 
 const MONTH_MAP = {
     ene: '01', feb: '02', mar: '03', abr: '04',
@@ -12,65 +20,115 @@ const MONTH_MAP = {
     sep: '09', oct: '10', nov: '11', dic: '12',
 };
 
-function bbvaDateToISO(dateStr) {
-    // "23-mar-2026" → "2026-03-23"
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    const day = parts[0].padStart(2, '0');
-    const month = MONTH_MAP[parts[1].toLowerCase()] ?? '01';
-    const year = parts[2];
-    return `${year}-${month}-${day}`;
+function bbvaDateToISO(d) {
+    const p = d.split('-');
+    if (p.length !== 3) return d;
+    const month = MONTH_MAP[p[1].toLowerCase()] ?? '01';
+    return `${p[2]}-${month}-${p[0].padStart(2, '0')}`;
 }
 
-function parseAmount(str) {
-    if (!str) return 0;
-    return parseFloat(str.replace(/,/g, '')) || 0;
+function parseAmt(s) {
+    if (!s) return 0;
+    return parseFloat(s.replace(/[$,\s]/g, '')) || 0;
 }
+
+const DATE_RE = /^\d{2}-(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)-\d{4}$/i;
+const AMOUNT_LINE_RE = /^([+-])\s*\$\s*([\d,]+\.\d{2})$/;
+const DOLLAR_AMOUNT_RE = /^\$\s*([\d,]+\.\d{2})$/;
 
 export function parseBBVA(text) {
-    const accountMatch = text.match(/N[úu]mero de tarjeta[:\s]+([\d\s]+)/i);
-    const lastFour = (accountMatch?.[1] ?? '').replace(/\s/g, '').slice(-4);
+    const cardMatch = text.match(/N[uú]mero de tarjeta[:\s]+([\d\s]+)/i);
+    const lastFour = (cardMatch?.[1] ?? '').replace(/\s/g, '').slice(-4);
     const accountNumber = lastFour ? `****${lastFour}` : '';
 
     const periodMatch = text.match(/Periodo[:\s]+([\d\w-]+)\s+al\s+([\d\w-]+)/i);
     const period = periodMatch ? `${periodMatch[1]} - ${periodMatch[2]}` : '';
 
-    const transactions = [];
+    const openingBalance = parseAmt(text.match(/Adeudo del periodo anterior\s+\$?([\d,]+\.\d{2})/i)?.[1]);
+    const closingBalance  = parseAmt(text.match(/PAGO PARA NO GENERAR INTERESES\S?\s+\$?([\d,]+\.\d{2})/i)?.[1]);
+    const totalDeposits   = parseAmt(text.match(/Pagos y abonos\s+-\s+\$?([\d,]+\.\d{2})/i)?.[1]);
+    const totalCharges    = parseAmt(text.match(/Cargos regulares \(no a meses\)\s+\+\s+\$?([\d,]+\.\d{2})/i)?.[1]);
 
-    // Sección principal: FECHA OP  FECHA CARGO  DESCRIPCION  [+/-] $MONTO
-    const txRegex = /^(\d{2}-(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)-\d{4})\s+(\d{2}-(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)-\d{4})\s+(.{5,80}?)\s+([+-])\s+\$\s*([\d,]+\.\d{2})/gim;
-    let match;
-    while ((match = txRegex.exec(text)) !== null) {
-        const isoDate = bbvaDateToISO(match[1]);
-        const description = match[3].trim().replace(/\s+/g, ' ').slice(0, 100);
-        const sign = match[4];
-        const monto = parseAmount(match[5]);
-        // TDC BBVA: "+" = cargo al cliente (egreso), "-" = pago/abono (ingreso)
-        const isPayment = sign === '-' || /PGO SPEI|PAGO/i.test(description);
+    const transactions = [];
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // Main section: parse line by line
+    // fecha_op → [fecha_cargo] → description(s) → [+/-] $monto
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i];
+        if (!DATE_RE.test(line)) { i++; continue; }
+
+        const fechaOp = line;
+        i++;
+
+        // Optional: second date = fecha de cargo
+        if (i < lines.length && DATE_RE.test(lines[i])) i++;
+
+        // Description lines until amount
+        const descLines = [];
+        while (i < lines.length && !AMOUNT_LINE_RE.test(lines[i])) {
+            if (DATE_RE.test(lines[i])) break; // next transaction
+            descLines.push(lines[i]);
+            i++;
+        }
+
+        if (i >= lines.length) break;
+
+        const montoMatch = AMOUNT_LINE_RE.exec(lines[i]);
+        if (!montoMatch) continue;
+        i++;
+
+        const sign = montoMatch[1];   // "+" or "-"
+        const monto = parseAmt(montoMatch[2]);
+        const description = descLines.join(' ').replace(/\s+/g, ' ').trim().slice(0, 150);
+
+        if (monto === 0 || description.length < 2) continue;
+
+        // BBVA TDC: "+" = cargo (egreso para el usuario), "-" = pago (ingreso)
+        const tipo = sign === '-' ? 'ingreso' : 'egreso';
+
         transactions.push({
-            fecha: isoDate,
+            fecha: bbvaDateToISO(fechaOp),
             concepto: description,
             monto,
-            tipo: isPayment ? 'ingreso' : 'egreso',
-            categoria: inferirCategoria(description),
+            tipo,
+            categoria: categorize(description, tipo),
             banco: 'BBVA',
         });
     }
 
-    // Sección compras a meses
-    const mesesRegex = /^(\d{2}-(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)-\d{4})\s+(.{5,80}?)\s+\$\s*([\d,]+\.\d{2})\s+\$\s*([\d,]+\.\d{2})\s+\$\s*([\d,]+\.\d{2})\s+(\d+)\s+de\s+(\d+)\s+0\.00%/gim;
-    while ((match = mesesRegex.exec(text)) !== null) {
-        const isoDate = bbvaDateToISO(match[1]);
-        const description = `[${match[6]}/${match[7]} meses] ${match[2].trim()}`;
-        const monthlyPayment = parseAmount(match[5]);
-        transactions.push({
-            fecha: isoDate,
-            concepto: description,
-            monto: monthlyPayment,
-            tipo: 'egreso',
-            categoria: inferirCategoria(match[2]),
-            banco: 'BBVA',
-        });
+    // MSI section: COMPRAS Y CARGOS DIFERIDOS A MESES
+    const mesesStart = text.indexOf('COMPRAS Y CARGOS DIFERIDOS A MESES');
+    if (mesesStart >= 0) {
+        const mesesText = text.slice(mesesStart);
+        const mesesLines = mesesText.split('\n').map(l => l.trim()).filter(Boolean);
+        let j = 0;
+        while (j < mesesLines.length) {
+            if (!DATE_RE.test(mesesLines[j])) { j++; continue; }
+            const fecha = mesesLines[j]; j++;
+            const desc = mesesLines[j] ?? ''; j++;
+            // Collect $ amounts
+            const amounts = [];
+            while (j < mesesLines.length && DOLLAR_AMOUNT_RE.test(mesesLines[j])) {
+                amounts.push(parseAmt(mesesLines[j]));
+                j++;
+            }
+            // Skip "N de M" and "0.00%"
+            while (j < mesesLines.length && (mesesLines[j].match(/^\d+ de \d+$/) || mesesLines[j] === '0.00%')) j++;
+
+            const pagoRequerido = amounts[2] ?? amounts[0] ?? 0;
+            if (pagoRequerido > 0) {
+                transactions.push({
+                    fecha: bbvaDateToISO(fecha),
+                    concepto: `[MSI] ${desc.trim()}`,
+                    monto: pagoRequerido,
+                    tipo: 'egreso',
+                    categoria: categorize(desc, 'egreso'),
+                    banco: 'BBVA',
+                });
+            }
+        }
     }
 
     return { banco: 'BBVA', cuenta: accountNumber, periodo: period, transactions };

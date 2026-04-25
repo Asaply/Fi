@@ -4,19 +4,54 @@ import { parseSantander } from './santander-parser';
 import { parseBanamex } from './banamex-parser';
 import { parseBBVA } from './bbva-parser';
 
-export function detectBank(text) {
-    if (/NOMINA FLEXIBLE HSBC|HSBC/i.test(text)) return 'hsbc';
-    if (/BANCO INBURSA|Cuentaefe|INBURSA/i.test(text)) return 'inbursa';
-    if (/Banco Santander|SUPER NOMINA.*Santander|ESTADO DE CUENTA N[ÓO]MINA.*Santander/i.test(text)) return 'santander';
-    if (/Banamex|MiCuenta|BANCO NACIONAL DE M[ÉE]XICO/i.test(text)) return 'banamex';
-    if (/BBVA|TARJETA ORO BBVA|BBVA MEXICO/i.test(text)) return 'bbva';
+/**
+ * Detect bank from PDF text (or filename as fallback for image PDFs).
+ * @param {string} text
+ * @param {string} [filename]
+ * @returns {'hsbc'|'inbursa'|'santander'|'banamex'|'bbva'|null}
+ */
+export function detectBank(text, filename = '') {
+    const f = filename.toLowerCase();
+
+    // By text content
+    if (/nomina flexible hsbc|hsbc.*estado de cuenta/i.test(text)) return 'hsbc';
+    if (/banco inbursa|cuentaefe|inbursa.*estado de cuenta/i.test(text)) return 'inbursa';
+    if (/banco santander|super nomina.*santander|estado de cuenta n[oó]mina.*santander/i.test(text)) return 'santander';
+    if (/banamex|micuenta|banco nacional de m[eé]xico/i.test(text)) return 'banamex';
+    if (/bbva mexico|tarjeta oro bbva|bbva.*estado de cuenta/i.test(text)) return 'bbva';
+
+    // Fallback to filename when text is empty/unreadable (image PDF)
+    if (!text.trim() || text.trim().length < 50) {
+        if (f.includes('hsbc')) return 'hsbc';
+        if (f.includes('inbursa')) return 'inbursa';
+        if (f.includes('santander')) return 'santander';
+        if (f.includes('banamex')) return 'banamex';
+        if (f.includes('bbva')) return 'bbva';
+    }
+
     return null;
 }
 
-// Returns { banco, cuenta, periodo, transactions }
-// where transactions use the existing format: { fecha, concepto, monto, tipo, categoria }
-export function parseBankStatement(text) {
-    const bank = detectBank(text);
+/**
+ * Detect if a PDF needs OCR (image-based or corrupted encoding).
+ * HSBC: many non-ASCII chars (Õ Ö Ô É Á) = corrupted encoding.
+ * @param {string} text
+ * @returns {boolean}
+ */
+export function needsOCR(text) {
+    if (!text || text.trim().length < 100) return true;
+    const nonAsciiRatio = (text.match(/[^\x00-\x7F]/g) ?? []).length / text.length;
+    return nonAsciiRatio > 0.3;
+}
+
+/**
+ * Parse a bank statement. Returns { banco, cuenta, periodo, transactions }
+ * where transactions use format: { fecha, concepto, monto, tipo, categoria }
+ * @param {string} text
+ * @param {string} [filename]
+ */
+export function parseBankStatement(text, filename = '') {
+    const bank = detectBank(text, filename);
     if (!bank) return null;
 
     switch (bank) {
