@@ -25,6 +25,7 @@ export default function ReporteMensual({ startDate, endDate }) {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
+            try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) { setLoading(false); return; }
 
@@ -93,6 +94,7 @@ export default function ReporteMensual({ startDate, endDate }) {
 
             setChartData(result);
             setTotales({ ingresos: totalIngresos, egresos: totalEgresos });
+            } catch (_) {}
             setLoading(false);
         };
         load();

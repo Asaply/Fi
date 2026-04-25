@@ -36,13 +36,15 @@ export default function Recordatorios() {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data } = await supabase
-                .from('reminders')
-                .select('*')
-                .eq('user_id', user?.id)
-                .order('date', { ascending: true });
-            setReminders(data || []);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                const { data } = await supabase
+                    .from('reminders')
+                    .select('*')
+                    .eq('user_id', user?.id)
+                    .order('date', { ascending: true });
+                setReminders(data || []);
+            } catch (_) {}
             setLoading(false);
         };
         load();

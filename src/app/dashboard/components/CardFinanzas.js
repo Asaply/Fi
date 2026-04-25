@@ -12,6 +12,7 @@ export default function CardFinanzas({ fechaInicio }) {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
+            try {
             const from = fechaInicio || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
             const { data } = await supabase
@@ -54,6 +55,7 @@ export default function CardFinanzas({ fechaInicio }) {
                 .reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
             setTotals({ ingresos: totalIngresos, egresos: totalEgresos });
+            } catch (_) {}
             setLoading(false);
         };
         load();

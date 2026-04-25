@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
+import { withCors, corsOptions } from '@/lib/cors';
+
+export async function OPTIONS(request) {
+    return corsOptions(request);
+}
 
 export async function GET(request) {
+    const origin = request.headers.get('origin') || '';
     const { searchParams } = new URL(request.url);
     const ticker = searchParams.get('ticker');
-    const range = searchParams.get('range'); // e.g. 1y, 7d
+    const range = searchParams.get('range');
 
     if (!ticker) {
-        return NextResponse.json({ error: 'Ticker is required' }, { status: 400 });
+        return withCors(NextResponse.json({ error: 'Ticker is required' }, { status: 400 }), origin);
     }
 
     try {
@@ -31,17 +37,15 @@ export async function GET(request) {
         });
 
         if (!response.ok) {
-            return NextResponse.json({ error: 'Failed to fetch' }, { status: response.status });
+            return withCors(NextResponse.json({ error: 'Failed to fetch' }, { status: response.status }), origin);
         }
 
         const data = await response.json();
         const result = data?.chart?.result?.[0];
-        
+
         if (result) {
             const price = result.meta.regularMarketPrice;
-            
             let history = [];
-            // If timestamps and close prices exist
             if (range && result.timestamp && result.indicators?.quote?.[0]?.close) {
                 const closes = result.indicators.quote[0].close;
                 history = result.timestamp.map((t, i) => ({
@@ -49,13 +53,12 @@ export async function GET(request) {
                     price: closes[i] || null
                 })).filter(h => h.price !== null);
             }
-
-            return NextResponse.json({ price, history });
+            return withCors(NextResponse.json({ price, history }), origin);
         }
 
-        return NextResponse.json({ error: 'Data not found' }, { status: 404 });
+        return withCors(NextResponse.json({ error: 'Data not found' }, { status: 404 }), origin);
     } catch (error) {
         console.error('Yahoo Finance Proxy Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return withCors(NextResponse.json({ error: 'Internal Server Error' }, { status: 500 }), origin);
     }
 }

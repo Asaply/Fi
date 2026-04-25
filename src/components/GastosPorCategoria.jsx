@@ -41,6 +41,7 @@ export default function GastosPorCategoria({ startDate, endDate }) {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
+            try {
             const { data: { user } } = await supabase.auth.getUser();
             const from = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
             const to = endDate || new Date().toISOString().split('T')[0];
@@ -71,6 +72,7 @@ export default function GastosPorCategoria({ startDate, endDate }) {
 
             setData(chartData);
             setTotal(totalAmt);
+            } catch (_) {}
             setLoading(false);
         };
         load();

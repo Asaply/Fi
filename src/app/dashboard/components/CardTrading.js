@@ -10,6 +10,7 @@ export default function CardTrading({ fechaInicio }) {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
+            try {
             const from = fechaInicio || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
             const { data } = await supabase
@@ -29,6 +30,7 @@ export default function CardTrading({ fechaInicio }) {
                 : null;
 
             setStats({ totalPnL, winRate, wins: wins.length, losses: losses.length, periodCount: rows.length, bestTrade });
+            } catch (_) {}
             setLoading(false);
         };
         load();

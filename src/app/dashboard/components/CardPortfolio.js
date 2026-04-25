@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/lib/supabaseClient';
 import { formatUSD } from '@/lib/formatCurrency';
+import { API_BASE } from '@/lib/apiBase';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
@@ -11,9 +12,9 @@ async function fetchPrices(assets) {
     await Promise.all(assets.map(async (asset) => {
         const cat = asset.category?.toLowerCase();
         let endpoint = '';
-        if (cat === 'crypto') endpoint = `/api/crypto?ticker=${asset.ticker}&range=7d`;
+        if (cat === 'crypto') endpoint = `${API_BASE}/api/crypto?ticker=${asset.ticker}&range=7d`;
         else if (['stock', 'etf', 'bono', 'bond', 'reit', 'fondo/mutual fund', 'otro'].includes(cat))
-            endpoint = `/api/price?ticker=${asset.ticker}&range=7d`;
+            endpoint = `${API_BASE}/api/price?ticker=${asset.ticker}&range=7d`;
         if (!endpoint) return;
         try {
             const res = await fetch(endpoint);
@@ -32,6 +33,7 @@ export default function CardPortfolio() {
 
     useEffect(() => {
         const load = async () => {
+            try {
             const { data: assets } = await supabase.from('portfolio_assets').select('*');
             if (!assets || assets.length === 0) { setLoading(false); return; }
 
@@ -60,6 +62,7 @@ export default function CardPortfolio() {
                 .slice(0, 3);
 
             setPortfolio({ totalValue, totalCost, byCategory, topAssets });
+            } catch (_) {}
             setLoading(false);
         };
         load();

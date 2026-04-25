@@ -40,3 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 server.log
+
+# testing fixtures
+__local_pdfs__
+__tests__/fixtures/*
+!__tests__/fixtures/.gitkeep
