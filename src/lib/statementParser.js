@@ -1,4 +1,5 @@
 import { inferirCategoria } from './categorias';
+import { parseBankStatement } from './parsers/bank-statement-parser';
 
 const MESES = {
     ENE: '01', FEB: '02', MAR: '03', ABR: '04', MAY: '05', JUN: '06',
@@ -175,6 +176,16 @@ function parseMexicanStatement(text) {
 
 export function parseStatementText(rawText) {
     const text = normalizarMeses(rawText);
+
+    // Try bank-specific parser first
+    try {
+        const bankResult = parseBankStatement(text);
+        if (bankResult && bankResult.transactions.length > 0) {
+            return bankResult.transactions;
+        }
+    } catch (_) {}
+
+    // Fallback to generic parsers
     const nuResult      = parsearNu(text);
     const genericResult = parseMexicanStatement(text);
     const transactions  = nuResult.length >= genericResult.length ? nuResult : genericResult;
