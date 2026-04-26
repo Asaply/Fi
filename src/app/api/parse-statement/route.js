@@ -1,242 +1,65 @@
 import { NextResponse } from 'next/server';
-import { PDFParse, PasswordException } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
+import Anthropic from '@anthropic-ai/sdk';
 
-// ── Shared month map ──────────────────────────────────────────────────────────
+const client = new Anthropic();
 
-const MESES = {
-    ENE: '01', FEB: '02', MAR: '03', ABR: '04', MAY: '05', JUN: '06',
-    JUL: '07', AGO: '08', SEP: '09', OCT: '10', NOV: '11', DIC: '12',
-};
+const PARSER_PROMPT = `Eres un parser de estados de cuenta bancarios mexicanos.
+Extrae TODOS los movimientos del siguiente texto de estado de cuenta.
 
-function normalizarMeses(text) {
-    const map = {
-        'ene': 'ENE', 'feb': 'FEB', 'mar': 'MAR', 'abr': 'ABR',
-        'may': 'MAY', 'jun': 'JUN', 'jul': 'JUL', 'ago': 'AGO',
-        'sep': 'SEP', 'oct': 'OCT', 'nov': 'NOV', 'dic': 'DIC',
-        'jan': 'ENE', 'apr': 'ABR', 'aug': 'AGO',
-    };
-    return text.replace(/\b(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic|jan|apr|aug)\.?\b/gi,
-        (m) => map[m.replace('.', '').toLowerCase()] || m
-    );
+Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin markdown:
+{
+  "banco": "nombre del banco",
+  "periodo": { "inicio": "YYYY-MM-DD", "fin": "YYYY-MM-DD" },
+  "cuenta": "últimos 4 dígitos",
+  "tipo_cuenta": "debito|credito",
+  "movimientos": [
+    {
+      "fecha": "YYYY-MM-DD",
+      "descripcion": "descripción limpia",
+      "monto": 0.00,
+      "tipo": "cargo|abono",
+      "saldo": 0.00
+    }
+  ]
 }
 
-// ── PDF encryption detection ──────────────────────────────────────────────────
-// Scans the raw PDF binary for the /Encrypt dictionary marker.
-// This avoids calling pdfjs-dist on encrypted PDFs (which throws unpredictable
-// errors on Vercel serverless before PasswordException is raised).
+REGLAS:
+- cargo = retiro/gasto/compra (monto positivo)
+- abono = depósito/ingreso/pago recibido (monto positivo)
+- Excluye: saldo inicial, saldo final, totales, encabezados de columna
+- HSBC: excluye transferencias internas "Cajita"
+- BBVA TDC: pagos recibidos = abono, compras = cargo
+- Santander: RETIRO = cargo, DEPOSITO = abono
+- Banamex: RETIROS = cargo, DEPÓSITOS = abono
+- Fechas siempre YYYY-MM-DD
+- Si la fecha solo tiene día y mes, usa el año del periodo`;
 
-function isPdfEncrypted(buffer) {
-    // Search in chunks to avoid converting the whole file to a string
-    const chunkSize = 4096;
-    const needle = Buffer.from('/Encrypt');
-    for (let i = 0; i < buffer.length - needle.length; i += chunkSize) {
-        const chunk = buffer.slice(i, Math.min(i + chunkSize + needle.length, buffer.length));
-        if (chunk.includes(needle)) return true;
-    }
-    return false;
-}
-
-// ── PDF text extraction (with password support) ───────────────────────────────
-
-async function extractPdfText(buffer, password) {
-    // Fast path: detect encryption before attempting to parse.
-    // On Vercel, pdfjs-dist throws "the string did not match the expected pattern"
-    // when hitting an encrypted PDF — before it can raise PasswordException.
-    if (!password && isPdfEncrypted(buffer)) {
-        throw Object.assign(new Error('PASSWORD_REQUIRED'), { code: 'PASSWORD_REQUIRED' });
-    }
-
-    const options = { data: buffer };
-    if (password) options.password = password;
-
-    const parser = new PDFParse(options);
+export async function POST(request) {
     try {
-        const result = await parser.getText();
-        return result.text;
-    } catch (err) {
-        if (err instanceof PasswordException || err.name === 'PasswordException') {
-            const code = password ? 'INCORRECT_PASSWORD' : 'PASSWORD_REQUIRED';
-            throw Object.assign(new Error(code), { code });
-        }
-        // Fallback: treat pdfjs pattern-mismatch errors on encrypted PDFs as wrong password
-        if (password && /did not match|pattern/i.test(err.message)) {
-            throw Object.assign(new Error('INCORRECT_PASSWORD'), { code: 'INCORRECT_PASSWORD' });
-        }
-        throw err;
-    } finally {
-        await parser.destroy().catch(() => {});
-    }
-}
+        const formData = await request.formData();
+        const file = formData.get('file');
+        const rawTextInput = formData.get('rawText');
 
-// ── Categorización ─────────────────────────────────────────────────────────────
+        let text;
 
-function categorizar(concepto) {
-    const t = (concepto || '').toLowerCase();
-    if (/netflix|spotify|disney|hbo|apple|youtube|openai|claude|netlify|porkbun|vercel|amazon prime/i.test(t))
-        return 'Suscripciones';
-    if (/oxxo|walmart|chedraui|soriana|costco|alsuper|seven.?eleven|super\s/i.test(t))
-        return 'Supermercado';
-    if (/restaur|rest\s|taqueria|paleteria|little caesar|wendys|mcdonalds|burger|pizza|comida|hambur|starbucks|uber\s?eats|rappi|didi\s?food|dominos/i.test(t))
-        return 'Comida';
-    if (/gasol|gasolinera|pemex|autozone|estacionamiento|caseta|uber|didi|cabify/i.test(t))
-        return 'Transporte';
-    if (/telmex|telcel|att|izzi|totalplay|cfe|gas\s?natural|predial/i.test(t))
-        return 'Servicios';
-    if (/farmacia|benavides|doctor|hospital|laboratorio|similares/i.test(t))
-        return 'Salud';
-    if (/barbershop|salon|spa|peluqueria/i.test(t))
-        return 'Higiene';
-    if (/cine|teatro|\bbar\b|antro|steam|juego/i.test(t))
-        return 'Ocio';
-    if (/office depot|papeleria|libreria/i.test(t))
-        return 'Papelería';
-    if (/airbnb|hospedaje|hotel/i.test(t))
-        return 'Airbnb / Hospedaje';
-    if (/spei|transferencia|deposito|depósito|pago\s?a\s|envio|envío/i.test(t))
-        return 'Transferencias';
-    return 'Otros';
-}
-
-// ── Nu parser ─────────────────────────────────────────────────────────────────
-
-const MONTO_RE = /([+\-])\s*(?:MX)?\$?([\d,]+\.\d{2})/;
-const NU_LINE_RE = /^(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{4})\s+(.+?)\s+([+\-]\s*(?:MX)?\$?[\d,]+\.\d{2})$/i;
-const NU_GLOBAL_RE = /(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{4})\s+(.+?)\s+([+\-]\s*(?:MX)?\$?[\d,]+\.\d{2})/gi;
-
-function buildNuTx(day, mon, year, concepto, montoStr) {
-    const mes2 = MESES[mon.toUpperCase()];
-    if (!mes2) return null;
-    if (/cajita|nu\s+invest|rendimiento/i.test(concepto)) return null;
-    const match = montoStr.match(MONTO_RE);
-    if (!match) return null;
-    const sign = match[1];
-    const value = parseFloat(match[2].replace(/,/g, ''));
-    if (isNaN(value) || value === 0) return null;
-    const monto = sign === '-' ? -value : value;
-    return {
-        fecha: `${year}-${mes2}-${day.padStart(2, '0')}`,
-        concepto: concepto.trim(),
-        monto: Math.abs(monto),
-        tipo: monto < 0 ? 'egreso' : 'ingreso',
-        categoria: categorizar(concepto),
-    };
-}
-
-function parsearNu(texto) {
-    const transacciones = [];
-
-    for (const linea of texto.split('\n')) {
-        const m = linea.trim().match(NU_LINE_RE);
-        if (!m) continue;
-        const tx = buildNuTx(m[1], m[2], m[3], m[4], m[5]);
-        if (tx) transacciones.push(tx);
-    }
-
-    if (transacciones.length < 3) {
-        const seen = new Set();
-        NU_GLOBAL_RE.lastIndex = 0;
-        let m;
-        while ((m = NU_GLOBAL_RE.exec(texto)) !== null) {
-            const tx = buildNuTx(m[1], m[2], m[3], m[4], m[5]);
-            if (!tx) continue;
-            const key = `${tx.fecha}|${tx.concepto}|${tx.monto}`;
-            if (!seen.has(key)) { seen.add(key); transacciones.push(tx); }
-        }
-    }
-
-    return transacciones;
-}
-
-// ── Generic parser (BBVA, Banorte, Santander, HSBC, Citibanamex) ──────────────
-
-const CARGO_RE  = /CARGO|RETIRO|D[EÉ]BITO|COMPRA/i;
-const ABONO_RE  = /ABONO|DEP[OÓ]SITO|TRANSFERENCIA\s+RECIBIDA|CR[EÉ]DITO/i;
-const DATE_SLASH = /\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/;
-const DATE_DASH  = /\b(\d{1,2})-(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)-(\d{4})\b/i;
-const DATE_ISO   = /\b(\d{4})-(\d{2})-(\d{2})\b/;
-const AMOUNT_RE  = /(?:^|[\s,])([-+]?\d{1,3}(?:,\d{3})*(?:\.\d{2}))/g;
-
-function parseFecha(linea) {
-    let m;
-    if ((m = linea.match(DATE_SLASH))) {
-        const y = m[3].length === 2 ? `20${m[3]}` : m[3];
-        return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-    }
-    if ((m = linea.match(DATE_DASH))) {
-        const mo = MESES[m[2].toUpperCase()];
-        if (mo) return `${m[3]}-${mo}-${m[1].padStart(2, '0')}`;
-    }
-    if ((m = linea.match(DATE_ISO))) {
-        return `${m[1]}-${m[2]}-${m[3]}`;
-    }
-    return null;
-}
-
-function parseMexicanStatement(text) {
-    const transactions = [];
-    for (const line of text.split('\n')) {
-        const trimmed = line.trim();
-        if (trimmed.length < 8) continue;
-        const fecha = parseFecha(trimmed);
-        if (!fecha) continue;
-
-        const amounts = [];
-        AMOUNT_RE.lastIndex = 0;
-        let m;
-        while ((m = AMOUNT_RE.exec(trimmed)) !== null) {
-            const v = parseFloat(m[1].replace(/,/g, ''));
-            if (!isNaN(v) && Math.abs(v) >= 1) amounts.push(v);
-        }
-        if (amounts.length === 0) continue;
-
-        const rawMonto = amounts[amounts.length - 1];
-        const monto = Math.abs(rawMonto);
-        let tipo = 'egreso';
-        if (ABONO_RE.test(trimmed)) tipo = 'ingreso';
-        else if (CARGO_RE.test(trimmed)) tipo = 'egreso';
-        else if (rawMonto > 0 && amounts.length > 1) tipo = 'ingreso';
-
-        const dateEnd = trimmed.search(/\d{1,2}[\/\-]\d/) + (trimmed.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)?.[0]?.length || 0);
-        const firstAmtIdx = trimmed.search(/\s\d{1,3}(?:,\d{3})*\.\d{2}/);
-        const conceptRaw = trimmed.substring(dateEnd, firstAmtIdx > dateEnd ? firstAmtIdx : undefined);
-        const concepto = conceptRaw.replace(/\s+/g, ' ').trim() || trimmed.substring(0, 60);
-
-        if (monto > 0) {
-            transactions.push({ fecha, concepto, monto, tipo, categoria: categorizar(concepto) });
-        }
-    }
-    return transactions;
-}
-
-// ── Route handler ─────────────────────────────────────────────────────────────
-
-export async function POST(req) {
-    try {
-        const formData = await req.formData();
-        const textFromClient = formData.get('rawText');
-        let rawText;
-
-        if (textFromClient) {
-            rawText = textFromClient;
+        if (rawTextInput) {
+            text = rawTextInput;
         } else {
-            const file = formData.get('file');
-            if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+            if (!file) {
+                return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 });
+            }
 
-            const password = formData.get('password') || '';
             const buffer = Buffer.from(await file.arrayBuffer());
+            const password = formData.get('password') || '';
 
             try {
-                rawText = await extractPdfText(buffer, password);
+                const pdfData = await pdfParse(buffer, password ? { password } : undefined);
+                text = pdfData.text;
             } catch (err) {
-                if (err.code === 'PASSWORD_REQUIRED') {
+                if (/password/i.test(err.message)) {
                     return NextResponse.json(
                         { error: 'Este PDF está protegido con contraseña.', code: 'PASSWORD_REQUIRED' },
-                        { status: 422 }
-                    );
-                }
-                if (err.code === 'INCORRECT_PASSWORD') {
-                    return NextResponse.json(
-                        { error: 'Contraseña incorrecta. Intenta de nuevo.', code: 'INCORRECT_PASSWORD' },
                         { status: 422 }
                     );
                 }
@@ -244,23 +67,47 @@ export async function POST(req) {
             }
         }
 
-        const text = normalizarMeses(rawText);
-
-        const nuResult      = parsearNu(text);
-        const genericResult = parseMexicanStatement(text);
-        const transactions  = nuResult.length >= genericResult.length ? nuResult : genericResult;
-
-        if (transactions.length === 0) {
-            const preview = rawText.substring(0, 800).replace(/\n+/g, ' | ');
+        if (!text || text.trim().length < 100) {
             return NextResponse.json(
-                { error: `No se encontraron transacciones. Formato no reconocido. Vista previa: "${preview}"` },
-                { status: 422 }
+                { error: 'No se pudo extraer texto del PDF. El PDF puede estar escaneado.' },
+                { status: 400 }
             );
         }
 
-        return NextResponse.json({ transactions });
-    } catch (err) {
-        console.error('[parse-statement]', err);
-        return NextResponse.json({ error: err.message || 'Error al procesar el PDF' }, { status: 500 });
+        const response = await client.messages.create({
+            model: 'claude-opus-4-5',
+            max_tokens: 4096,
+            messages: [{
+                role: 'user',
+                content: `${PARSER_PROMPT}\n\nTEXTO:\n${text.substring(0, 15000)}`,
+            }],
+        });
+
+        const rawText = response.content[0].text.trim();
+        const jsonText = rawText.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
+        const parsed = JSON.parse(jsonText);
+
+        // Map movimientos → transactions format compatible with finanzas page
+        const transactions = (parsed.movimientos ?? []).map(m => ({
+            fecha: m.fecha,
+            concepto: m.descripcion,
+            monto: Math.abs(Number(m.monto) || 0),
+            tipo: m.tipo === 'abono' ? 'ingreso' : 'egreso',
+            categoria: 'Otros',
+        })).filter(t => t.monto > 0 && t.fecha);
+
+        return NextResponse.json({
+            transactions,
+            success: true,
+            data: parsed,
+            tokens_used: response.usage.input_tokens + response.usage.output_tokens,
+        });
+
+    } catch (error) {
+        console.error('[parse-statement]', error);
+        return NextResponse.json(
+            { error: error.message || 'Error procesando el estado de cuenta' },
+            { status: 500 }
+        );
     }
 }
