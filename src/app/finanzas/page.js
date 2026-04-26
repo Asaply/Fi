@@ -585,9 +585,27 @@ export default function FinanzasPage() {
     };
 
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [showClearAll, setShowClearAll] = useState(false);
 
     const handleDelete = (id) => {
         setItemToDelete(id);
+    };
+
+    const confirmClearAll = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('user_id', user?.id);
+
+        if (error) {
+            console.error("Error clearing transactions:", error);
+            toast.error("Error al limpiar las transacciones.");
+        } else {
+            setTransactions([]);
+            toast.success("Transacciones eliminadas.");
+        }
+        setShowClearAll(false);
     };
 
     const confirmDelete = async () => {
@@ -841,6 +859,11 @@ export default function FinanzasPage() {
                     <button className="btn-cta-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
                         <Upload size={14} /> Importar
                     </button>
+                    {transactions.length > 0 && (
+                        <button className="btn-cta-secondary" style={{ color: 'var(--danger)' }} onClick={() => setShowClearAll(true)} title="Eliminar todas las transacciones">
+                            <Trash2 size={14} /> Limpiar
+                        </button>
+                    )}
                     <button className="btn-cta-tertiary" onClick={resetTour} title="¿Cómo usar esta sección?">?</button>
                 </div>
             </div>
@@ -1030,6 +1053,22 @@ export default function FinanzasPage() {
                         </button>
                         <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmDelete}>
                             Eliminar
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={showClearAll} onClose={() => setShowClearAll(false)} title="Limpiar todas las transacciones">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                        Se eliminarán <strong>{transactions.length}</strong> transacciones. Esta acción no se puede deshacer.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                        <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setShowClearAll(false)}>
+                            Cancelar
+                        </button>
+                        <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmClearAll}>
+                            Eliminar todo
                         </button>
                     </div>
                 </div>
