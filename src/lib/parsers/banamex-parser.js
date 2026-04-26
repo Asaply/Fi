@@ -1,10 +1,19 @@
 import { categorize } from './categories';
 
 // Banamex — MiCuenta
-// KEY RULE: trailing space on amount line = DEPÓSITO (ingreso), no space = RETIRO (egreso)
-// '2,500.00 ' → ingreso | '2,500.00' → egreso
-
-const MONTHS = new Set(['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']);
+// REAL FORMAT (pdf-parse):
+//   Detalle de Operaciones En pesos Moneda Nacional
+//   FECHA CONCEPTO RETIROS DEPÓSITOS SALDO
+//   SALDO ANTERIOR 23,221.52
+//   16 FEB PAGO INTERBANCARIO A NU MEXICO
+//   AL BENEF. DEREK
+//   REF. 0130226 pago MISMO DIA 10,000.00 13,221.52
+//   23 FEB PAGO RECIBIDO DE BBVA MEXICO
+//   2,500.00 15,721.52
+//
+// Date starts line: "16 FEB DESCRIPTION..."
+// Last content of each tx has TWO trailing amounts: monto + saldo
+// Saldo comparison with prev determines tipo (no trailing-space trick)
 
 const MONTH_MAP = {
     ENE:'01', FEB:'02', MAR:'03', ABR:'04', MAY:'05', JUN:'06',
@@ -13,7 +22,7 @@ const MONTH_MAP = {
 
 // Exact noise lines injected between transactions
 const NOISE_EXACT = new Set([
-    'FECHA','CONCEPTO','RETIROS','DEPÓSITOS','SALDO','SALDO ANTERIOR',
+    'FECHA','CONCEPTO','RETIROS','DEPÓSITOS','SALDO',
     'Centro de Atención Telefónica',
     'Ciudad de México: 55 1226 2639',
     "Resto del país: 800 021 2345",
@@ -34,14 +43,13 @@ const NOISE_PREFIXES = [
     'Período del','Número de sucursal','Número de cuenta',
     'Número de Tarjeta','CLABE','AHORRO','Periodo','GAT Nominal',
     'GAT Real','Número de Contrato','Número de cliente','RFC ',
+    'SALDO ANTERIOR',
 ];
 
-// Fecha en una línea: "16 FEB" o "02 MAR"
-const DATE_ONE_LINE = /^(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)$/i;
-// Solo número: "16" (mes viene en siguiente línea)
-const DATE_NUM_ONLY = /^(\d{1,2})$/;
-// Línea de monto: dígitos + comas + decimal + espacio opcional al final
-const AMOUNT_LINE   = /^([\d,]+\.\d{2})( ?)$/;
+// Line starting a new transaction: "16 FEB DESCRIPTION..." or just "16 FEB"
+const DATE_START = /^(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s*(.*)/i;
+// Two amounts at end of combined text: monto + saldo
+const TWO_AMOUNTS_END = /([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/;
 
 function isNoise(line) {
     const s = line.trim();
@@ -49,13 +57,13 @@ function isNoise(line) {
     if (NOISE_EXACT.has(s) || NOISE_EXACT.has(line)) return true;
     if (NOISE_PREFIXES.some(p => s.startsWith(p))) return true;
     if (/^Página\s+\d+/.test(s)) return true;
-    // Líneas de referencia técnica: "20260218 75064956047001025192098 683519"
+    // Reference lines: "20260218 75064956047001025192098 683519"
     if (/^\d{8}\s+\d{10,}/.test(s)) return true;
-    // Strings numéricos largos (CLABE, números de cuenta)
+    // Long numeric strings (CLABE, account numbers)
     if (/^\d{10,}$/.test(s)) return true;
-    // Códigos de referencia: "000190.B26INDA020.AR.0313.01"
+    // Reference codes: "000190.B26INDA020.AR.0313.01"
     if (/^\d{6}\.[A-Z0-9.]+$/.test(s)) return true;
-    // Líneas de referencia técnica: "9000/0012"
+    // Slash codes: "9000/0012"
     if (/^\d{4}\/\d{4}$/.test(s)) return true;
     return false;
 }
@@ -65,22 +73,22 @@ function parseAmt(s) {
 }
 
 export function parseBanamex(text) {
-    // Metadatos
     const accountMatch = text.match(/N[uú]mero de cuenta de cheques\s+(\d+)/i)
         ?? text.match(/N[uú]mero de contrato\s+(\d+)/i);
     const accountNumber = accountMatch?.[1] ?? '';
 
-    const yearMatch = text.match(/del\s+\d+\s+de\s+\w+\s+al\s+\d+\s+de\s+\w+\s+del\s+(\d{4})/i);
+    const yearMatch = text.match(/del\s+\d+\s+de\s+\w+\s+al\s+\d+\s+de\s+\w+\s+del\s+(\d{4})/i)
+        ?? text.match(/\b(20\d{2})\b/);
     const year = yearMatch?.[1] ?? String(new Date().getFullYear());
 
     const periodFull = text.match(/Per[ií]odo del\s+(.+?)(?:\n|$)/i)?.[1]?.trim() ?? '';
 
-    const openingBalance = parseAmt(text.match(/Saldo anterior\s+En pesos M\.N\.\s+([\d,]+\.\d{2})/i)?.[1]);
-    const closingBalance  = parseAmt(text.match(/Saldo al Corte\s+([\d,]+\.\d{2})/i)?.[1]);
-    const totalDeposits   = parseAmt(text.match(/\(\+\)\s+\d+\s+Dep[oó]sitos\s+([\d,]+\.\d{2})/i)?.[1]);
-    const totalCharges    = parseAmt(text.match(/\(-\)\s+\d+\s+Retiros\/Otros cargos\s+([\d,]+\.\d{2})/i)?.[1]);
+    const openingBalance = parseAmt(
+        text.match(/SALDO ANTERIOR\s+([\d,]+\.\d{2})/i)?.[1]
+        ?? text.match(/Saldo anterior\s+En pesos M\.N\.\s+([\d,]+\.\d{2})/i)?.[1]
+    );
 
-    // Extraer TODAS las secciones de detalle (una por página)
+    // Collect all "Detalle de Operaciones" sections
     const allLines = [];
     let searchFrom = 0;
     while (true) {
@@ -90,101 +98,66 @@ export function parseBanamex(text) {
         searchFrom = idx + 1;
     }
 
-    // Filtrar ruido
-    const lines = allLines.filter(line => !isNoise(line));
-
-    // Máquina de estados
     const transactions = [];
+    let prevSaldo = openingBalance;
     let currentDate = '';
-    let currentLines = [];
+    let currentParts = [];
 
-    function flushTransaction() {
-        if (!currentDate || currentLines.length === 0) return;
+    function flush() {
+        if (!currentDate || currentParts.length === 0) return;
 
-        // Índices de todas las líneas que son montos
-        const amountIdxs = [];
-        for (let j = 0; j < currentLines.length; j++) {
-            if (AMOUNT_LINE.test(currentLines[j])) amountIdxs.push(j);
-        }
+        const combined = currentParts.join(' ').trim();
+        const amtMatch = TWO_AMOUNTS_END.exec(combined);
+        if (!amtMatch) return;
 
-        // Necesitamos al menos 2: [monto, saldo]
-        if (amountIdxs.length < 2) return;
-
-        // Monto = penúltimo número, saldo = último
-        const montoIdx = amountIdxs[amountIdxs.length - 2];
-        const montoLine = currentLines[montoIdx];
-        const montoMatch = AMOUNT_LINE.exec(montoLine);
-        if (!montoMatch) return;
-
-        // LA REGLA CLAVE: trailing space = depósito
-        const isDeposit = montoMatch[2] === ' ';
-        const monto = parseAmt(montoMatch[1]);
-
+        const monto = parseAmt(amtMatch[1]);
+        const saldo = parseAmt(amtMatch[2]);
         if (monto === 0) return;
 
-        // Descripción = líneas antes del monto, limpiadas
-        const descLines = currentLines
-            .slice(0, montoIdx)
-            .map(l => l.trim())
-            .filter(l => l.length > 0)
-            .filter(l => !/^\d{8}/.test(l))
-            .filter(l => !/^\d{10,}/.test(l))
-            .filter(l => !/^\d{4}\/\d{4}$/.test(l))
-            .filter(l => !l.startsWith('RASTREO'))
-            .filter(l => !l.startsWith('CTA.BENEFICIARIO'));
+        // Build description: text before the two amounts, strip noise tokens
+        let desc = combined.slice(0, amtMatch.index).trim();
+        desc = desc.replace(/\bREF\.\s*\d+\b/gi, '');
+        desc = desc.replace(/\bRASTREO\b.*/i, '');
+        desc = desc.replace(/\bCTA\.BENEFICIARIO\b.*/i, '');
+        desc = desc.replace(/\bpago MISMO DIA\b/i, '');
+        desc = desc.replace(/\s+/g, ' ').trim().slice(0, 150);
 
-        const concepto = descLines.join(' ').replace(/\s+/g, ' ').trim().slice(0, 150);
-        if (!concepto) return;
+        if (!desc) return;
 
-        const tipo = isDeposit ? 'ingreso' : 'egreso';
+        const isIncome = saldo > prevSaldo + 0.005;
+        prevSaldo = saldo > 0 ? saldo : prevSaldo;
+        const tipo = isIncome ? 'ingreso' : 'egreso';
 
         transactions.push({
             fecha: currentDate,
-            concepto,
+            concepto: desc,
             monto,
             tipo,
-            categoria: categorize(concepto, tipo),
+            categoria: categorize(desc, tipo),
             banco: 'Banamex',
         });
     }
 
-    let i = 0;
-    while (i < lines.length) {
-        const line = lines[i];
+    for (const line of allLines) {
+        if (isNoise(line)) continue;
+
         const s = line.trim();
-
-        // Caso 1: fecha en una línea "16 FEB"
-        const oneLineMatch = DATE_ONE_LINE.exec(s);
-        if (oneLineMatch) {
-            flushTransaction();
-            const day = oneLineMatch[1].padStart(2, '0');
-            const mon = oneLineMatch[2].toUpperCase();
+        const dateM = DATE_START.exec(s);
+        if (dateM) {
+            flush();
+            const day = dateM[1].padStart(2, '0');
+            const mon = dateM[2].toUpperCase();
             currentDate = `${year}-${MONTH_MAP[mon]}-${day}`;
-            currentLines = [];
-            i++;
-            continue;
+            currentParts = [dateM[3].trim()].filter(Boolean);
+        } else if (currentDate) {
+            // Skip pure reference lines inside tx body
+            if (/^\d{8}\s/.test(s)) continue;
+            if (/^\d{10,}$/.test(s)) continue;
+            if (/^\d{6}\.[A-Z0-9.]+$/.test(s)) continue;
+            currentParts.push(s);
         }
-
-        // Caso 2: día solo "16", mes en siguiente línea "FEB"
-        const numOnlyMatch = DATE_NUM_ONLY.exec(s);
-        const nextLineStr = i + 1 < lines.length ? lines[i + 1].trim().toUpperCase() : '';
-        if (numOnlyMatch && MONTHS.has(nextLineStr)) {
-            flushTransaction();
-            const day = numOnlyMatch[1].padStart(2, '0');
-            currentDate = `${year}-${MONTH_MAP[nextLineStr]}-${day}`;
-            currentLines = [];
-            i += 2;
-            continue;
-        }
-
-        // Acumular en buffer de transacción actual
-        if (currentDate) {
-            currentLines.push(line);
-        }
-        i++;
     }
-    // Flush última transacción
-    flushTransaction();
+    flush();
 
     return { banco: 'Banamex', cuenta: accountNumber, periodo: periodFull, transactions };
 }

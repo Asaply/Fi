@@ -1,31 +1,45 @@
 import { categorize } from './categories';
 
 // Banco Inbursa — Cuentaefe
-// REAL FORMAT (line-by-line from pdf-parse/pdfjs):
-//   MAY 01 2969869111
-//   COSTCO CHIHUAHUA MX
-//   807.00
-//   95,627.97
+// REAL FORMAT (pdf-parse, mostly ONE LINE per tx):
+//   MAY 01 2969869111 COSTCO CHIHUAHUA MX 807.00 95,627.97
+//   MAY 06 2975324467 TRASPASO ENTRE CUENTAS        ← multi-line description
+//   TRASPASO DE (SANBORNS) - 8198 - DE LAURA IVONNE
+//   PARRA CARDENAS A TU CUENTA (EFE) - 50060703854
+//   9,000.00 101,214.90
 //
-// Cargo vs abono: compare saldo with previous saldo.
-// Values are always positive — no explicit cargo/abono column.
+// Columns: FECHA REFERENCIA CONCEPTO CARGOS ABONOS SALDO
+// No explicit cargo/abono column — compare saldo with prev to determine tipo.
 
 const MONTH_MAP = {
-    ENE: '01', FEB: '02', MAR: '03', ABR: '04',
-    MAY: '05', JUN: '06', JUL: '07', AGO: '08',
-    SEP: '09', OCT: '10', NOV: '11', DIC: '12',
+    ENE:'01', FEB:'02', MAR:'03', ABR:'04', MAY:'05', JUN:'06',
+    JUL:'07', AGO:'08', SEP:'09', OCT:'10', NOV:'11', DIC:'12',
 };
 
 function parseAmt(s) {
-    if (!s) return 0;
-    return parseFloat(s.replace(/,/g, '').trim()) || 0;
+    return parseFloat((s || '').replace(/,/g, '').trim()) || 0;
+}
+
+// Line starting a new transaction: "MAY 01 ..." or "MAY 01 2969869111 ..."
+const DATE_START = /^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{2})(?:\s+\d+)?(.*)/i;
+// Two amounts at end of line (or standalone): amount + saldo
+const TWO_AMOUNTS_END = /([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/;
+
+function isNoise(line) {
+    const s = line.trim();
+    if (!s) return true;
+    if (/^FECHA\s+REFERENCIA|^DETALLE DE MOVIMIENTOS|^BANCO INBURSA|^AVENIDA PASEO/i.test(s)) return true;
+    if (/^Página:\s*\d+/i.test(s)) return true;
+    if (/^\d{6,}$/.test(s)) return true; // pure reference numbers
+    return false;
 }
 
 export function parseInbursa(text) {
     const accountMatch = text.match(/CUENTA\s+(\d{10,})/i);
     const accountNumber = accountMatch?.[1] ?? '';
 
-    const periodMatch = text.match(/Del\s+(\d{2}\s+\w+\s+\d{4})\s+al\s+(\d{2}\s+\w+\s+\d{4})/i);
+    const periodMatch = text.match(/PERIODO\s+Del\s+(.+?)\s+al\s+(.+?)(?:\s+FECHA|\n)/i)
+        ?? text.match(/Del\s+(\d{2}\s+\w+\s+\d{4})\s+al\s+(\d{2}\s+\w+\s+\d{4})/i);
     const period = periodMatch ? `${periodMatch[1]} - ${periodMatch[2]}` : '';
 
     const yearMatch = text.match(/\b(20\d{2})\b/);
@@ -36,84 +50,76 @@ export function parseInbursa(text) {
     const totalDeposits   = parseAmt(text.match(/ABONOS\s+([\d,]+\.\d{2})/i)?.[1]);
     const totalCharges    = parseAmt(text.match(/CARGOS\s+([\d,]+\.\d{2})/i)?.[1]);
 
-    // Find detail section
     const detailStart = text.indexOf('DETALLE DE MOVIMIENTOS');
     const detailText = detailStart >= 0 ? text.slice(detailStart) : text;
 
-    const lines = detailText.split('\n').map(l => l.trim()).filter(Boolean);
+    const lines = detailText.split('\n');
     const transactions = [];
-
-    // Skip to first date line
-    let i = 0;
-    while (i < lines.length && !lines[i].match(/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)/)) i++;
-
     let prevSaldo = openingBalance;
 
-    while (i < lines.length) {
-        const line = lines[i];
+    let currentDate = '';
+    let currentParts = []; // accumulated text parts for current tx
 
-        // Date line: "MAY 01" or "MAY 01 2969869111"
-        const dateMatch = line.match(/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{2})(?:\s+\d+)?$/);
-        if (!dateMatch) { i++; continue; }
+    function flush() {
+        if (!currentDate || currentParts.length === 0) return;
 
-        const monthNum = MONTH_MAP[dateMatch[1]] ?? '01';
-        const day = dateMatch[2].padStart(2, '0');
-        const isoDate = `${year}-${monthNum}-${day}`;
-        i++;
+        const combined = currentParts.join(' ').trim();
 
-        // Collect description lines until we hit a money line
-        const descLines = [];
-        while (
-            i < lines.length &&
-            !lines[i].match(/^[\d,]+\.\d{2}$/) &&
-            !lines[i].match(/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)/)
-        ) {
-            descLines.push(lines[i]);
-            i++;
-        }
-        const description = descLines.join(' ').slice(0, 120);
+        // Extract last two numbers = amount + saldo
+        const amtMatch = TWO_AMOUNTS_END.exec(combined);
+        if (!amtMatch) return;
 
-        // Amount line
-        if (i >= lines.length) break;
-        const montoMatch = lines[i].match(/^([\d,]+\.\d{2})$/);
-        if (!montoMatch) continue;
-        i++;
+        const monto = parseAmt(amtMatch[1]);
+        const saldo = parseAmt(amtMatch[2]);
 
-        // Balance line
-        let saldo = 0;
-        if (i < lines.length) {
-            const saldoMatch = lines[i].match(/^([\d,]+\.\d{2})$/);
-            if (saldoMatch) {
-                saldo = parseAmt(saldoMatch[1]);
-                i++;
-            }
+        if (monto === 0) return;
+
+        // Everything before the two amounts = description (remove reference number at start)
+        let desc = combined.slice(0, amtMatch.index).trim();
+        desc = desc.replace(/^\d{7,12}\s*/, '').trim(); // remove ref number
+        desc = desc.replace(/\s+/g, ' ').slice(0, 150);
+
+        if (/BALANCE INICIAL/i.test(desc)) {
+            prevSaldo = saldo || monto;
+            return;
         }
 
-        const monto = parseAmt(montoMatch[1]);
-        if (monto === 0) continue;
-        if (/BALANCE INICIAL/i.test(description)) { prevSaldo = monto; continue; }
-
-        // Determine tipo by saldo change
-        const saldoRose = saldo > 0 && saldo >= prevSaldo - 1;
-        if (saldo > 0) prevSaldo = saldo;
+        // Determine tipo by saldo direction
+        const isIncome = saldo > prevSaldo + 0.005;
+        prevSaldo = saldo > 0 ? saldo : prevSaldo;
 
         // Keyword overrides
-        const incomeKW = /INTERESES GANADOS|TRASPASO.*RECIB|ABONO|RENDIMIENTO|NOMINA|NÓMINA|DEPOSITO/i;
-        const expenseKW = /COSTCO|GASOL|OXXO|FARMACIA|CASINO|SEARS|ALSUPER|COPPEL|CASETAS|PIZZERIA|MERCADO|RETIRO/i;
+        let tipo = isIncome ? 'ingreso' : 'egreso';
+        if (/INTERESES GANADOS|TRASPASO.*RECIB|ABONO|RENDIMIENTO|NOMINA|NÓMINA|DEPOSITO/i.test(desc)) tipo = 'ingreso';
+        if (/COSTCO|GASOL|OXXO|FARMACIA|CASINO|SEARS|ALSUPER|COPPEL|CASETAS|PIZZERIA|MERCADO|RETIRO/i.test(desc)) tipo = 'egreso';
 
-        let tipo = saldoRose ? 'ingreso' : 'egreso';
-        if (incomeKW.test(description)) tipo = 'ingreso';
-        if (expenseKW.test(description)) tipo = 'egreso';
+        if (!desc) return;
 
         transactions.push({
-            fecha: isoDate,
-            concepto: description || 'Sin descripción',
+            fecha: currentDate,
+            concepto: desc,
             monto,
             tipo,
-            categoria: categorize(description, tipo),
+            categoria: categorize(desc, tipo),
             banco: 'Inbursa',
         });
     }
+
+    for (const line of lines) {
+        if (isNoise(line)) continue;
+
+        const dateM = DATE_START.exec(line.trim());
+        if (dateM) {
+            flush();
+            const mon = dateM[1].toUpperCase();
+            const day = dateM[2].padStart(2, '0');
+            currentDate = `${year}-${MONTH_MAP[mon]}-${day}`;
+            currentParts = [dateM[3].trim()]; // rest of the date line (ref + desc + maybe amounts)
+        } else if (currentDate) {
+            currentParts.push(line.trim());
+        }
+    }
+    flush();
 
     return { banco: 'Inbursa', cuenta: accountNumber, periodo: period, transactions };
 }
