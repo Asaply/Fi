@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import pdfParse from 'pdf-parse';
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic();
-
 const PARSER_PROMPT = `Eres un parser de estados de cuenta bancarios mexicanos.
 Extrae TODOS los movimientos del siguiente texto de estado de cuenta.
 
@@ -37,6 +35,16 @@ REGLAS:
 
 export async function POST(request) {
     try {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json(
+                { error: 'ANTHROPIC_API_KEY no configurada. Agrégala en .env.local y en Vercel → Settings → Environment Variables.' },
+                { status: 503 }
+            );
+        }
+
+        const client = new Anthropic({ apiKey });
+
         const formData = await request.formData();
         const file = formData.get('file');
         const rawTextInput = formData.get('rawText');
