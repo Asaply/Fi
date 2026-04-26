@@ -1,14 +1,17 @@
 /**
  * AI-powered bank statement parser.
- * Sends PDF page images to Claude Vision via /api/parse-ai (server-side proxy).
- * Returns transactions in the finanzas page format: {fecha, concepto, monto, tipo, categoria}.
+ * Two paths:
+ *   1. Text-based  — extracted text → /api/parse-statement → Claude (fast, cheap)
+ *   2. Vision-based — page images  → /api/parse-ai        → Claude Vision (for scanned PDFs)
+ *
+ * Returns transactions in finanzas format: {fecha, concepto, monto, tipo, categoria, banco}
  */
 
 function categorizeAI(description, type) {
-    if (type === 'income') {
+    if (type === 'income' || type === 'ingreso' || type === 'abono') {
         if (/nomina|nómina|sueldo|salario/i.test(description)) return 'Salario';
         if (/intereses/i.test(description)) return 'Intereses';
-        if (/deposito canales/i.test(description)) return 'Depósito';
+        if (/deposito canales|spin by oxxo/i.test(description)) return 'Depósito';
         return 'Transferencias recibidas';
     }
     if (/oxxo|seven|alsuper|costco|walmart|soriana|chedraui|abarr/i.test(description)) return 'Supermercado';
@@ -28,9 +31,52 @@ function categorizeAI(description, type) {
     return 'Otros gastos';
 }
 
+function mapToFinanzasFormat(tx, banco) {
+    const isIncome = tx.type === 'income' || tx.tipo === 'ingreso' || tx.tipo === 'abono';
+    const desc = tx.description ?? tx.descripcion ?? tx.concepto ?? '';
+    return {
+        fecha: tx.date ?? tx.fecha ?? '',
+        concepto: String(desc).trim().slice(0, 150),
+        monto: Math.abs(Number(tx.amount ?? tx.monto) || 0),
+        tipo: isIncome ? 'ingreso' : 'egreso',
+        categoria: categorizeAI(String(desc), isIncome ? 'income' : 'expense'),
+        banco: banco ?? 'Desconocido',
+    };
+}
+
 /**
- * Parse a bank statement using Claude Vision.
- * @param {string[]} pagesBase64 - Array of base64 PNG images (one per page)
+ * Parse via text extraction (digital PDFs).
+ * Calls /api/parse-statement with extracted text.
+ * @param {string} rawText
+ * @returns {Promise<{banco: string, transactions: Array}>}
+ */
+export async function parseStatementTextWithAI(rawText) {
+    const formData = new FormData();
+    formData.append('rawText', rawText);
+
+    const response = await fetch('/api/parse-statement', {
+        method: 'POST',
+        body: formData,
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.error ?? `Error ${response.status} en /api/parse-statement`);
+    }
+
+    const banco = data.data?.banco ?? 'Desconocido';
+
+    // parse-statement returns data.transactions already mapped
+    const transactions = (data.transactions ?? []).filter(t => t.monto > 0 && t.fecha);
+
+    return { banco, transactions };
+}
+
+/**
+ * Parse via Claude Vision (scanned/image PDFs).
+ * Calls /api/parse-ai with base64 page images.
+ * @param {string[]} pagesBase64
  * @param {string} [mediaType]
  * @returns {Promise<{banco: string, transactions: Array}>}
  */
@@ -41,26 +87,16 @@ export async function parseStatementWithAI(pagesBase64, mediaType = 'image/png')
         body: JSON.stringify({ images: pagesBase64, mediaType }),
     });
 
+    const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: response.statusText }));
-        throw new Error(err.error ?? `Error ${response.status}`);
+        throw new Error(data.error ?? `Error ${response.status} en /api/parse-ai`);
     }
 
-    const parsed = await response.json();
+    const banco = data.bank ?? data.banco ?? 'Desconocido';
+    const transactions = (data.transactions ?? [])
+        .map(tx => mapToFinanzasFormat(tx, banco))
+        .filter(t => t.monto > 0 && t.fecha);
 
-    const transactions = (parsed.transactions ?? [])
-        .map(tx => ({
-            fecha: tx.date ?? '',
-            concepto: String(tx.description ?? '').trim().slice(0, 150),
-            monto: Math.abs(Number(tx.amount) || 0),
-            tipo: tx.type === 'income' ? 'ingreso' : 'egreso',
-            categoria: categorizeAI(String(tx.description ?? ''), tx.type),
-            banco: parsed.bank ?? 'Desconocido',
-        }))
-        .filter(tx => tx.monto > 0 && tx.fecha);
-
-    return {
-        banco: parsed.bank ?? 'Desconocido',
-        transactions,
-    };
+    return { banco, transactions };
 }

@@ -10,7 +10,7 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/categorias";
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import { parseStatementText } from "@/lib/statementParser";
-import { parseStatementWithAI } from "@/lib/parsers/ai-statement-parser";
+import { parseStatementWithAI, parseStatementTextWithAI } from "@/lib/parsers/ai-statement-parser";
 import { pdfToImages } from "@/lib/parsers/pdf-to-images";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
@@ -350,28 +350,53 @@ export default function FinanzasPage() {
             return;
         }
 
-        // Try regex parsers first (fast, free)
+        // Try regex parsers first (fast, free, no API key needed)
         let transacciones = rawText?.trim() ? parseStatementText(rawText) : [];
 
-        // Fallback: AI Vision parsing (handles image PDFs + any bank format)
         if (transacciones.length < 3) {
-            const toastId = toast.loading("Analizando con IA... esto toma 15-20 segundos.", { duration: 30000 });
-            try {
-                const images = await pdfToImages(file, { scale: 2.0, maxPages: 12, skipFirst: false });
-                const aiResult = await parseStatementWithAI(images);
-                toast.dismiss(toastId);
-                if (aiResult.transactions.length > 0) {
-                    transacciones = aiResult.transactions;
-                    toast.success(`IA detectó ${transacciones.length} transacciones de ${aiResult.banco}.`);
+            const toastId = toast.loading("Analizando con IA...", { duration: 40000 });
+            let aiError = null;
+
+            // Path A: text-based AI (digital PDF — fast, cheap, any bank)
+            if (rawText?.trim().length > 200) {
+                try {
+                    const aiResult = await parseStatementTextWithAI(rawText);
+                    if (aiResult.transactions.length > 0) {
+                        transacciones = aiResult.transactions;
+                        toast.dismiss(toastId);
+                        toast.success(`IA detectó ${transacciones.length} transacciones de ${aiResult.banco}.`);
+                    }
+                } catch (err) {
+                    aiError = err;
+                    console.error("AI text parse error:", err.message);
                 }
-            } catch (aiErr) {
-                console.error("AI parse error:", aiErr);
-                toast.dismiss(toastId);
-                if (transacciones.length === 0) {
-                    toast.error("No se pudieron extraer transacciones. Verifica que sea un estado de cuenta válido.");
-                    setIsParsing(false);
-                    return;
+            }
+
+            // Path B: vision-based AI (scanned/image PDF — only if text path failed or no text)
+            if (transacciones.length < 3) {
+                try {
+                    const images = await pdfToImages(file, { scale: 1.5, maxPages: 8, skipFirst: false });
+                    const aiResult = await parseStatementWithAI(images);
+                    if (aiResult.transactions.length > 0) {
+                        transacciones = aiResult.transactions;
+                        toast.dismiss(toastId);
+                        toast.success(`IA (visión) detectó ${transacciones.length} transacciones de ${aiResult.banco}.`);
+                    }
+                } catch (visionErr) {
+                    console.error("AI vision parse error:", visionErr.message);
+                    aiError = aiError ?? visionErr;
                 }
+            }
+
+            toast.dismiss(toastId);
+
+            if (transacciones.length === 0) {
+                const msg = aiError?.message?.includes('ANTHROPIC_API_KEY')
+                    ? 'Falta configurar ANTHROPIC_API_KEY en el servidor.'
+                    : aiError?.message ?? 'No se encontraron transacciones. Verifica que sea un estado de cuenta válido.';
+                toast.error(msg);
+                setIsParsing(false);
+                return;
             }
         }
 
