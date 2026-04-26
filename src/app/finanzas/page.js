@@ -10,6 +10,8 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/categorias";
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import { parseStatementText } from "@/lib/statementParser";
+import { parseStatementWithAI } from "@/lib/parsers/ai-statement-parser";
+import { pdfToImages } from "@/lib/parsers/pdf-to-images";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -348,52 +350,31 @@ export default function FinanzasPage() {
             return;
         }
 
-        if (!rawText || rawText.trim() === '') {
-            const toastId = toast.loading("Analizando imagen con Visión Artificial... por favor espera.", { duration: 25000 });
+        // Try regex parsers first (fast, free)
+        let transacciones = rawText?.trim() ? parseStatementText(rawText) : [];
+
+        // Fallback: AI Vision parsing (handles image PDFs + any bank format)
+        if (transacciones.length < 3) {
+            const toastId = toast.loading("Analizando con IA... esto toma 15-20 segundos.", { duration: 30000 });
             try {
-                if (!window.Tesseract) {
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
-                }
-                
-                rawText = '';
-                const pdfjsLib = window.pdfjsLib;
-                const buffer = await file.arrayBuffer();
-                const loadingTask = pdfjsLib.getDocument({ data: buffer, password: password || undefined });
-                const pdfDoc = await loadingTask.promise;
-                
-                for (let i = 1; i <= pdfDoc.numPages; i++) {
-                    const page = await pdfDoc.getPage(i);
-                    const viewport = page.getViewport({ scale: 2.0 }); // HiDPI para nitidez
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                    
-                    const result = await window.Tesseract.recognize(canvas, 'spa');
-                    rawText += result.data.text + '\n\n';
-                }
+                const images = await pdfToImages(file, { scale: 2.0, maxPages: 12, skipFirst: false });
+                const aiResult = await parseStatementWithAI(images);
                 toast.dismiss(toastId);
-                toast.success("Análisis óptico completado.");
-            } catch (ocrErr) {
-                console.error("OCR Error:", ocrErr);
+                if (aiResult.transactions.length > 0) {
+                    transacciones = aiResult.transactions;
+                    toast.success(`IA detectó ${transacciones.length} transacciones de ${aiResult.banco}.`);
+                }
+            } catch (aiErr) {
+                console.error("AI parse error:", aiErr);
                 toast.dismiss(toastId);
-                toast.error("Imposible procesar la imagen (baja resolución o encriptación bloqueante).");
-                setIsParsing(false);
-                return;
+                if (transacciones.length === 0) {
+                    toast.error("No se pudieron extraer transacciones. Verifica que sea un estado de cuenta válido.");
+                    setIsParsing(false);
+                    return;
+                }
             }
         }
 
-        // Parseamos 100% locamente en el cliente
-        const transacciones = parseStatementText(rawText);
-        
         if (transacciones.length === 0) {
             toast.error("No se encontraron transacciones. Formato no reconocido.");
             setIsParsing(false);
