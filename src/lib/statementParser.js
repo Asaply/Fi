@@ -44,6 +44,24 @@ function buildNuTx(day, mon, year, concepto, montoStr) {
 
 function parsearNu(texto) {
     const transacciones = [];
+
+    // Opening balance → prepend as ingreso
+    const saldoInicialMatch = texto.match(/saldo\s+(?:anterior|inicial|previo)\s*:?\s*(?:MX)?\$?\s*([\d,]+\.\d{2})/i);
+    const saldoInicial = saldoInicialMatch ? parseFloat(saldoInicialMatch[1].replace(/,/g, '')) : 0;
+    if (saldoInicial > 0) {
+        // Grab first date from statement for the opening balance entry
+        const firstDateM = texto.match(/(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{4})/i);
+        const fechaInicial = firstDateM
+            ? `${firstDateM[3]}-${MESES[firstDateM[2].toUpperCase()]}-${firstDateM[1].padStart(2, '0')}`
+            : String(new Date().getFullYear()) + '-01-01';
+        transacciones.push({
+            fecha: fechaInicial,
+            concepto: 'Saldo Anterior',
+            monto: saldoInicial,
+            tipo: 'ingreso',
+            categoria: inferirCategoria('Saldo Anterior'),
+        });
+    }
     let lastTx = null;
     let lineasSigue = 0;
 
