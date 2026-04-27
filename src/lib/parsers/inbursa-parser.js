@@ -63,21 +63,32 @@ export function parseInbursa(text) {
     function flush() {
         if (!currentDate || currentParts.length === 0) return;
 
-        const combined = currentParts.join(' ').trim();
+        // Inbursa: amounts can appear on the DATE line (same PDF row) when the
+        // transaction has continuation description lines below it.
+        // Strategy: check first part first (multi-line case), else use combined (single-line/last-line case).
+        let amtMatch, desc;
+        const firstMatch = TWO_AMOUNTS_END.exec(currentParts[0]);
 
-        // Extract last two numbers = amount + saldo
-        const amtMatch = TWO_AMOUNTS_END.exec(combined);
-        if (!amtMatch) return;
+        if (firstMatch && currentParts.length > 1) {
+            // Amounts on date line; continuation lines are description only
+            amtMatch = firstMatch;
+            const firstDesc = currentParts[0].slice(0, firstMatch.index).trim();
+            const rest = currentParts.slice(1).join(' ').trim();
+            desc = (firstDesc + ' ' + rest).replace(/\s+/g, ' ').trim().slice(0, 150);
+        } else {
+            // Amounts on last (or only) line
+            const combined = currentParts.join(' ').trim();
+            amtMatch = TWO_AMOUNTS_END.exec(combined);
+            if (!amtMatch) return;
+            desc = combined.slice(0, amtMatch.index).trim();
+            desc = desc.replace(/^\d{7,12}\s*/, '').trim(); // remove ref number
+            desc = desc.replace(/\s+/g, ' ').slice(0, 150);
+        }
 
         const monto = parseAmt(amtMatch[1]);
         const saldo = parseAmt(amtMatch[2]);
 
         if (monto === 0) return;
-
-        // Everything before the two amounts = description (remove reference number at start)
-        let desc = combined.slice(0, amtMatch.index).trim();
-        desc = desc.replace(/^\d{7,12}\s*/, '').trim(); // remove ref number
-        desc = desc.replace(/\s+/g, ' ').slice(0, 150);
 
         if (/BALANCE INICIAL/i.test(desc)) {
             prevSaldo = saldo || monto;

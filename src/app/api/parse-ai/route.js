@@ -35,13 +35,21 @@ const MAX_IMAGES = 8; // Limit to avoid oversized requests (each page ~1-2MB)
 
 export async function POST(req) {
     try {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json(
+                { error: 'ANTHROPIC_API_KEY no configurada. Agrégala en .env.local (desarrollo) o en Vercel → Settings → Environment Variables (producción).' },
+                { status: 503 }
+            );
+        }
+
         const { images, mediaType = 'image/png' } = await req.json();
 
         if (!images?.length) {
             return NextResponse.json({ error: 'No images provided' }, { status: 400 });
         }
 
-        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const client = new Anthropic({ apiKey });
 
         // Limit pages to avoid exceeding request/token limits
         const pagesToProcess = images.slice(0, MAX_IMAGES);
