@@ -113,5 +113,19 @@ export function parseSantander(text) {
         });
     }
 
+    if (openingBalance > 0) {
+        const startDate = transactions[0]?.fecha
+            ?? (periodMatch?.[1] ? santanderDate(periodMatch[1]) : null)
+            ?? new Date().getFullYear() + '-01-01';
+        transactions.unshift({
+            fecha: startDate,
+            concepto: 'Saldo Anterior',
+            monto: openingBalance,
+            tipo: 'ingreso',
+            categoria: categorize('Saldo Anterior', 'ingreso'),
+            banco: 'Santander',
+        });
+    }
+
     return { banco: 'Santander', cuenta: accountNumber, periodo: period, transactions };
 }

@@ -132,5 +132,17 @@ export function parseInbursa(text) {
     }
     flush();
 
+    if (openingBalance > 0) {
+        const startDate = transactions[0]?.fecha ?? `${year}-01-01`;
+        transactions.unshift({
+            fecha: startDate,
+            concepto: 'Saldo Anterior',
+            monto: openingBalance,
+            tipo: 'ingreso',
+            categoria: categorize('Saldo Anterior', 'ingreso'),
+            banco: 'Inbursa',
+        });
+    }
+
     return { banco: 'Inbursa', cuenta: accountNumber, periodo: period, transactions };
 }

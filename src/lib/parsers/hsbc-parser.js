@@ -107,5 +107,17 @@ export function parseHSBC(text) {
         }
     }
 
+    if (openingBalance > 0) {
+        const startDate = transactions[0]?.fecha ?? `${year}-${baseMonth}-01`;
+        transactions.unshift({
+            fecha: startDate,
+            concepto: 'Saldo Anterior',
+            monto: openingBalance,
+            tipo: 'ingreso',
+            categoria: categorize('Saldo Anterior', 'ingreso'),
+            banco: 'HSBC',
+        });
+    }
+
     return { banco: 'HSBC', cuenta: accountNumber, periodo: period, transactions };
 }

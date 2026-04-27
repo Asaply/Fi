@@ -156,5 +156,17 @@ export function parseBanamex(text) {
     }
     flush();
 
+    if (openingBalance > 0) {
+        const startDate = transactions[0]?.fecha ?? `${year}-01-01`;
+        transactions.unshift({
+            fecha: startDate,
+            concepto: 'Saldo Anterior',
+            monto: openingBalance,
+            tipo: 'ingreso',
+            categoria: categorize('Saldo Anterior', 'ingreso'),
+            banco: 'Banamex',
+        });
+    }
+
     return { banco: 'Banamex', cuenta: accountNumber, periodo: periodFull, transactions };
 }
