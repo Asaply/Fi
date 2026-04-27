@@ -57,6 +57,8 @@ function isNoise(line) {
     if (NOISE_EXACT.has(s) || NOISE_EXACT.has(line)) return true;
     if (NOISE_PREFIXES.some(p => s.startsWith(p))) return true;
     if (/^Página\s+\d+/.test(s)) return true;
+    if (/^Detalle de Operaciones/i.test(s)) return true;
+    if (/^FECHA\s+CONCEPTO/i.test(s)) return true;
     // Reference lines: "20260218 75064956047001025192098 683519"
     if (/^\d{8}\s+\d{10,}/.test(s)) return true;
     // Long numeric strings (CLABE, account numbers)
@@ -88,15 +90,10 @@ export function parseBanamex(text) {
         ?? text.match(/Saldo anterior\s+En pesos M\.N\.\s+([\d,]+\.\d{2})/i)?.[1]
     );
 
-    // Collect all "Detalle de Operaciones" sections
-    const allLines = [];
-    let searchFrom = 0;
-    while (true) {
-        const idx = text.indexOf('Detalle de Operaciones', searchFrom);
-        if (idx < 0) break;
-        allLines.push(...text.slice(idx).split('\n'));
-        searchFrom = idx + 1;
-    }
+    // Collect lines starting from first "Detalle de Operaciones"
+    // (single slice avoids duplicating later pages)
+    const detailStart = text.indexOf('Detalle de Operaciones');
+    const allLines = (detailStart >= 0 ? text.slice(detailStart) : text).split('\n');
 
     const transactions = [];
     let prevSaldo = openingBalance;
