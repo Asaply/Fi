@@ -497,6 +497,8 @@ export default function FinanzasPage() {
                 throw new Error(error?.message || error?.code || 'Error al guardar en Supabase');
             }
             setImportResult({ ok: true, count: payload.length, errorMsg: null });
+            setFilter('finanzas', 'Todos');
+            setPeriodo('Todos');
             await fetchData();
         } catch (e) {
             console.error('Import error:', e?.message || JSON.stringify(e));
