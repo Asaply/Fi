@@ -1,7 +1,8 @@
 /* ───────────────────────────────────────────────────────────
-   FNCE — Onboarding  (World App–inspired, dark theme)
+   FINN — Onboarding  (World App–inspired, dark)
    ─────────────────────────────────────────────────────────── */
 
+/* ── Root ───────────────────────────────────────────────────── */
 .ob-root {
     position: fixed;
     inset: 0;
@@ -12,23 +13,22 @@
     background: #000;
     z-index: 9999;
     overflow: hidden;
-    padding: 0 28px 72px; /* bottom room for progress dots */
+    padding: 0 28px 72px;
 }
 
-/* Ambient glow */
 .ob-bg-glow {
     position: absolute;
-    top: 28%;
+    top: 26%;
     left: 50%;
     transform: translateX(-50%);
     width: min(72vw, 480px);
     height: min(72vw, 480px);
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 102, 0, 0.13) 0%, transparent 68%);
+    background: radial-gradient(circle, rgba(255,102,0,0.12) 0%, transparent 68%);
     pointer-events: none;
 }
 
-/* ── Content ────────────────────────────────────────────── */
+/* ── Content ─────────────────────────────────────────────────── */
 .ob-content {
     width: 100%;
     max-width: 390px;
@@ -45,7 +45,7 @@
     transform: translateY(0);
 }
 
-/* ── Step wrapper ───────────────────────────────────────── */
+/* ── Step base ───────────────────────────────────────────────── */
 .ob-step {
     display: flex;
     flex-direction: column;
@@ -53,11 +53,44 @@
     width: 100%;
 }
 
-.ob-step-use {
+.ob-step-use,
+.ob-step-form {
     align-items: flex-start;
 }
 
-/* ── Icon ───────────────────────────────────────────────── */
+/* ── Spinner (Step 0) ────────────────────────────────────────── */
+.ob-spinner-wrap {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    margin-bottom: 36px;
+}
+
+.ob-spinner-wrap .ob-icon-circle {
+    position: absolute;
+    inset: 8px;
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+    border-radius: 50%;
+}
+
+.ob-spinner-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+@keyframes ob-spin-track {
+    from { stroke-dashoffset: 276.46; }
+    to   { stroke-dashoffset: 0; }
+}
+
+.ob-spinner-track {
+    animation: ob-spin-track 2.6s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+}
+
+/* ── Icon / ring ─────────────────────────────────────────────── */
 .ob-icon-wrap {
     margin-bottom: 36px;
 }
@@ -65,11 +98,15 @@
 .ob-icon-ring {
     padding: 8px;
     border-radius: 50%;
-    background: rgba(255, 102, 0, 0.08);
+    background: rgba(255,102,0,0.08);
 }
 
 .ob-icon-ring-green {
-    background: rgba(34, 197, 94, 0.08);
+    background: rgba(34,197,94,0.08);
+}
+
+.ob-icon-ring-orange {
+    background: rgba(255,102,0,0.08);
 }
 
 .ob-icon-circle {
@@ -84,15 +121,23 @@
 
 .ob-icon-orange {
     background: #ff6600;
-    box-shadow: 0 0 40px rgba(255, 102, 0, 0.35);
+    box-shadow: 0 0 40px rgba(255,102,0,0.35);
 }
 
 .ob-icon-green {
     background: #22c55e;
-    box-shadow: 0 0 40px rgba(34, 197, 94, 0.35);
+    box-shadow: 0 0 40px rgba(34,197,94,0.35);
 }
 
-/* ── Typography ─────────────────────────────────────────── */
+/* FINN logo inside circles */
+.ob-logo-sm {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: contain;
+}
+
+/* ── Typography ──────────────────────────────────────────────── */
 .ob-title {
     font-size: 30px;
     font-weight: 700;
@@ -103,9 +148,7 @@
     text-align: center;
 }
 
-.ob-title-left {
-    text-align: left;
-}
+.ob-title-left { text-align: left; }
 
 .ob-subtitle {
     font-size: 15px;
@@ -122,7 +165,52 @@
     margin-bottom: 24px;
 }
 
-/* ── Option cards ───────────────────────────────────────── */
+/* ── Skip row (name step) ────────────────────────────────────── */
+.ob-skip-row {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+.ob-btn-skip {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 4px 0;
+    transition: color 0.15s;
+}
+
+.ob-btn-skip:hover { color: #888; }
+
+/* ── Input (name step) ───────────────────────────────────────── */
+.ob-input-wrap {
+    width: 100%;
+    margin-bottom: 28px;
+}
+
+.ob-input {
+    width: 100%;
+    background: #0d0d0d;
+    border: 1px solid #222;
+    border-radius: 50px;
+    padding: 16px 22px;
+    font-size: 16px;
+    color: #fff;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.ob-input::placeholder { color: #444; }
+.ob-input:focus { border-color: #ff6600; }
+
+/* ── Option cards (use case) ─────────────────────────────────── */
 .ob-option-list {
     width: 100%;
     display: flex;
@@ -136,8 +224,8 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    background: #111;
-    border: 1px solid #222;
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
     border-radius: 18px;
     padding: 18px 20px;
     cursor: pointer;
@@ -147,19 +235,19 @@
 }
 
 .ob-option:hover {
-    background: #161616;
+    background: #141414;
     border-color: #2a2a2a;
 }
 
 .ob-option-selected {
     border-color: #ff6600 !important;
-    background: rgba(255, 102, 0, 0.07) !important;
+    background: rgba(255,102,0,0.07) !important;
 }
 
 .ob-option-text {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
 }
 
 .ob-option-label {
@@ -181,11 +269,9 @@
     transition: color 0.15s;
 }
 
-.ob-option-selected .ob-option-arrow {
-    color: #ff6600;
-}
+.ob-option-selected .ob-option-arrow { color: #ff6600; }
 
-/* ── Actions ────────────────────────────────────────────── */
+/* ── Actions ─────────────────────────────────────────────────── */
 .ob-actions {
     width: 100%;
     display: flex;
@@ -209,14 +295,8 @@
     transition: opacity 0.15s;
 }
 
-.ob-btn-primary:hover:not(:disabled) {
-    opacity: 0.88;
-}
-
-.ob-btn-primary:disabled {
-    opacity: 0.25;
-    cursor: not-allowed;
-}
+.ob-btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.ob-btn-primary:disabled { opacity: 0.25; cursor: not-allowed; }
 
 .ob-btn-link {
     background: none;
@@ -230,11 +310,9 @@
     transition: color 0.15s;
 }
 
-.ob-btn-link:hover {
-    color: #888;
-}
+.ob-btn-link:hover { color: #888; }
 
-/* ── Progress dots ──────────────────────────────────────── */
+/* ── Progress dots ───────────────────────────────────────────── */
 .ob-dots {
     position: fixed;
     bottom: 28px;
@@ -249,35 +327,17 @@
     width: 6px;
     height: 6px;
     border-radius: 3px;
-    background: #2a2a2a;
+    background: #1f1f1f;
     transition: width 0.2s ease, background 0.2s ease;
 }
 
-.ob-dot-active {
-    width: 22px;
-    background: #ff6600;
-}
+.ob-dot-active { width: 22px; background: #ff6600; }
+.ob-dot-done   { background: #444; }
 
-.ob-dot-done {
-    background: #444;
-}
-
-/* ── Responsive ─────────────────────────────────────────── */
+/* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 480px) {
-    .ob-root {
-        padding: 0 20px 64px;
-    }
-
-    .ob-title {
-        font-size: 26px;
-    }
-
-    .ob-subtitle {
-        font-size: 14px;
-    }
-
-    .ob-icon-circle {
-        width: 72px;
-        height: 72px;
-    }
+    .ob-root { padding: 0 20px 64px; }
+    .ob-title { font-size: 26px; }
+    .ob-subtitle { font-size: 14px; }
+    .ob-icon-circle { width: 72px; height: 72px; }
 }

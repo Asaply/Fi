@@ -1,8 +1,9 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Target, CircleDollarSign, Home, LineChart, Activity, Wallet } from "lucide-react";
+import { LayoutDashboard, Users, Target, Home, LineChart, Activity, Wallet } from "lucide-react";
 import "./Sidebar.css";
 
 const showBeta = process.env.NEXT_PUBLIC_SHOW_BETA_FEATURES === 'true';
@@ -14,9 +15,9 @@ export default function Sidebar() {
         <aside className="sidebar">
             <div className="sidebar-brand">
                 <div className="brand-icon-wrap">
-                    <CircleDollarSign className="brand-icon" size={16} />
+                    <Image src="/img/finn-logo.svg" alt="FINN" width={18} height={18} />
                 </div>
-                <span className="brand-name">FNCE</span>
+                <span className="brand-name">FINN</span>
             </div>
 
             <nav className="sidebar-nav">

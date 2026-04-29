@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "FNCE",
+  title: "FINN",
   description: "Tus finanzas personales en un solo lugar.",
   manifest: "/manifest.json",
   icons: {
@@ -24,7 +24,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "FNCE",
+    title: "FINN",
   },
 };
 

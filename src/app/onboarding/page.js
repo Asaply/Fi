@@ -2,17 +2,27 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    CircleDollarSign, Check, FileText, TrendingUp,
+    Check, FileText, TrendingUp,
     Wallet, BarChart3, ArrowUpRight,
 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 import './Onboarding.css';
 
 const ONBOARDING_KEY = 'fnce_onboarding_v1';
 
+// Steps:
+// 0 = Loading spinner (auto 2.6s)
+// 1 = Account created success
+// 2 = Display name input
+// 3 = Use-case selection
+// 4 = Import CTA
+// 5 = Done
+const TOTAL_STEPS = 6;
+
 const USE_OPTIONS = [
-    { id: 'personal',   icon: Wallet,    label: 'Finanzas personales', desc: 'Controla gastos e ingresos' },
-    { id: 'business',   icon: BarChart3,  label: 'Mi negocio',          desc: 'Ingresos, egresos y clientes' },
-    { id: 'investing',  icon: TrendingUp, label: 'Inversiones',          desc: 'Portfolio, trading y activos' },
+    { id: 'personal',  icon: Wallet,    label: 'Finanzas personales', desc: 'Controla gastos e ingresos' },
+    { id: 'business',  icon: BarChart3,  label: 'Mi negocio',          desc: 'Ingresos, egresos y clientes' },
+    { id: 'investing', icon: TrendingUp, label: 'Inversiones',          desc: 'Portfolio, trading y activos' },
 ];
 
 export default function OnboardingPage() {
@@ -21,6 +31,7 @@ export default function OnboardingPage() {
     const [selectedUse, setSelectedUse] = useState(null);
     const router = useRouter();
 
+    // Skip if already onboarded
     useEffect(() => {
         if (typeof window !== 'undefined' && localStorage.getItem(ONBOARDING_KEY)) {
             router.replace('/dashboard');
@@ -29,6 +40,13 @@ export default function OnboardingPage() {
         const t = setTimeout(() => setVisible(true), 60);
         return () => clearTimeout(t);
     }, [router]);
+
+    // Step 0: auto-advance spinner
+    useEffect(() => {
+        if (step !== 0) return;
+        const t = setTimeout(() => advance(1), 2700);
+        return () => clearTimeout(t);
+    }, [step]);
 
     function advance(next) {
         setVisible(false);
@@ -46,73 +64,146 @@ export default function OnboardingPage() {
             <div className="ob-bg-glow" aria-hidden />
 
             <div className={`ob-content ${visible ? 'ob-visible' : ''}`}>
-                {step === 0 && (
-                    <StepWelcome onNext={() => advance(1)} />
-                )}
-                {step === 1 && (
+                {step === 0 && <StepLoading />}
+                {step === 1 && <StepSuccess onNext={() => advance(2)} />}
+                {step === 2 && <StepName    onNext={() => advance(3)} />}
+                {step === 3 && (
                     <StepUse
                         selected={selectedUse}
                         onSelect={setSelectedUse}
-                        onNext={() => advance(2)}
+                        onNext={() => advance(4)}
                     />
                 )}
-                {step === 2 && (
+                {step === 4 && (
                     <StepImport
                         onImport={() => complete('/finanzas')}
-                        onSkip={() => advance(3)}
+                        onSkip={() => advance(5)}
                     />
                 )}
-                {step === 3 && (
-                    <StepDone onFinish={() => complete('/dashboard')} />
-                )}
+                {step === 5 && <StepDone onFinish={() => complete('/dashboard')} />}
             </div>
 
-            <div className="ob-dots" aria-hidden>
-                {[0, 1, 2, 3].map(i => (
-                    <div
-                        key={i}
-                        className={`ob-dot${i === step ? ' ob-dot-active' : i < step ? ' ob-dot-done' : ''}`}
-                    />
-                ))}
-            </div>
+            {/* Progress dots — hide on spinner */}
+            {step > 0 && (
+                <div className="ob-dots" aria-hidden>
+                    {Array.from({ length: TOTAL_STEPS - 1 }).map((_, i) => (
+                        <div
+                            key={i}
+                            className={`ob-dot${(i + 1) === step ? ' ob-dot-active' : (i + 1) < step ? ' ob-dot-done' : ''}`}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
 
-/* ── Step 0: Welcome ─────────────────────────────────── */
-function StepWelcome({ onNext }) {
+/* ── Step 0: Loading spinner ─────────────────────────────── */
+function StepLoading() {
+    // 2*PI*44 ≈ 276.46
+    return (
+        <div className="ob-step">
+            <div className="ob-spinner-wrap">
+                <div className="ob-icon-circle ob-icon-orange">
+                    <img src="/img/finn-logo.svg" alt="FINN" className="ob-logo-sm" />
+                </div>
+                <svg className="ob-spinner-svg" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="48" cy="48" r="44" stroke="rgba(255,102,0,0.12)" strokeWidth="3"/>
+                    <circle
+                        cx="48" cy="48" r="44"
+                        stroke="#ff6600"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray="276.46"
+                        strokeDashoffset="276.46"
+                        className="ob-spinner-track"
+                        transform="rotate(-90 48 48)"
+                    />
+                </svg>
+            </div>
+            <h1 className="ob-title">Configurando tu cuenta</h1>
+            <p className="ob-subtitle">Un momento, preparamos todo para ti.</p>
+        </div>
+    );
+}
+
+/* ── Step 1: Account created ─────────────────────────────── */
+function StepSuccess({ onNext }) {
+    useEffect(() => {
+        const t = setTimeout(onNext, 2200);
+        return () => clearTimeout(t);
+    }, [onNext]);
+
     return (
         <div className="ob-step">
             <div className="ob-icon-wrap">
-                <div className="ob-icon-ring">
-                    <div className="ob-icon-circle ob-icon-orange">
-                        <CircleDollarSign size={38} strokeWidth={1.5} />
+                <div className="ob-icon-ring ob-icon-ring-green">
+                    <div className="ob-icon-circle ob-icon-green">
+                        <Check size={38} strokeWidth={2.5} />
                     </div>
                 </div>
             </div>
+            <h1 className="ob-title">¡Cuenta creada!</h1>
+            <p className="ob-subtitle">Tu cuenta ha sido creada exitosamente.</p>
+        </div>
+    );
+}
 
-            <h1 className="ob-title">Bienvenido a FNCE</h1>
-            <p className="ob-subtitle">
-                Tu centro de control financiero. Conecta tus bancos,
-                visualiza tu dinero y toma mejores decisiones.
+/* ── Step 2: Display name ────────────────────────────────── */
+function StepName({ onNext }) {
+    const [name, setName]       = useState('');
+    const [loading, setLoading] = useState(false);
+
+    async function handleContinue() {
+        if (!name.trim()) { onNext(); return; }
+        setLoading(true);
+        try {
+            await supabase.auth.updateUser({ data: { display_name: name.trim() } });
+        } catch (_) {}
+        setLoading(false);
+        onNext();
+    }
+
+    return (
+        <div className="ob-step ob-step-form">
+            <div className="ob-skip-row">
+                <button className="ob-btn-skip" onClick={onNext}>Saltar</button>
+            </div>
+
+            <h1 className="ob-title ob-title-left">¿Cómo te llamas?</h1>
+            <p className="ob-subtitle ob-subtitle-left">
+                Personaliza tu experiencia con tu nombre.
             </p>
 
+            <div className="ob-input-wrap">
+                <input
+                    className="ob-input"
+                    type="text"
+                    placeholder="Tu nombre"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    maxLength={40}
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && handleContinue()}
+                />
+            </div>
+
             <div className="ob-actions">
-                <button className="ob-btn-primary" onClick={onNext}>
-                    Comenzar
+                <button className="ob-btn-primary" onClick={handleContinue} disabled={loading}>
+                    {loading ? 'Guardando...' : 'Continuar'}
                 </button>
             </div>
         </div>
     );
 }
 
-/* ── Step 1: Use case ────────────────────────────────── */
+/* ── Step 3: Use case ────────────────────────────────────── */
 function StepUse({ selected, onSelect, onNext }) {
     return (
         <div className="ob-step ob-step-use">
-            <h1 className="ob-title ob-title-left">¿Para qué usarás FNCE?</h1>
+            <h1 className="ob-title ob-title-left">¿Para qué usarás FINN?</h1>
             <p className="ob-subtitle ob-subtitle-left">
-                Personalizamos tu experiencia desde el inicio.
+                Personaliza tu experiencia desde el inicio.
             </p>
 
             <div className="ob-option-list">
@@ -145,7 +236,7 @@ function StepUse({ selected, onSelect, onNext }) {
     );
 }
 
-/* ── Step 2: Import CTA ──────────────────────────────── */
+/* ── Step 4: Import CTA ──────────────────────────────────── */
 function StepImport({ onImport, onSkip }) {
     return (
         <div className="ob-step">
@@ -173,21 +264,21 @@ function StepImport({ onImport, onSkip }) {
     );
 }
 
-/* ── Step 3: Done ────────────────────────────────────── */
+/* ── Step 5: Done ────────────────────────────────────────── */
 function StepDone({ onFinish }) {
     return (
         <div className="ob-step">
             <div className="ob-icon-wrap">
-                <div className="ob-icon-ring ob-icon-ring-green">
-                    <div className="ob-icon-circle ob-icon-green">
-                        <Check size={38} strokeWidth={2.5} />
+                <div className="ob-icon-ring ob-icon-ring-orange">
+                    <div className="ob-icon-circle ob-icon-orange">
+                        <img src="/img/finn-logo.svg" alt="FINN" className="ob-logo-sm" />
                     </div>
                 </div>
             </div>
 
             <h1 className="ob-title">¡Todo listo!</h1>
             <p className="ob-subtitle">
-                Ya puedes usar FNCE al 100%. Tu dashboard te espera.
+                Ya puedes usar FINN al 100%. Tu dashboard te espera.
             </p>
 
             <div className="ob-actions">
