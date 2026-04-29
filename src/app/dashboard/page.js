@@ -13,25 +13,22 @@ import { formatMXN } from '@/lib/formatCurrency';
 import './Dashboard.css';
 
 const PERIODOS = [
-    { value: '1m', label: 'Este mes' },
-    { value: '3m', label: '3 meses' },
-    { value: '6m', label: '6 meses' },
-    { value: '1y', label: '1 año' },
+    { value: '1m',  label: 'Este mes' },
+    { value: '3m',  label: '3 meses' },
+    { value: '6m',  label: '6 meses' },
+    { value: '1y',  label: '1 año' },
+    { value: 'todo', label: 'Todo' },
 ];
 
 function getFechaInicio(periodo) {
     const now = new Date();
     switch (periodo) {
-        case '1m':
-            return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        case '3m':
-            return new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
-        case '6m':
-            return new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
-        case '1y':
-            return new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString().split('T')[0];
-        default:
-            return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        case '1m':   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        case '3m':   return new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
+        case '6m':   return new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
+        case '1y':   return new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString().split('T')[0];
+        case 'todo': return '2000-01-01';
+        default:     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     }
 }
 
@@ -42,6 +39,7 @@ export default function DashboardPage() {
         ingresos: 0,
         egresos: 0,
         porCobrar: 0,
+        porCobrarLabel: 'Por Cobrar',
         portafolio: 0,
         loading: true
     });
@@ -57,7 +55,15 @@ export default function DashboardPage() {
         const loadDashboardStats = async () => {
             setStats(prev => ({ ...prev, loading: true }));
             try {
-                const { data: txs } = await supabase.from('transactions').select('type, amount').gte('date', fechaInicio);
+                const { data: { user } } = await supabase.auth.getUser();
+                const uid = user?.id;
+
+                const { data: txs } = await supabase
+                    .from('transactions')
+                    .select('type, amount')
+                    .eq('user_id', uid)
+                    .gte('date', fechaInicio);
+
                 let ingresos = 0; let egresos = 0;
                 if (txs) {
                     txs.forEach(t => {
@@ -68,18 +74,20 @@ export default function DashboardPage() {
                     });
                 }
 
-                const { data: clients } = await supabase.from('clients').select('name, total_price');
-                const { data: cTxs } = await supabase.from('transactions').select('amount, client').not('client', 'is', null);
-                let porCobrar = 0;
-                if (clients) {
-                    clients.forEach(c => {
-                        const paid = (cTxs || []).filter(t => t.client === c.name).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-                        const price = Number(c.total_price) || 0;
-                        porCobrar += Math.max(0, price - paid);
-                    });
-                }
+                // Per-user por cobrar — same source as finanzas page
+                const { data: config } = await supabase
+                    .from('user_config')
+                    .select('concepto_custom_label, concepto_custom_total')
+                    .eq('user_id', uid)
+                    .maybeSingle();
+                const porCobrar = Number(config?.concepto_custom_total) || 0;
+                const porCobrarLabel = config?.concepto_custom_label || 'Por Cobrar';
 
-                const { data: assets } = await supabase.from('portfolio_assets').select('ticker, quantity, avg_buy_price');
+                const { data: assets } = await supabase
+                    .from('portfolio_assets')
+                    .select('ticker, quantity, avg_buy_price')
+                    .eq('user_id', uid);
+
                 let portafolio = 0;
                 if (assets) {
                     const pricePromises = assets.map(async (a) => {
@@ -94,7 +102,7 @@ export default function DashboardPage() {
                     portafolio = values.reduce((a, b) => a + b, 0);
                 }
 
-                setStats({ ingresos, egresos, porCobrar, portafolio, loading: false });
+                setStats({ ingresos, egresos, porCobrar, porCobrarLabel, portafolio, loading: false });
             } catch (err) {
                 console.error(err);
                 setStats(prev => ({ ...prev, loading: false }));
@@ -146,28 +154,28 @@ export default function DashboardPage() {
                             <ArrowUpRight size={16} />
                         </div>
                         <span className="app-metric-title">Ingresos</span>
-                        <span className="app-metric-value" style={{ color: 'var(--success)' }}>{formatMXN(stats.ingresos)}</span>
+                        <span className="app-metric-value">{formatMXN(stats.ingresos)}</span>
                     </div>
                     <div className="app-metric-card">
                         <div className="app-metric-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }}>
                             <ArrowDownRight size={16} />
                         </div>
                         <span className="app-metric-title">Egresos</span>
-                        <span className="app-metric-value" style={{ color: 'var(--danger)' }}>{formatMXN(stats.egresos)}</span>
+                        <span className="app-metric-value">{formatMXN(stats.egresos)}</span>
                     </div>
                     <div className="app-metric-card">
                         <div className="app-metric-icon" style={{ background: 'rgba(234, 179, 8, 0.12)', color: '#eab308' }}>
                             <Wallet size={16} />
                         </div>
-                        <span className="app-metric-title">Por Cobrar</span>
-                        <span className="app-metric-value" style={{ color: '#eab308' }}>{formatMXN(stats.porCobrar)}</span>
+                        <span className="app-metric-title">{stats.porCobrarLabel}</span>
+                        <span className="app-metric-value">{formatMXN(stats.porCobrar)}</span>
                     </div>
                     <div className="app-metric-card">
                         <div className="app-metric-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
                             <TrendingUp size={16} />
                         </div>
                         <span className="app-metric-title">Portafolio</span>
-                        <span className="app-metric-value" style={{ color: '#eab308' }}>{formatMXN(stats.portafolio)}</span>
+                        <span className="app-metric-value">{formatMXN(stats.portafolio)}</span>
                         <span className="app-metric-subtext">Costo base</span>
                     </div>
                 </div>

@@ -61,7 +61,8 @@ export default function OnboardingPage() {
 
     return (
         <div className="ob-root">
-            <div className="ob-bg-glow" aria-hidden />
+            <div className="ob-bg-glow"        aria-hidden />
+            <div className="ob-bg-speedlines"  aria-hidden />
 
             <div className={`ob-content ${visible ? 'ob-visible' : ''}`}>
                 {step === 0 && <StepLoading />}
