@@ -26,8 +26,9 @@ export async function middleware(req) {
     const { data: { session } } = await supabase.auth.getSession()
 
     const { pathname } = req.nextUrl
-    const isLoginPage = pathname === '/login'
-    const isRoot = pathname === '/'
+    const isLoginPage    = pathname === '/login'
+    const isRoot         = pathname === '/'
+    const isOnboarding   = pathname === '/onboarding'
     // /auth/* handles email verification and OAuth callbacks — always allow through
     const isAuthCallback = pathname.startsWith('/auth/')
 
@@ -37,6 +38,7 @@ export async function middleware(req) {
     }
 
     // Authenticated on login or root — go to dashboard
+    // Onboarding manages its own redirect (localStorage check)
     if (session && (isLoginPage || isRoot)) {
         return NextResponse.redirect(new URL('/dashboard', req.url))
     }

@@ -29,6 +29,6 @@ export async function GET(request) {
         await supabase.auth.exchangeCodeForSession(code)
     }
 
-    // After verifying email or OAuth flow — user is now authenticated
-    return NextResponse.redirect(new URL('/dashboard', requestUrl.origin))
+    // After verifying email or OAuth flow — send to onboarding (skips if already done)
+    return NextResponse.redirect(new URL('/onboarding', requestUrl.origin))
 }
