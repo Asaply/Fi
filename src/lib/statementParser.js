@@ -23,7 +23,7 @@ const MONTO_RE = /([+\-])\s*(?:MX)?\$?([\d,]+\.\d{2})/;
 const NU_LINE_RE = /^(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{4})\s+(.+?)\s+([+\-]\s*(?:MX)?\$?[\d,]+\.\d{2})$/i;
 const NU_GLOBAL_RE = /(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{4})\s+(.+?)\s+([+\-]\s*(?:MX)?\$?[\d,]+\.\d{2})/gi;
 
-function buildNuTx(day, mon, year, concepto, montoStr) {
+function buildNuTx(day, mon, year, concepto, montoStr, isCreditCard) {
     const mes2 = MESES[mon.toUpperCase()];
     if (!mes2) return null;
     if (/cajita|nu\s+invest|rendimiento/i.test(concepto)) return null;
@@ -37,12 +37,12 @@ function buildNuTx(day, mon, year, concepto, montoStr) {
         fecha: `${year}-${mes2}-${day.padStart(2, '0')}`,
         concepto: concepto.trim(),
         monto: Math.abs(monto),
-        tipo: monto < 0 ? 'egreso' : 'ingreso',
+        tipo: monto < 0 ? 'egreso' : (isCreditCard ? 'Transferencia' : 'ingreso'),
         categoria: inferirCategoria(concepto),
     };
 }
 
-function parsearNu(texto) {
+function parsearNu(texto, isCreditCard) {
     const transacciones = [];
 
     // Opening balance → prepend as ingreso
@@ -76,7 +76,7 @@ function parsearNu(texto) {
             }
             continue;
         }
-        const tx = buildNuTx(m[1], m[2], m[3], m[4], m[5]);
+        const tx = buildNuTx(m[1], m[2], m[3], m[4], m[5], isCreditCard);
         if (tx) {
             transacciones.push(tx);
             lastTx = tx;
@@ -88,7 +88,7 @@ function parsearNu(texto) {
         NU_GLOBAL_RE.lastIndex = 0;
         let m;
         while ((m = NU_GLOBAL_RE.exec(texto)) !== null) {
-            const tx = buildNuTx(m[1], m[2], m[3], m[4], m[5]);
+            const tx = buildNuTx(m[1], m[2], m[3], m[4], m[5], isCreditCard);
             if (!tx) continue;
             const key = `${tx.fecha}|${tx.concepto}|${tx.monto}`;
             if (!seen.has(key)) { seen.add(key); transacciones.push(tx); }
@@ -137,7 +137,7 @@ function parseFecha(linea) {
     return null;
 }
 
-function parseMexicanStatement(text) {
+function parseMexicanStatement(text, isCreditCard) {
     const transactions = [];
     let lastTx = null;
     let lineasSigue = 0;
@@ -182,6 +182,7 @@ function parseMexicanStatement(text) {
         const conceptRaw = trimmed.substring(dateEnd, firstAmtIdx > dateEnd ? firstAmtIdx : undefined);
         const concepto = conceptRaw.replace(/\s+/g, ' ').trim() || trimmed.substring(0, 60);
 
+        if (isCreditCard && tipo === 'ingreso') tipo = 'Transferencia';
         if (monto > 0) {
             const tx = { fecha, concepto, monto, tipo, categoria: inferirCategoria(concepto) };
             transactions.push(tx);
@@ -192,20 +193,20 @@ function parseMexicanStatement(text) {
     return transactions;
 }
 
-export function parseStatementText(rawText) {
+export function parseStatementText(rawText, isCreditCard = false) {
     const text = normalizarMeses(rawText);
 
     // Try bank-specific parser first
     try {
-        const bankResult = parseBankStatement(text);
+        const bankResult = parseBankStatement(text, isCreditCard);
         if (bankResult && bankResult.transactions.length > 0) {
             return bankResult.transactions;
         }
     } catch (_) {}
 
     // Fallback to generic parsers
-    const nuResult      = parsearNu(text);
-    const genericResult = parseMexicanStatement(text);
+    const nuResult      = parsearNu(text, isCreditCard);
+    const genericResult = parseMexicanStatement(text, isCreditCard);
     const transactions  = nuResult.length >= genericResult.length ? nuResult : genericResult;
     return transactions;
 }

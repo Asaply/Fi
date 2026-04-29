@@ -65,7 +65,7 @@ export default function CardFinanzas({ fechaInicio }) {
 
     return (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
+            <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
                 Resumen Finanzas
             </h2>
 
@@ -75,15 +75,15 @@ export default function CardFinanzas({ fechaInicio }) {
                 <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                         <div>
-                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Ingresos</p>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Ingresos</p>
                             <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--success)', margin: 0, fontFamily: 'var(--font-mono)' }}>{formatMXN(totals.ingresos)}</p>
                         </div>
                         <div>
-                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Egresos</p>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Egresos</p>
                             <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--danger)', margin: 0, fontFamily: 'var(--font-mono)' }}>{formatMXN(totals.egresos)}</p>
                         </div>
                         <div>
-                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Neto</p>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Neto</p>
                             <p style={{ fontSize: '18px', fontWeight: 700, color: neta >= 0 ? 'var(--success)' : 'var(--danger)', margin: 0, fontFamily: 'var(--font-mono)' }}>
                                 {neta >= 0 ? '+' : ''}{formatMXN(neta)}
                             </p>
@@ -98,8 +98,8 @@ export default function CardFinanzas({ fechaInicio }) {
                                     <YAxis hide />
                                     <Tooltip
                                         formatter={(v, name) => [formatMXN(v), name === 'ingresos' ? 'Ingresos' : 'Egresos']}
-                                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#ffffff', fontSize: '12px' }}
-                                        labelStyle={{ color: '#aaaaaa', marginBottom: '4px' }}
+                                        contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '12px' }}
+                                        labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px' }}
                                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                     />
                                     <Bar dataKey="ingresos" fill="var(--success)" radius={[3, 3, 0, 0]} opacity={0.85} />

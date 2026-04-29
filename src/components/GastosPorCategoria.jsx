@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/lib/supabaseClient';
+import Modal from '@/components/Modal';
 
 const CATEGORY_COLORS = {
     'Suscripciones': '#EC4899',
@@ -37,6 +38,13 @@ export default function GastosPorCategoria({ startDate, endDate }) {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [activeIndex, setActiveIndex] = useState(null);
+    const [allTransactions, setAllTransactions] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+
+    const handleCategoryClick = (categoryName) => {
+        if (!categoryName) return;
+        setSelectedCategory(categoryName);
+    };
 
     useEffect(() => {
         const load = async () => {
@@ -48,7 +56,7 @@ export default function GastosPorCategoria({ startDate, endDate }) {
 
             const { data: rows } = await supabase
                 .from('transactions')
-                .select('categoria, amount, type, concept')
+                .select('categoria, amount, type, concept, date')
                 .eq('user_id', user?.id)
                 .in('type', ['Egreso', 'egreso', 'Gasto Personal', 'gasto personal'])
                 .gte('date', from)
@@ -56,12 +64,14 @@ export default function GastosPorCategoria({ startDate, endDate }) {
 
             const egresos = (rows || []).filter(t =>
                 ['egreso', 'gasto personal'].includes(t.type?.toLowerCase().trim() ?? '')
-            );
+            ).map(t => ({ ...t, categoria: t.categoria || categorizarAutomatico(t.concept || '') }));
+
+            setAllTransactions(egresos);
 
             const totalAmt = egresos.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
             const grouped = egresos.reduce((acc, t) => {
-                const cat = t.categoria || categorizarAutomatico(t.concept || '');
+                const cat = t.categoria;
                 acc[cat] = (acc[cat] || 0) + Math.abs(Number(t.amount) || 0);
                 return acc;
             }, {});
@@ -80,17 +90,17 @@ export default function GastosPorCategoria({ startDate, endDate }) {
 
     if (loading) {
         return (
-            <div className="card" style={{ padding: '20px' }}>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Cargando...</p>
+            <div className="card fnce-dynamic-panel" style={{ padding: '20px' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Cargando...</p>
             </div>
         );
     }
 
     return (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="card fnce-dynamic-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
+                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
                     Gastos por Categoría
                 </h2>
                 {total > 0 && (
@@ -101,7 +111,7 @@ export default function GastosPorCategoria({ startDate, endDate }) {
             </div>
 
             {data.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>
                     Sin egresos en este período
                 </p>
             ) : (
@@ -128,6 +138,8 @@ export default function GastosPorCategoria({ startDate, endDate }) {
                                             key={entry.name}
                                             fill={getColor(entry.name, idx)}
                                             opacity={activeIndex === null || activeIndex === idx ? 1 : 0.4}
+                                            onClick={() => handleCategoryClick(entry.name)}
+                                            style={{ cursor: 'pointer' }}
                                         />
                                     ))}
                                 </Pie>
@@ -137,10 +149,10 @@ export default function GastosPorCategoria({ startDate, endDate }) {
                                         const { name, value } = payload[0].payload;
                                         const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                         return (
-                                            <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: '8px 12px' }}>
+                                            <div style={{ background: 'var(--bg-surface)', border: '1px solid #333', borderRadius: 8, padding: '8px 12px' }}>
                                                 <p style={{ color: CATEGORY_COLORS[name] || '#fff', margin: 0, fontSize: '12px', fontWeight: 600 }}>{name}</p>
-                                                <p style={{ color: '#fff', margin: 0, fontSize: '12px' }}>{formatMXN(value)}</p>
-                                                <p style={{ color: '#aaa', margin: 0, fontSize: '11px' }}>{pct}%</p>
+                                                <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '12px' }}>{formatMXN(value)}</p>
+                                                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '11px' }}>{pct}%</p>
                                             </div>
                                         );
                                     }}
@@ -153,7 +165,7 @@ export default function GastosPorCategoria({ startDate, endDate }) {
                                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
                                     {formatMXN(total)}
                                 </p>
-                                <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
+                                <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
                                     100%
                                 </p>
                             </div>
@@ -163,7 +175,7 @@ export default function GastosPorCategoria({ startDate, endDate }) {
                     {/* Legend */}
                     <div className="donut-legend" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {data.map((entry, idx) => (
-                            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div key={entry.name} onClick={() => handleCategoryClick(entry.name)} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px', borderRadius: '6px', transition: 'background 0.2s' }} className="legend-item">
                                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: getColor(entry.name, idx), flexShrink: 0 }} />
                                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {entry.name}
@@ -176,15 +188,49 @@ export default function GastosPorCategoria({ startDate, endDate }) {
                         {/* Total row */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid var(--bg-border)', paddingTop: '8px', marginTop: '2px' }}>
                             <div style={{ width: '8px', height: '8px', flexShrink: 0 }} />
-                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', flex: 1 }}>Total</span>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Total</span>
                             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
                                 {formatMXN(total)}
                             </span>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '38px', textAlign: 'right' }}>100.0%</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', minWidth: '38px', textAlign: 'right' }}>100.0%</span>
                         </div>
                     </div>
                 </div>
             )}
+
+            {(() => {
+                const categoryTx = allTransactions.filter(t => t.categoria === selectedCategory);
+                const categoryTotal = categoryTx.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+                const pct = total > 0 ? ((categoryTotal / total) * 100).toFixed(1) : 0;
+                
+                return (
+                    <Modal isOpen={!!selectedCategory} onClose={() => setSelectedCategory(null)} title={
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span>{selectedCategory}</span>
+                            <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 400, marginTop: '4px' }}>
+                                {formatMXN(categoryTotal)} ({pct}% del total)
+                            </span>
+                        </div>
+                    }>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+                    {allTransactions.filter(t => t.categoria === selectedCategory).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).map((t, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.concept || 'Sin descripción'}</span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.date ? new Date(t.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>
+                            </div>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', alignSelf: 'center', flexShrink: 0, marginLeft: '12px' }}>
+                                {formatMXN(t.amount)}
+                            </span>
+                        </div>
+                    ))}
+                    {categoryTx.length === 0 && (
+                        <p style={{ color: 'var(--text-secondary)', textAlign: 'center', fontSize: '13px' }}>No se encontraron transacciones detalladas.</p>
+                    )}
+                </div>
+            </Modal>
+                );
+            })()}
         </div>
     );
 }

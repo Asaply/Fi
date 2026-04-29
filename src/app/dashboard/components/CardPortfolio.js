@@ -114,8 +114,8 @@ export default function CardPortfolio() {
                                     </Pie>
                                     <Tooltip
                                         formatter={(v) => formatUSD(v)}
-                                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#ffffff', fontSize: '12px' }}
-                                        labelStyle={{ color: '#aaaaaa' }}
+                                        contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '12px' }}
+                                        labelStyle={{ color: 'var(--text-secondary)' }}
                                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                     />
                                 </PieChart>
@@ -138,7 +138,7 @@ export default function CardPortfolio() {
                                             width: '20px', height: '20px', borderRadius: '50%',
                                             background: COLORS[i % COLORS.length], display: 'inline-flex',
                                             alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '10px', fontWeight: 700, color: '#fff', flexShrink: 0
+                                            fontSize: '10px', fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0
                                         }}>{i + 1}</span>
                                         <div>
                                             <p className="top-activo-nombre" style={{ fontSize: '13px', fontWeight: 600, margin: 0 }}>{a.ticker.toUpperCase()}</p>

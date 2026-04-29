@@ -4,6 +4,41 @@
     gap: 24px;
 }
 
+.dashboard-page {
+    position: relative;
+    isolation: isolate;
+}
+
+.dashboard-page .page-header {
+    background: transparent;
+}
+
+.dashboard-page .page-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.dashboard-page .btn-tour {
+    margin-top: 8px;
+}
+
+.dashboard-page::before {
+    content: '';
+    position: absolute;
+    top: -180px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(1050px, 96%);
+    height: 360px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at top, rgba(255, 152, 64, 0.16) 0%, rgba(255, 126, 32, 0.08) 45%, rgba(0, 0, 0, 0) 74%);
+    z-index: -1;
+}
+
 .dashboard-full-width {
     grid-column: 1 / -1;
 }

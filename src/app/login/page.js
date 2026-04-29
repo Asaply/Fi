@@ -52,6 +52,8 @@ export default function LoginPage() {
 
     return (
         <div className="login-root">
+            <div className="login-bg-glow" aria-hidden="true" />
+            <div className="login-bg-speedlines" aria-hidden="true" />
             <div className="login-card">
                 {/* Logo */}
                 <div className="login-logo">

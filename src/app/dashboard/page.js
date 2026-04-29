@@ -4,12 +4,12 @@ import { getFilter, setFilter } from '@/lib/filterMemory';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { DASHBOARD_STEPS } from '@/components/onboarding/tourSteps';
-import CardFinanzas from './components/CardFinanzas';
-import CardTrading from './components/CardTrading';
-import CardPortfolio from './components/CardPortfolio';
 import GastosPorCategoria from '@/components/GastosPorCategoria';
 import ReporteMensual from '@/components/ReporteMensual';
 import Recordatorios from '@/components/Recordatorios';
+import { supabase } from '@/lib/supabaseClient';
+import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Search, Calendar } from 'lucide-react';
+import { formatMXN } from '@/lib/formatCurrency';
 import './Dashboard.css';
 
 const PERIODOS = [
@@ -38,6 +38,13 @@ function getFechaInicio(periodo) {
 export default function DashboardPage() {
     const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('dashboard');
     const [periodo, setPeriodo] = useState('3m');
+    const [stats, setStats] = useState({
+        ingresos: 0,
+        egresos: 0,
+        porCobrar: 0,
+        portafolio: 0,
+        loading: true
+    });
 
     useEffect(() => {
         const saved = getFilter('dashboard');
@@ -46,21 +53,128 @@ export default function DashboardPage() {
 
     const fechaInicio = getFechaInicio(periodo);
 
+    useEffect(() => {
+        const loadDashboardStats = async () => {
+            setStats(prev => ({ ...prev, loading: true }));
+            try {
+                const { data: txs } = await supabase.from('transactions').select('type, amount').gte('date', fechaInicio);
+                let ingresos = 0; let egresos = 0;
+                if (txs) {
+                    txs.forEach(t => {
+                        const type = t.type?.toLowerCase().trim();
+                        const amt = Number(t.amount) || 0;
+                        if (type === 'ingreso') ingresos += amt;
+                        if (['egreso', 'gasto personal'].includes(type)) egresos += amt;
+                    });
+                }
+
+                const { data: clients } = await supabase.from('clients').select('name, total_price');
+                const { data: cTxs } = await supabase.from('transactions').select('amount, client').not('client', 'is', null);
+                let porCobrar = 0;
+                if (clients) {
+                    clients.forEach(c => {
+                        const paid = (cTxs || []).filter(t => t.client === c.name).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+                        const price = Number(c.total_price) || 0;
+                        porCobrar += Math.max(0, price - paid);
+                    });
+                }
+
+                const { data: assets } = await supabase.from('portfolio_assets').select('ticker, quantity, avg_buy_price');
+                let portafolio = 0;
+                if (assets) {
+                    const pricePromises = assets.map(async (a) => {
+                        try {
+                            const res = await fetch(`/api/price?ticker=${encodeURIComponent(a.ticker)}`);
+                            const data = await res.json();
+                            if (data.price) return Number(data.price) * Number(a.quantity);
+                        } catch (e) {}
+                        return Number(a.avg_buy_price) * Number(a.quantity);
+                    });
+                    const values = await Promise.all(pricePromises);
+                    portafolio = values.reduce((a, b) => a + b, 0);
+                }
+
+                setStats({ ingresos, egresos, porCobrar, portafolio, loading: false });
+            } catch (err) {
+                console.error(err);
+                setStats(prev => ({ ...prev, loading: false }));
+            }
+        };
+        loadDashboardStats();
+    }, [fechaInicio]);
+
+    const balanceTotal = stats.ingresos - stats.egresos + stats.portafolio + stats.porCobrar;
+    const balanceAbs = formatMXN(Math.abs(balanceTotal));
+    const [balanceInt, balanceDec] = balanceAbs.split('.');
+
     return (
-        <div className="page-container">
+        <div className="page-container dashboard-page">
             <OnboardingTour
                 steps={DASHBOARD_STEPS}
                 isActive={tourActive}
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />
-            {/* Page header */}
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Resumen</h1>
+            {stats.loading ? (
+                <div className="app-hero">
+                    <div className="skeleton" style={{ height: '14px', width: '90px', margin: '0 auto 12px', borderRadius: '4px' }} />
+                    <div className="skeleton" style={{ height: '52px', width: '220px', margin: '0 auto', borderRadius: '8px' }} />
                 </div>
-                <div className="page-actions">
-                    <button onClick={resetTour} className="btn-tour" title="¿Cómo usar esta sección?">?</button>
+            ) : (
+                <div className="app-hero">
+                    <p className="app-hero-label">Balance Total</p>
+                    <div className="app-hero-amount">
+                        <span className={`app-hero-int${balanceTotal < 0 ? ' negative' : ''}`}>
+                            {balanceTotal < 0 ? '-' : ''}{balanceInt}
+                        </span>
+                        <span className="app-hero-dec">.{balanceDec}</span>
+                    </div>
+                </div>
+            )}
+
+            {stats.loading ? (
+                <div className="app-metric-grid">
+                    <div className="skeleton card" style={{ height: '90px' }} />
+                    <div className="skeleton card" style={{ height: '90px' }} />
+                    <div className="skeleton card" style={{ height: '90px' }} />
+                    <div className="skeleton card" style={{ height: '90px' }} />
+                </div>
+            ) : (
+                <div className="app-metric-grid">
+                    <div className="app-metric-card">
+                        <div className="app-metric-icon" style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>
+                            <ArrowUpRight size={16} />
+                        </div>
+                        <span className="app-metric-title">Ingresos</span>
+                        <span className="app-metric-value" style={{ color: 'var(--success)' }}>{formatMXN(stats.ingresos)}</span>
+                    </div>
+                    <div className="app-metric-card">
+                        <div className="app-metric-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }}>
+                            <ArrowDownRight size={16} />
+                        </div>
+                        <span className="app-metric-title">Egresos</span>
+                        <span className="app-metric-value" style={{ color: 'var(--danger)' }}>{formatMXN(stats.egresos)}</span>
+                    </div>
+                    <div className="app-metric-card">
+                        <div className="app-metric-icon" style={{ background: 'rgba(234, 179, 8, 0.12)', color: '#eab308' }}>
+                            <Wallet size={16} />
+                        </div>
+                        <span className="app-metric-title">Por Cobrar</span>
+                        <span className="app-metric-value" style={{ color: '#eab308' }}>{formatMXN(stats.porCobrar)}</span>
+                    </div>
+                    <div className="app-metric-card">
+                        <div className="app-metric-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
+                            <TrendingUp size={16} />
+                        </div>
+                        <span className="app-metric-title">Portafolio</span>
+                        <span className="app-metric-value" style={{ color: '#eab308' }}>{formatMXN(stats.portafolio)}</span>
+                        <span className="app-metric-subtext">Costo base</span>
+                    </div>
+                </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                <div className="page-actions" style={{ justifyContent: 'center' }}>
                     <div className="period-filter-wrap" data-tour="time-filter">
                         {PERIODOS.map(p => (
                             <button
@@ -75,22 +189,13 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Cards grid */}
+            {/* Layout inferior */}
             <div className="dashboard-grid">
-                <div data-tour="resumen-finanzas">
-                    <CardFinanzas fechaInicio={fechaInicio} />
-                </div>
-                <div data-tour="resumen-trading">
-                    <CardTrading fechaInicio={fechaInicio} />
-                </div>
                 <div className="dashboard-full-width" data-tour="gastos-categoria">
                     <GastosPorCategoria startDate={fechaInicio} />
                 </div>
                 <div className="dashboard-full-width">
                     <ReporteMensual startDate={fechaInicio} />
-                </div>
-                <div className="dashboard-full-width">
-                    <CardPortfolio />
                 </div>
                 <div className="dashboard-full-width">
                     <Recordatorios />

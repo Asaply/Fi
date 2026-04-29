@@ -286,23 +286,20 @@ export default function PortfolioHealth() {
     };
 
     const formatCurrency = (amt) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'USD' }).format(amt);
+    const valAbs = formatCurrency(Math.abs(totalValue));
+    const [valInt, valDec] = valAbs.split('.');
 
     return (
-        <div className="portfolio-page page-container">
+        <div className="page-container portfolio-page">
             <OnboardingTour
                 steps={PORTFOLIO_STEPS}
                 isActive={tourActive}
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />
-
-            {/* HEADER */}
-            <div className="portfolio-header page-header">
-                <div>
-                    <h1 className="page-title">Portfolio Health</h1>
-                </div>
-                <div className="page-actions">
-                    <button onClick={resetTour} className="btn-tour" title="¿Cómo usar esta sección?">?</button>
+            {/* Controles de Action Button */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                <div className="page-actions" style={{ justifyContent: 'center' }}>
                     <div className="period-filter-wrap">
                         {[
                             { label: 'Este mes', range: '1M' },
@@ -315,9 +312,12 @@ export default function PortfolioHealth() {
                             >{p.label}</button>
                         ))}
                     </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                     <button className="btn-cta-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
                         <Plus size={16} /> Agregar Activo
                     </button>
+                    <button onClick={resetTour} className="btn-action-secondary" title="¿Cómo usar esta sección?">?</button>
                 </div>
             </div>
 
@@ -347,45 +347,64 @@ export default function PortfolioHealth() {
 
             ) : (
                 <>
-                    {/* 1. HERO — Valor total + P&L */}
-                    <div className="portfolio-hero card">
-                        <div className="hero-main">
-                            <div>
-                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Valor total del portafolio</span>
-                                <div className="hero-value">{formatCurrency(totalValue)}</div>
-                            </div>
-                            <div className={`hero-pnl ${totalPnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
-                                <span className="hero-pnl-amount">{totalPnl > 0 ? '+' : ''}{formatCurrency(totalPnl)}</span>
-                                <span className="hero-pnl-perc">({totalPnlPerc > 0 ? '+' : ''}{totalPnlPerc.toFixed(2)}%)</span>
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 400 }}>ganancia / pérdida total</span>
-                            </div>
+                    {/* 1. HERO — Valor total */}
+                    <div className="app-hero">
+                        <p className="app-hero-label">Valor total del portafolio</p>
+                        <div className="app-hero-amount">
+                            <span className="app-hero-int">
+                                {valInt}
+                            </span>
+                            <span className="app-hero-dec">.{valDec}</span>
                         </div>
-                        <div className="hero-secondary">
-                            <div className="hero-stat" style={{ borderRight: '1px solid #1c1c1c', paddingRight: '16px' }}>
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowUpRight size={14} color="#22c55e" />Mejor activo</span>
-                                <span style={{ fontWeight: 700, color: 'var(--success)' }}>{bestAsset.ticker}</span>
-                                <span style={{ fontSize: '12px', color: 'var(--success)' }}>{bestAsset.pnlPerc === -Infinity ? '-' : `+${bestAsset.pnlPerc.toFixed(1)}%`}</span>
+                        <div className={`app-hero-badge ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
+                            {totalPnl >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                            {Math.abs(totalPnlPerc).toFixed(2)}% ROI Global
+                        </div>
+                    </div>
+
+                    {/* 2. METRIC GRID 2x2 */}
+                    <div className="app-metric-grid">
+                        <div className="app-metric-card" data-tour="card-pnl">
+                            <div className="app-metric-icon" style={{ background: totalPnl >= 0 ? 'rgba(52, 211, 153, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: totalPnl >= 0 ? '#34d399' : '#ef4444' }}>
+                                {totalPnl >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                             </div>
-                            <div className="hero-stat" style={{ borderRight: '1px solid #1c1c1c', paddingRight: '16px' }}>
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowDownRight size={14} color="#ef4444" />Peor activo</span>
-                                <span style={{ fontWeight: 700, color: 'var(--danger)' }}>{worstAsset.ticker}</span>
-                                <span style={{ fontSize: '12px', color: 'var(--danger)' }}>{worstAsset.pnlPerc === Infinity ? '-' : `${worstAsset.pnlPerc.toFixed(1)}%`}</span>
+                            <span className="app-metric-title">P&L Total</span>
+                            <span className={`app-metric-value ${totalPnl >= 0 ? 'amount-positive' : 'amount-negative'}`}>
+                                {totalPnl > 0 ? '+' : ''}{formatCurrency(totalPnl)}
+                            </span>
+                        </div>
+
+                        <div className="app-metric-card">
+                            <div className="app-metric-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
+                                <Wallet size={16} />
                             </div>
-                            <div className="hero-stat" style={{ borderRight: '1px solid #1c1c1c', paddingRight: '16px' }}>
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><Wallet size={14} />Capital invertido</span>
-                                <span style={{ fontWeight: 700 }}>{formatCurrency(totalCost)}</span>
+                            <span className="app-metric-title">Capital Invertido</span>
+                            <span className="app-metric-value">{formatCurrency(totalCost)}</span>
+                        </div>
+
+                        <div className="app-metric-card">
+                            <div className="app-metric-icon" style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>
+                                <ArrowUpRight size={16} />
                             </div>
-                            <div className="hero-stat">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><LayoutGrid size={14} />Número de activos</span>
-                                <span style={{ fontWeight: 700 }}>{assets.length}</span>
+                            <span className="app-metric-title">Mejor Activo</span>
+                            <span className="app-metric-value" style={{ color: 'var(--success)' }}>{bestAsset.ticker}</span>
+                            <span className="app-metric-subtext" style={{ color: 'var(--success)' }}>{bestAsset.pnlPerc === -Infinity ? '-' : `+${bestAsset.pnlPerc.toFixed(1)}%`}</span>
+                        </div>
+
+                        <div className="app-metric-card">
+                            <div className="app-metric-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }}>
+                                <ArrowDownRight size={16} />
                             </div>
+                            <span className="app-metric-title">Peor Activo</span>
+                            <span className="app-metric-value" style={{ color: 'var(--danger)' }}>{worstAsset.ticker}</span>
+                            <span className="app-metric-subtext" style={{ color: 'var(--danger)' }}>{worstAsset.pnlPerc === Infinity ? '-' : `${worstAsset.pnlPerc.toFixed(1)}%`}</span>
                         </div>
                     </div>
 
                     {/* 2. TABLA DE ACTIVOS */}
-                    <div className="table-section" data-tour="tabla-activos">
+                    <div className="table-section fnce-dynamic-panel" data-tour="tabla-activos">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 600 }}>Mis Activos</h3>
+                            <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>Mis Activos</h3>
                             <div className="search-input-wrapper">
                                 <Search className="search-input-icon" size={16} />
                                 <input
@@ -467,7 +486,7 @@ export default function PortfolioHealth() {
                                 <XAxis dataKey="day" stroke="#666" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
                                 <YAxis yAxisId="left" stroke="#666" fontSize={11} tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} width={55} tickLine={false} axisLine={false} />
                                 <YAxis yAxisId="right" orientation="right" stroke="#666" fontSize={11} tickLine={false} axisLine={false} hide />
-                                <RechartsTooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#ffffff', fontSize: '13px' }} labelStyle={{ color: '#aaaaaa' }} formatter={(val) => formatCurrency(val)} />
+                                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px' }} labelStyle={{ color: 'var(--text-secondary)' }} formatter={(val) => formatCurrency(val)} />
                                 <Legend iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
                                 <Line yAxisId="left" type="monotone" dataKey="Tu portafolio" stroke="#10b981" strokeWidth={3} dot={false} />
                                 <Line yAxisId="right" type="monotone" dataKey="S&P 500" stroke="#3b82f6" strokeWidth={2} dot={false} strokeDasharray="5 5" />
@@ -485,7 +504,7 @@ export default function PortfolioHealth() {
                                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
                                         {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                                     </Pie>
-                                    <RechartsTooltip formatter={(value, name) => [formatCurrency(value), name]} contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#ffffff' }} labelStyle={{ color: '#aaaaaa' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                                    <RechartsTooltip formatter={(value, name) => [formatCurrency(value), name]} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }} labelStyle={{ color: 'var(--text-secondary)' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                                     <Legend iconType="circle" />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -496,7 +515,7 @@ export default function PortfolioHealth() {
                                 <BarChart data={barData}>
                                     <XAxis dataKey="name" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis stroke="#666" fontSize={12} tickFormatter={(val) => `$${val}`} width={60} tickLine={false} axisLine={false} />
-                                    <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#ffffff' }} labelStyle={{ color: '#aaaaaa' }} />
+                                    <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }} labelStyle={{ color: 'var(--text-secondary)' }} />
                                     <ReferenceLine y={0} stroke="var(--border-color)" />
                                     <Bar dataKey="PnL" radius={[4, 4, 0, 0]}>
                                         {barData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.PnL >= 0 ? '#10b981' : '#ef4444'} />)}
@@ -508,7 +527,7 @@ export default function PortfolioHealth() {
 
                     {/* 4. MÉTRICAS DE RIESGO */}
                     <div className="card">
-                        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Métricas de Riesgo</h3>
+                        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: 'var(--text-primary)' }}>Métricas de Riesgo</h3>
                         <div className="risk-metrics-row">
                             <div className="risk-card">
                                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -552,7 +571,7 @@ export default function PortfolioHealth() {
                     <div className="health-card">
                         <div className="health-header">
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Salud de tu Portafolio</h3>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Salud de tu Portafolio</h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                                     Mide qué tan equilibrado y seguro está tu portafolio. 0 = muy arriesgado, 100 = muy diversificado
                                 </p>

@@ -86,11 +86,11 @@ export default function ExpensesWidget({ widgetId, removeWidget }) {
                                 </Pie>
                                 <Tooltip
                                     formatter={(v) => `$${v.toLocaleString('es-MX')}`}
-                                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#ffffff', fontSize: '11px' }}
-                                    labelStyle={{ color: '#aaaaaa' }}
+                                    contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '11px' }}
+                                    labelStyle={{ color: 'var(--text-secondary)' }}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
-                                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', color: '#aaa' }} />
+                                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', color: 'var(--text-secondary)' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>

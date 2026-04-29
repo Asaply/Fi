@@ -153,7 +153,7 @@ export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) 
                     </span>
                     <button
                         onClick={onSkip}
-                        style={{ fontSize: '12px', color: '#555', cursor: 'pointer', background: 'none', border: 'none', padding: '2px 4px', borderRadius: 4, lineHeight: 1 }}
+                        style={{ fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer', background: 'none', border: 'none', padding: '2px 4px', borderRadius: 4, lineHeight: 1 }}
                     >
                         Saltar
                     </button>

@@ -18,6 +18,7 @@ const PERIODOS_TRAD = [
     { value: '3m', label: '3 meses' },
     { value: '6m', label: '6 meses' },
     { value: '1y', label: 'Este año' },
+    { value: 'all', label: 'Todos' },
 ];
 
 function getFechaInicioTrad(periodo) {
@@ -27,6 +28,7 @@ function getFechaInicioTrad(periodo) {
         case '3m': return new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
         case '6m': return new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
         case '1y': return new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+        case 'all': return '2000-01-01'; // Permite traer todos los registros
         default:   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     }
 }
@@ -207,6 +209,9 @@ export default function TradingPage() {
         return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
     };
 
+    const pnlAbs = formatCurrency(Math.abs(totalPnL));
+    const [pnlInt, pnlDec] = pnlAbs.split('.');
+
     return (
         <div className="page-container">
             <OnboardingTour
@@ -215,12 +220,26 @@ export default function TradingPage() {
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />
-            <div className="trading-header page-header">
-                <div className="trading-header-title">
-                    <h1 className="page-title">Trading</h1>
+            
+            {isLoading ? (
+                <div className="app-hero">
+                    <div className="skeleton" style={{ height: '14px', width: '90px', margin: '0 auto 12px', borderRadius: '4px' }} />
+                    <div className="skeleton" style={{ height: '52px', width: '220px', margin: '0 auto', borderRadius: '8px' }} />
                 </div>
-                <div className="page-actions">
-                    <button onClick={resetTour} className="btn-tour" title="¿Cómo usar esta sección?">?</button>
+            ) : (
+                <div className="app-hero">
+                    <p className="app-hero-label">Total P&L Realizado</p>
+                    <div className="app-hero-amount">
+                        <span className={`app-hero-int${totalPnL < 0 ? ' negative' : ''}`}>
+                            {totalPnL > 0 ? '+' : ''}{pnlInt}
+                        </span>
+                        <span className="app-hero-dec">.{pnlDec}</span>
+                    </div>
+                </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                <div className="page-actions" style={{ justifyContent: 'center' }}>
                     <div className="period-filter-wrap">
                         {PERIODOS_TRAD.map(p => (
                             <button
@@ -230,64 +249,63 @@ export default function TradingPage() {
                             >{p.label}</button>
                         ))}
                     </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                     <button className="btn-cta-primary" data-tour="btn-nuevo-trade" onClick={() => openModal()}>
                         <Plus size={15} />
                         <span>Nuevo Trade</span>
                     </button>
+                    <button onClick={resetTour} className="btn-action-secondary" title="¿Cómo usar esta sección?">?</button>
                 </div>
             </div>
 
             {isLoading ? (
-                <div className="metrics-grid-3">
-                    <SkeletonCard /><SkeletonCard /><SkeletonCard />
+                <div className="app-metric-grid">
+                    <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
                 </div>
             ) : (
                 <>
-                    <div className="metrics-grid-3" style={{ marginBottom: '20px' }}>
-                        <div className="card summary-card glass">
-                            <span className="summary-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <DollarSign size={16} /> Total P&L Realizado
-                            </span>
-                            <span className={`summary-amount ${totalPnL > 0 ? 'amount-positive' : totalPnL < 0 ? 'amount-negative' : 'amount-neutral'}`}>
-                                {totalPnL > 0 ? '+' : ''}{formatCurrency(totalPnL)}
-                            </span>
-                            {totalPnL === 0 && closedTrades.length === 0 && (
-                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Sin operaciones en este período</span>
-                            )}
+                    <div className="app-metric-grid">
+                    <div className="app-metric-card" data-tour="card-winrate">
+                        <div className="app-metric-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
+                            <Target size={16} />
                         </div>
-                        <div className="card summary-card" data-tour="card-winrate">
-                            <span className="summary-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Target size={16} /> Win Rate (Cerradas)
-                            </span>
-                            <span className={`summary-amount ${Number(winRate) >= 60 ? 'amount-positive' : Number(winRate) >= 40 ? 'amount-warning' : closedTrades.length === 0 ? 'amount-neutral' : 'amount-negative'}`}>{winRate}%</span>
-                            {closedTrades.length === 0 ? (
-                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Sin operaciones en este período</span>
-                            ) : (
-                                <div style={{ display: 'flex', gap: '8px', fontSize: '12px', marginTop: '4px' }}>
-                                    <span style={{ color: "var(--success)" }}>W: {wonTrades}</span>
-                                    <span style={{ color: "var(--danger)" }}>L: {lostTrades}</span>
-                                    {closedTrades.length - wonTrades - lostTrades > 0 && (
-                                        <span style={{ color: "var(--text-secondary)" }}>BE: {closedTrades.length - wonTrades - lostTrades}</span>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <div className="card summary-card">
-                            <span className="summary-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <LineChart size={16} /> Trades Abiertos
-                            </span>
-                            <span className="summary-amount">{openTradesCount}</span>
-                            {openTradesCount === 0 && (
-                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Sin operaciones en este período</span>
-                            )}
-                        </div>
+                        <span className="app-metric-title">Win Rate</span>
+                        <span className={`app-metric-value ${Number(winRate) >= 60 ? 'amount-positive' : Number(winRate) >= 40 ? 'amount-warning' : closedTrades.length === 0 ? 'amount-neutral' : 'amount-negative'}`}>
+                            {winRate}%
+                        </span>
                     </div>
+                    
+                    <div className="app-metric-card">
+                        <div className="app-metric-icon" style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>
+                            <ArrowUpRight size={16} />
+                        </div>
+                        <span className="app-metric-title">Trades Ganados</span>
+                        <span className="app-metric-value" style={{ color: 'var(--success)' }}>{wonTrades}</span>
+                    </div>
+
+                    <div className="app-metric-card">
+                        <div className="app-metric-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }}>
+                            <ArrowDownRight size={16} />
+                        </div>
+                        <span className="app-metric-title">Trades Perdidos</span>
+                        <span className="app-metric-value" style={{ color: 'var(--danger)' }}>{lostTrades}</span>
+                    </div>
+
+                    <div className="app-metric-card">
+                        <div className="app-metric-icon" style={{ background: 'rgba(168, 85, 247, 0.12)', color: '#a855f7' }}>
+                            <LineChart size={16} />
+                        </div>
+                        <span className="app-metric-title">Trades Abiertos</span>
+                        <span className="app-metric-value">{openTradesCount}</span>
+                    </div>
+                </div>
 
                     <div data-tour="pl-calendar">
                         <PLCalendar transactions={filteredOps} mode="trading" />
                     </div>
 
-                    <div className="card table-section">
+                    <div className="card table-section fnce-dynamic-panel">
                         <div className="table-header">
                             <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Historial de Operaciones</h2>
                         </div>
@@ -421,7 +439,7 @@ export default function TradingPage() {
                         <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsModalOpen(false)}>
                             Cancelar
                         </button>
-                        <button type="submit" className="btn-primary" style={{ background: "var(--brand-blue)", color: "#fff" }}>
+                        <button type="submit" className="btn-primary" style={{ background: "var(--brand-blue)", color: 'var(--text-primary)' }}>
                             Guardar Trade
                         </button>
                     </div>

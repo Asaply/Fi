@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Settings, LogOut, FileText, HelpCircle, Send } from "lucide-react";
+import { User, Settings, LogOut, FileText, HelpCircle, Send, Sun, Moon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useTopbar } from "./TopbarContext";
@@ -28,6 +28,7 @@ export default function Topbar() {
     const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
     const [supportMessage, setSupportMessage] = useState("");
     const [userDisplay, setUserDisplay] = useState({ name: '', email: '' });
+    const [theme, setTheme] = useState('dark');
     const profileRef = useRef(null);
 
     useEffect(() => {
@@ -37,8 +38,21 @@ export default function Topbar() {
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
+        
+        // Initialize theme
+        const savedTheme = localStorage.getItem('fnce-theme') || 'dark';
+        setTheme(savedTheme);
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    const toggleTheme = () => {
+        const newTheme = theme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+        localStorage.setItem('fnce-theme', newTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
+    };
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -54,7 +68,11 @@ export default function Topbar() {
             <header className="topbar">
                 <div className="topbar-left" />
 
-                <div className="topbar-right">
+                <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div onClick={toggleTheme} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }} title="Alternar tema">
+                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                    </div>
+
                     <div className="profile-dropdown-container" ref={profileRef} style={{ position: 'relative' }}>
                         <div className="profile-icon" onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ cursor: 'pointer', overflow: 'hidden' }}>
                             {profilePic ? (

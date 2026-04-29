@@ -63,10 +63,10 @@ export default function CardGastosCategorias({ fechaInicio }) {
     const getColor = (name, idx) => CAT_COLORS[name] || DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
 
     return (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="card fnce-dynamic-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
+                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
                     Gastos por Categoría
                 </h2>
                 {total > 0 && (
@@ -79,7 +79,7 @@ export default function CardGastosCategorias({ fechaInicio }) {
             {loading ? (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Cargando...</p>
             ) : data.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>
                     Sin egresos en este período
                 </p>
             ) : (
@@ -108,13 +108,13 @@ export default function CardGastosCategorias({ fechaInicio }) {
                                         name
                                     ]}
                                     contentStyle={{
-                                        backgroundColor: '#1a1a1a',
-                                        border: '1px solid #2a2a2a',
+                                        backgroundColor: 'var(--bg-surface)',
+                                        border: '1px solid var(--border-color)',
                                         borderRadius: '8px',
                                         fontSize: '12px',
-                                        color: '#ffffff',
+                                        color: 'var(--text-primary)',
                                     }}
-                                    itemStyle={{ color: '#f5f5f5' }}
+                                    itemStyle={{ color: 'var(--text-primary)' }}
                                     labelStyle={{ display: 'none' }}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
@@ -136,7 +136,7 @@ export default function CardGastosCategorias({ fechaInicio }) {
                                     <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
                                         {formatMXN(entry.value)}
                                     </span>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '38px', textAlign: 'right' }}>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', minWidth: '38px', textAlign: 'right' }}>
                                         {pct}%
                                     </span>
                                 </div>

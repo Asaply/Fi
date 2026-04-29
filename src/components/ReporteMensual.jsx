@@ -104,15 +104,15 @@ export default function ReporteMensual({ startDate, endDate }) {
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
+                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
                     Reporte Mensual
                 </h2>
             </div>
 
             {loading ? (
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cargando...</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando...</p>
             ) : chartData.length === 0 ? (
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '24px 0' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 0' }}>
                     Sin datos en este período
                 </p>
             ) : (
@@ -141,14 +141,14 @@ export default function ReporteMensual({ startDate, endDate }) {
                                         name === 'ingresos' ? 'Ingresos' : 'Egresos',
                                     ]}
                                     contentStyle={{
-                                        backgroundColor: '#1a1a1a',
-                                        border: '1px solid #2a2a2a',
+                                        backgroundColor: 'var(--bg-surface)',
+                                        border: '1px solid var(--border-color)',
                                         borderRadius: '8px',
-                                        color: '#ffffff',
+                                        color: 'var(--text-primary)',
                                         fontSize: 12,
                                     }}
-                                    labelStyle={{ color: '#aaaaaa', marginBottom: '4px' }}
-                                    itemStyle={{ color: '#f5f5f5' }}
+                                    labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px' }}
+                                    itemStyle={{ color: 'var(--text-primary)' }}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
                                 <Bar dataKey="ingresos" fill="#22C55E" radius={[4, 4, 0, 0]} name="ingresos" />
@@ -175,7 +175,7 @@ export default function ReporteMensual({ startDate, endDate }) {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '4px', borderTop: '1px solid var(--bg-border-subtle)' }}>
                             <div style={{ width: '8px', height: '8px', flexShrink: 0 }} />
-                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', flex: 1 }}>Balance neto</span>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Balance neto</span>
                             <span style={{ fontSize: '14px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: totales.ingresos - totales.egresos >= 0 ? '#22C55E' : '#EF4444' }}>
                                 {formatMXN(totales.ingresos - totales.egresos)}
                             </span>

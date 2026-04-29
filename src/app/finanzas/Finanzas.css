@@ -56,11 +56,11 @@
 }
 
 .amount-positive {
-    color: var(--success);
+    color: var(--positive);
 }
 
 .amount-negative {
-    color: var(--danger);
+    color: var(--negative);
 }
 
 .chart-section {

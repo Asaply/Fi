@@ -1,6 +1,7 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
+import BottomNav from './BottomNav';
 import { TopbarProvider, TopbarLayout } from './TopbarContext';
 
 export default function ConditionalShell({ children }) {
@@ -14,6 +15,7 @@ export default function ConditionalShell({ children }) {
         <TopbarProvider>
             <Sidebar />
             <TopbarLayout>{children}</TopbarLayout>
+            <BottomNav />
         </TopbarProvider>
     );
 }

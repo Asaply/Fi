@@ -35,6 +35,23 @@
     border-color: #3a3a3a;
 }
 
+.profile-dropdown {
+    color: var(--text-primary);
+}
+
+.profile-dropdown .dropdown-item {
+    color: var(--text-primary);
+}
+
+.profile-dropdown .dropdown-item span,
+.profile-dropdown .dropdown-item svg {
+    color: inherit;
+}
+
+.profile-dropdown .dropdown-item:hover {
+    background: var(--bg-surface);
+}
+
 /* ── Mobile ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .current-month {

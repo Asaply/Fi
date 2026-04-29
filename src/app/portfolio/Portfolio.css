@@ -124,6 +124,10 @@
     margin-bottom: 8px;
 }
 
+.portfolio-header .page-title {
+    white-space: nowrap;
+}
+
 .p-title {
     font-size: 24px;
     font-weight: 700;
@@ -243,6 +247,13 @@
     overflow-x: auto;
 }
 
+.table-section.fnce-dynamic-panel {
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -252,10 +263,11 @@
     padding: 16px;
     border-bottom: 1px solid var(--border-color);
     text-align: left;
+    white-space: nowrap;
 }
 
 .data-table th {
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -498,6 +510,7 @@
     gap: 32px;
     flex-wrap: wrap;
     padding: 28px 32px;
+    color: var(--text-primary);
 }
 
 .hero-main {
@@ -541,6 +554,68 @@
     flex-direction: column;
     gap: 4px;
     min-width: 100px;
+    color: var(--text-primary);
+}
+
+.portfolio-page .card,
+.portfolio-page .chart-card,
+.portfolio-page .health-card,
+.portfolio-page .table-section,
+.portfolio-page .risk-card {
+    color: var(--text-primary);
+}
+
+.portfolio-page .card h3,
+.portfolio-page .chart-card h3,
+.portfolio-page .health-card h3,
+.portfolio-page .table-section h3 {
+    color: var(--text-primary);
+}
+
+.portfolio-page .data-table {
+    min-width: 1080px;
+    table-layout: auto;
+}
+
+.portfolio-page .data-table th {
+    color: var(--text-secondary);
+}
+
+.portfolio-page .data-table th,
+.portfolio-page .data-table td {
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.portfolio-page .data-table th:nth-child(4),
+.portfolio-page .data-table th:nth-child(5),
+.portfolio-page .data-table th:nth-child(6),
+.portfolio-page .data-table td:nth-child(4),
+.portfolio-page .data-table td:nth-child(5),
+.portfolio-page .data-table td:nth-child(6) {
+    min-width: 132px;
+}
+
+[data-theme="dark"] .portfolio-page .metric-card,
+[data-theme="dark"] .portfolio-page .metric-card .metric-title,
+[data-theme="dark"] .portfolio-page .metric-card .metric-value,
+[data-theme="dark"] .portfolio-page .hero-stat,
+[data-theme="dark"] .portfolio-page .hero-stat span:not(.pnl-positive):not(.pnl-negative),
+[data-theme="dark"] .portfolio-page .card h3,
+[data-theme="dark"] .portfolio-page .chart-card h3,
+[data-theme="dark"] .portfolio-page .health-card h3,
+[data-theme="dark"] .portfolio-page .table-section h3 {
+    color: #fff;
+}
+
+[data-theme="dark"] .portfolio-page .data-table thead th {
+    color: #d4d4d8;
+}
+
+@media (max-width: 1180px) {
+    .portfolio-header .page-title {
+        font-size: 1.35rem;
+    }
 }
 
 /* ---- Category badge ---- */

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import pdfParse from 'pdf-parse';
-import Anthropic from '@anthropic-ai/sdk';
 
-const PARSER_PROMPT = `Eres un parser de estados de cuenta bancarios mexicanos.
+export const runtime = 'nodejs'; // Fix para Vercel (evita fallos de dependencias nativas de pdf-parse)
+
+const getParserPrompt = (isCreditCard) => `Eres un parser de estados de cuenta bancarios mexicanos.
 Extrae TODOS los movimientos del siguiente texto de estado de cuenta.
 
 Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin markdown:
@@ -10,7 +10,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin m
   "banco": "nombre del banco",
   "periodo": { "inicio": "YYYY-MM-DD", "fin": "YYYY-MM-DD" },
   "cuenta": "últimos 4 dígitos",
-  "tipo_cuenta": "debito|credito",
+  "tipo_cuenta": "${isCreditCard ? 'credito' : 'debito'}",
   "movimientos": [
     {
       "fecha": "YYYY-MM-DD",
@@ -23,6 +23,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin m
 }
 
 REGLAS:
+${isCreditCard ? '- cargo = retiro/gasto/compra (monto positivo)\n- abono = PAGO DE TARJETA / abono recibido (monto positivo, se registrará como Transferencia interna)' : '- cargo = retiro/gasto/compra (monto positivo)\n- abono = depósito/ingreso/pago recibido (monto positivo)'}
 - cargo = retiro/gasto/compra (monto positivo)
 - abono = depósito/ingreso/pago recibido (monto positivo)
 - Excluye: saldo inicial, saldo final, totales, encabezados de columna
@@ -43,11 +44,16 @@ export async function POST(request) {
             );
         }
 
+        // Dynamic import para evitar problemas de worker en Vercel/NextJS Edge
+        const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default || (await import('pdf-parse')).default;
+        const Anthropic = (await import('@anthropic-ai/sdk')).default;
+
         const client = new Anthropic({ apiKey });
 
         const formData = await request.formData();
         const file = formData.get('file');
         const rawTextInput = formData.get('rawText');
+        const isCreditCard = formData.get('isCreditCard') === 'true';
 
         let text;
 
@@ -87,7 +93,7 @@ export async function POST(request) {
             max_tokens: 4096,
             messages: [{
                 role: 'user',
-                content: `${PARSER_PROMPT}\n\nTEXTO:\n${text.substring(0, 15000)}`,
+                content: `${getParserPrompt(isCreditCard)}\n\nTEXTO:\n${text.substring(0, 15000)}`,
             }],
         });
 
@@ -96,13 +102,19 @@ export async function POST(request) {
         const parsed = JSON.parse(jsonText);
 
         // Map movimientos → transactions format compatible with finanzas page
-        const transactions = (parsed.movimientos ?? []).map(m => ({
-            fecha: m.fecha,
-            concepto: m.descripcion,
-            monto: Math.abs(Number(m.monto) || 0),
-            tipo: m.tipo === 'abono' ? 'ingreso' : 'egreso',
-            categoria: 'Otros',
-        })).filter(t => t.monto > 0 && t.fecha);
+        const transactions = (parsed.movimientos ?? []).map(m => {
+            let tipo = m.tipo === 'abono' ? 'ingreso' : 'egreso';
+            if (isCreditCard && m.tipo === 'abono') {
+                tipo = 'Transferencia'; // Movimiento interno, pago de tarjeta
+            }
+            return {
+                fecha: m.fecha,
+                concepto: m.descripcion,
+                monto: Math.abs(Number(m.monto) || 0),
+                tipo,
+                categoria: 'Otros',
+            };
+        }).filter(t => t.monto > 0 && t.fecha);
 
         return NextResponse.json({
             transactions,

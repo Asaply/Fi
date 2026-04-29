@@ -123,7 +123,7 @@ export default function PipelineWidget({ widgetId, data = {}, updateWidgetData, 
                             <BarChart data={chartData} layout="vertical" margin={{ top: 8, right: 30, left: 20, bottom: 8 }}>
                                 <XAxis type="number" allowDecimals={false} hide />
                                 <YAxis dataKey="step" type="category" axisLine={false} tickLine={false} width={90} style={{ fontSize: '12px', fill: '#a1a1aa' }} />
-                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#ffffff' }} labelStyle={{ color: '#aaaaaa' }} />
+                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }} labelStyle={{ color: 'var(--text-secondary)' }} />
                                 <Bar dataKey="leads" radius={[0, 4, 4, 0]} barSize={20}>
                                     {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                 </Bar>

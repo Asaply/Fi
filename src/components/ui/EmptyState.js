@@ -21,7 +21,7 @@ export function EmptyState({ icon, title, description, action }) {
                 <button
                     onClick={action.onClick}
                     className="btn-primary"
-                    style={{ background: 'var(--accent-color)', color: '#fff', fontSize: '14px', fontWeight: 500 }}
+                    style={{ background: 'var(--accent-color)', color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}
                 >
                     {action.label}
                 </button>

@@ -109,12 +109,12 @@ export default function Recordatorios() {
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
+                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
                     Recordatorios
                 </h2>
                 <button
                     onClick={() => { setForm(f => ({ ...f, date: selectedDate })); setIsModalOpen(true); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--brand)', border: 'none', color: '#fff', fontSize: '12px', fontWeight: 600, padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--brand)', border: 'none', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}
                 >
                     <Plus size={12} /> Agregar
                 </button>
@@ -135,7 +135,7 @@ export default function Recordatorios() {
                     {/* Day headers */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '4px' }}>
                         {DAYS_ES.map(d => (
-                            <div key={d} style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, padding: '2px 0' }}>{d}</div>
+                            <div key={d} style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600, padding: '2px 0' }}>{d}</div>
                         ))}
                     </div>
 
@@ -181,9 +181,9 @@ export default function Recordatorios() {
                         {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
                     {loading ? (
-                        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cargando...</p>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando...</p>
                     ) : dayReminders.length === 0 ? (
-                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', paddingTop: '8px' }}>Sin recordatorios este día</p>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', paddingTop: '8px' }}>Sin recordatorios este día</p>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {dayReminders.map(r => (
@@ -208,12 +208,12 @@ export default function Recordatorios() {
                                             {r.title}
                                         </p>
                                         {r.time && (
-                                            <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                            <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-secondary)' }}>
                                                 {r.time.slice(0, 5)}
                                             </p>
                                         )}
                                     </div>
-                                    <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '1px', flexShrink: 0 }}>
+                                    <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '1px', flexShrink: 0 }}>
                                         <Trash2 size={13} />
                                     </button>
                                 </div>

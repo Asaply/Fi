@@ -121,7 +121,7 @@ function normalizarFecha(rawDate) {
     return new Date().toISOString().split('T')[0];
 }
 
-function buildRows(rawRows, headers, mapping) {
+function buildRows(rawRows, headers, mapping, isCreditCard = false) {
     const parseMonto = (s) => Math.abs(parseFloat((s || '').replace(/[$,\s]/g, '')) || 0);
 
     return rawRows.map((row, idx) => {
@@ -133,13 +133,17 @@ function buildRows(rawRows, headers, mapping) {
         if (mapping.charge || mapping.credit) {
             const charge = parseMonto(get(mapping.charge));
             const credit = parseMonto(get(mapping.credit));
-            if (credit > 0 && charge === 0) { amount = credit; type = 'Ingreso'; }
+            if (credit > 0 && charge === 0) { amount = credit; type = isCreditCard ? 'Transferencia' : 'Ingreso'; }
             else if (charge > 0) { amount = charge; type = 'Egreso'; }
             else { amount = Math.max(credit, charge); }
         } else if (mapping.amount) {
             const v = parseFloat((get(mapping.amount) || '').replace(/[$,\s]/g, '')) || 0;
             amount = Math.abs(v);
-            type = v >= 0 ? 'Ingreso' : 'Egreso';
+            let mappedType = v >= 0 ? 'Ingreso' : 'Egreso';
+            if (isCreditCard) {
+                if (mappedType === 'Ingreso') mappedType = 'Transferencia';
+            }
+            type = mappedType;
         }
 
         return { _idx: idx, date: normalizarFecha(rawDate), concept, amount, type, client: 'N/A', categoria: categorizarTransaccion(concept) };
@@ -163,7 +167,7 @@ function getFechaInicioFin(periodo) {
         case '3m': return new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
         case '6m': return new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
         case '1y': return new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-        case 'Todos': return '0000-01-01';
+        case 'Todos': return '2000-01-01';
         default:   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     }
 }
@@ -192,6 +196,7 @@ export default function FinanzasPage() {
     const [importResult, setImportResult] = useState(null); // { ok, count }
     const [isParsing, setIsParsing] = useState(false);
     const [pendingPdfFile, setPendingPdfFile] = useState(null);
+    const [isCreditCard, setIsCreditCard] = useState(false);
     const [showPdfPassword, setShowPdfPassword] = useState(false);
     const [pdfPassword, setPdfPassword] = useState('');
     const [pdfPasswordError, setPdfPasswordError] = useState(false);
@@ -353,7 +358,7 @@ export default function FinanzasPage() {
         }
 
         // Try regex parsers first (fast, free, no API key needed)
-        let transacciones = rawText?.trim() ? parseStatementText(rawText) : [];
+        let transacciones = rawText?.trim() ? parseStatementText(rawText, isCreditCard) : [];
 
         if (transacciones.length < 3) {
             const toastId = toast.loading("Analizando con IA...", { duration: 40000 });
@@ -408,15 +413,23 @@ export default function FinanzasPage() {
             return;
         }
 
-        const rows = transacciones.map((tx, i) => ({
-            _idx: i,
-            date: tx.fecha,
-            concept: tx.concepto,
-            amount: tx.monto,
-            type: tx.tipo === 'ingreso' ? 'Ingreso' : 'Egreso',
-            client: 'N/A',
-            categoria: tx.categoria || 'Otros',
-        }));
+        const rows = transacciones.map((tx, i) => {
+            let mappedType = tx.tipo?.toLowerCase() === 'ingreso' ? 'Ingreso' : 'Egreso';
+            if (isCreditCard) {
+                if (mappedType === 'Ingreso') mappedType = 'Transferencia'; // Pagos a tarjeta de crédito
+                else if (mappedType === 'Egreso') mappedType = 'Egreso'; // Cargos a tarjeta de crédito
+            }
+            
+            return {
+                _idx: i,
+                date: tx.fecha,
+                concept: tx.concepto,
+                amount: tx.monto,
+                type: mappedType,
+                client: 'N/A',
+                categoria: tx.categoria || 'Otros',
+            };
+        });
 
         setShowPdfPassword(false);
         setPendingPdfFile(null);
@@ -468,7 +481,7 @@ export default function FinanzasPage() {
     };
 
     const handlePreview = () => {
-        const rows = buildRows(csvRawRows, csvHeaders, csvMapping);
+        const rows = buildRows(csvRawRows, csvHeaders, csvMapping, isCreditCard);
         setPendingRows(rows);
         setImportStep(2);
     };
@@ -817,7 +830,7 @@ export default function FinanzasPage() {
                         <div className="fin-metric-icon" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
                             <ArrowUpRight size={14} />
                         </div>
-                        <span className="fin-metric-label">Ingresos</span>
+                        <span className="fin-metric-label amount-positive">Ingresos</span>
                         <span className="fin-metric-value amount-positive">{formatCurrency(totalIngresos)}</span>
                         {tradingIncome > 0 && <span className="fin-metric-hint">Trading +{formatCurrency(tradingIncome)}</span>}
                     </div>
@@ -825,7 +838,7 @@ export default function FinanzasPage() {
                         <div className="fin-metric-icon" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171' }}>
                             <ArrowDownRight size={14} />
                         </div>
-                        <span className="fin-metric-label">Egresos</span>
+                        <span className="fin-metric-label amount-negative">Egresos</span>
                         <span className="fin-metric-value amount-negative">{formatCurrency(totalEgresos)}</span>
                     </div>
                     <div className="fin-metric-card" style={{ position: 'relative' }}>
@@ -840,14 +853,16 @@ export default function FinanzasPage() {
                             <Wallet size={14} />
                         </div>
                         <span className="fin-metric-label">{userConfig.concepto_custom_label}</span>
-                        <span className="fin-metric-value" style={{ color: '#f59e0b' }}>{formatCurrency(userConfig.concepto_custom_total)}</span>
+                        <span className="fin-metric-value">{formatCurrency(userConfig.concepto_custom_total)}</span>
                     </div>
                     <div className="fin-metric-card">
                         <div className="fin-metric-icon" style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}>
                             <TrendingUp size={14} />
                         </div>
                         <span className="fin-metric-label">Portafolio</span>
-                        <span className="fin-metric-value" style={{ color: '#60a5fa' }}>{formatCurrency(totalPortfolioInvested)}</span>
+                        <span className="fin-metric-value">
+                            {formatCurrency(totalPortfolioInvested)}
+                        </span>
                         <span className="fin-metric-hint">Costo base</span>
                     </div>
                 </div>
@@ -911,7 +926,7 @@ export default function FinanzasPage() {
 
                     <PLCalendar transactions={transactions} />
 
-                    <div className="card table-section">
+                    <div className="card table-section fnce-dynamic-panel">
                         <div className="table-header">
                             <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Transacciones Recientes</h2>
                             <div className="filters-group">
@@ -1138,10 +1153,31 @@ export default function FinanzasPage() {
                     </div>
                 ) : importStep === 1 ? (
                     /* Step 1: upload + column mapping */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '100px' }}>
+                        <p style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
                             Sube tu estado de cuenta en PDF o CSV. Los PDF de BBVA, Banorte, Santander, HSBC, Citibanamex y Nu se procesan automáticamente.
                         </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Tipo de Tarjeta (para clasificar abonos y retiros)</label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    className={`btn-secondary ${!isCreditCard ? 'active' : ''}`}
+                                    style={{ flex: 1, borderColor: !isCreditCard ? 'var(--brand)' : '', color: !isCreditCard ? 'var(--brand)' : '' }}
+                                    onClick={() => setIsCreditCard(false)}
+                                >
+                                    Débito / Cheques
+                                </button>
+                                <button
+                                    className={`btn-secondary ${isCreditCard ? 'active' : ''}`}
+                                    style={{ flex: 1, borderColor: isCreditCard ? 'var(--brand)' : '', color: isCreditCard ? 'var(--brand)' : '' }}
+                                    onClick={() => setIsCreditCard(true)}
+                                >
+                                    Crédito
+                                </button>
+                            </div>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{isCreditCard ? 'Los pagos a la tarjeta se registrarán como "Transferencia" (interno) y no sumarán a tus ingresos.' : 'Los depósitos se registrarán como "Ingreso" y los retiros como "Egreso".'}</p>
+                        </div>
+
 
                         {!showPdfPassword ? (
                             <button
@@ -1159,7 +1195,7 @@ export default function FinanzasPage() {
                                     <span style={{ fontSize: '18px' }}>🔒</span>
                                     <div>
                                         <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>PDF protegido con contraseña</p>
-                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>Ingresa la contraseña para continuar</p>
+                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Ingresa la contraseña para continuar</p>
                                     </div>
                                 </div>
                                 <input
@@ -1235,24 +1271,24 @@ export default function FinanzasPage() {
                     </div>
                 ) : (
                     /* Step 2: preview + confirm */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
                         {/* Summary stats */}
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <div style={{ flex: 1, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>INGRESOS</div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: '#22c55e' }}>{formatCurrency(pendingRows.filter(r => r.type === 'Ingreso').reduce((s, r) => s + r.amount, 0))}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>INGRESOS</div>
+                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--positive)' }}>{formatCurrency(pendingRows.filter(r => r.type === 'Ingreso').reduce((s, r) => s + r.amount, 0))}</div>
                             </div>
                             <div style={{ flex: 1, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>EGRESOS</div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: '#ef4444' }}>{formatCurrency(pendingRows.filter(r => r.type === 'Egreso').reduce((s, r) => s + r.amount, 0))}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>EGRESOS</div>
+                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--negative)' }}>{formatCurrency(pendingRows.filter(r => r.type === 'Egreso').reduce((s, r) => s + r.amount, 0))}</div>
                             </div>
                             <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>TRANSACCIONES</div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{pendingRows.length}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>TRANSACCIONES</div>
+                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{pendingRows.length}</div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
                             <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                                 Revisa y ajusta tipo y categoría antes de importar.
                             </p>
