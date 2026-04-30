@@ -367,7 +367,7 @@ export default function FinanzasPage() {
             // Path A: text-based AI (digital PDF — fast, cheap, any bank)
             if (rawText?.trim().length > 200) {
                 try {
-                    const aiResult = await parseStatementTextWithAI(rawText);
+                    const aiResult = await parseStatementTextWithAI(rawText, isCreditCard);
                     if (aiResult.transactions.length > 0) {
                         transacciones = aiResult.transactions;
                         toast.dismiss(toastId);

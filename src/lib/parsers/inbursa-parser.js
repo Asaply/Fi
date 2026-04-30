@@ -34,7 +34,7 @@ function isNoise(line) {
     return false;
 }
 
-export function parseInbursa(text) {
+export function parseInbursa(text, isCreditCard = false) {
     const accountMatch = text.match(/CUENTA\s+(\d{10,})/i);
     const accountNumber = accountMatch?.[1] ?? '';
 
@@ -95,14 +95,17 @@ export function parseInbursa(text) {
             return;
         }
 
-        // Determine tipo by saldo direction
-        const isIncome = saldo > prevSaldo + 0.005;
+        // Debit: saldo UP = ingreso, DOWN = egreso
+        // Credit (TDC): saldo UP = egreso (more debt), DOWN = Transferencia (payment)
+        const isIncome = isCreditCard ? saldo < prevSaldo - 0.005 : saldo > prevSaldo + 0.005;
         prevSaldo = saldo > 0 ? saldo : prevSaldo;
 
-        // Keyword overrides
-        let tipo = isIncome ? 'ingreso' : 'egreso';
-        if (/INTERESES GANADOS|TRASPASO.*RECIB|ABONO|RENDIMIENTO|NOMINA|NÓMINA|DEPOSITO/i.test(desc)) tipo = 'ingreso';
-        if (/COSTCO|GASOL|OXXO|FARMACIA|CASINO|SEARS|ALSUPER|COPPEL|CASETAS|PIZZERIA|MERCADO|RETIRO/i.test(desc)) tipo = 'egreso';
+        let tipo = isIncome ? (isCreditCard ? 'Transferencia' : 'ingreso') : 'egreso';
+        // Keyword overrides (debit only — for credit card saldo logic is more reliable)
+        if (!isCreditCard) {
+            if (/INTERESES GANADOS|TRASPASO.*RECIB|ABONO|RENDIMIENTO|NOMINA|NÓMINA|DEPOSITO/i.test(desc)) tipo = 'ingreso';
+            if (/COSTCO|GASOL|OXXO|FARMACIA|CASINO|SEARS|ALSUPER|COPPEL|CASETAS|PIZZERIA|MERCADO|RETIRO/i.test(desc)) tipo = 'egreso';
+        }
 
         if (!desc) return;
 

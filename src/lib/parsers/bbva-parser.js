@@ -28,7 +28,9 @@ function parseAmt(s) {
 // Main tx line: "DD-mes-YYYY DD-mes-YYYY DESCRIPTION +/- $AMOUNT"
 const TX_RE = /^(\d{2}-[a-záéíóúü]+-\d{4})\s+\d{2}-[a-záéíóúü]+-\d{4}\s+(.+?)\s+([+\-])\s*\$\s*([\d,]+\.\d{2})\s*$/i;
 
-export function parseBBVA(text) {
+export function parseBBVA(text, isCreditCard = false) {
+    // Auto-detect TDC from statement content (overrides param if explicit)
+    const isTDC = isCreditCard || /tarjeta\s+de\s+cr[eé]dito|TDC|tarjeta\s+(oro|azul|platino|clásica)/i.test(text);
     const cardMatch = text.match(/N[uú]mero de tarjeta[:\s]+([\d\s]+)/i);
     const lastFour = (cardMatch?.[1] ?? '').replace(/\s/g, '').slice(-4);
     const accountNumber = lastFour ? `****${lastFour}` : '';
@@ -57,8 +59,9 @@ export function parseBBVA(text) {
         // Skip header/noise lines caught by regex
         if (/^Fecha\s+de\s+la|Descripci[oó]n del movimiento/i.test(description)) continue;
 
-        // + = cargo (expense), - = pago/abono (income)
-        const tipo = sign === '-' ? 'ingreso' : 'egreso';
+        // + = cargo (expense), - = pago/abono
+        // TDC: pago reduces debt → Transferencia (not real income)
+        const tipo = sign === '-' ? (isTDC ? 'Transferencia' : 'ingreso') : 'egreso';
 
         transactions.push({
             fecha,

@@ -48,11 +48,13 @@ function mapToFinanzasFormat(tx, banco) {
  * Parse via text extraction (digital PDFs).
  * Calls /api/parse-statement with extracted text.
  * @param {string} rawText
+ * @param {boolean} [isCreditCard]
  * @returns {Promise<{banco: string, transactions: Array}>}
  */
-export async function parseStatementTextWithAI(rawText) {
+export async function parseStatementTextWithAI(rawText, isCreditCard = false) {
     const formData = new FormData();
     formData.append('rawText', rawText);
+    formData.append('isCreditCard', String(isCreditCard));
 
     const response = await fetch('/api/parse-statement', {
         method: 'POST',

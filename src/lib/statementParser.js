@@ -37,7 +37,7 @@ function buildNuTx(day, mon, year, concepto, montoStr, isCreditCard) {
         fecha: `${year}-${mes2}-${day.padStart(2, '0')}`,
         concepto: concepto.trim(),
         monto: Math.abs(monto),
-        tipo: monto < 0 ? 'egreso' : (isCreditCard ? 'Transferencia' : 'ingreso'),
+        tipo: monto < 0 ? 'egreso' : (isCreditCard ? 'Transferencia' : 'ingreso'), // Nu: negative = spending
         categoria: inferirCategoria(concepto),
     };
 }
@@ -45,23 +45,7 @@ function buildNuTx(day, mon, year, concepto, montoStr, isCreditCard) {
 function parsearNu(texto, isCreditCard) {
     const transacciones = [];
 
-    // Opening balance → prepend as ingreso
-    const saldoInicialMatch = texto.match(/saldo\s+(?:anterior|inicial|previo)\s*:?\s*(?:MX)?\$?\s*([\d,]+\.\d{2})/i);
-    const saldoInicial = saldoInicialMatch ? parseFloat(saldoInicialMatch[1].replace(/,/g, '')) : 0;
-    if (saldoInicial > 0) {
-        // Grab first date from statement for the opening balance entry
-        const firstDateM = texto.match(/(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)\s+(\d{4})/i);
-        const fechaInicial = firstDateM
-            ? `${firstDateM[3]}-${MESES[firstDateM[2].toUpperCase()]}-${firstDateM[1].padStart(2, '0')}`
-            : String(new Date().getFullYear()) + '-01-01';
-        transacciones.push({
-            fecha: fechaInicial,
-            concepto: 'Saldo Anterior',
-            monto: saldoInicial,
-            tipo: 'ingreso',
-            categoria: inferirCategoria('Saldo Anterior'),
-        });
-    }
+    // Skip saldo anterior injection — it's not a real transaction and inflates income totals
     let lastTx = null;
     let lineasSigue = 0;
 
@@ -173,11 +157,12 @@ function parseMexicanStatement(text, isCreditCard) {
         const monto = Math.abs(rawMonto);
         
         let tipo = 'egreso';
-        if (ABONO_RE.test(trimmed)) tipo = 'ingreso';
+        if (ABONO_RE.test(trimmed)) tipo = isCreditCard ? 'Transferencia' : 'ingreso';
         else if (CARGO_RE.test(trimmed)) tipo = 'egreso';
         else if (rawMonto < 0) tipo = 'egreso';
-        else if (rawMonto > 0 && amounts.length > 1) tipo = 'ingreso'; // Asume que si es positivo y hay múltiples, es abono (Banorte/BBVA)
-        else if (rawMonto > 0 && amounts.length === 1) tipo = 'ingreso';
+        else if (rawMonto > 0 && amounts.length > 1) tipo = isCreditCard ? 'Transferencia' : 'ingreso';
+        // Single positive amount: ambiguous — for debit assume ingreso, for credit assume egreso (cargo)
+        else if (rawMonto > 0 && amounts.length === 1) tipo = isCreditCard ? 'egreso' : 'ingreso';
 
         const conceptRaw = trimmed.substring(dateEnd, firstAmtIdx > dateEnd ? firstAmtIdx : undefined);
         const concepto = conceptRaw.replace(/\s+/g, ' ').trim() || trimmed.substring(0, 60);
@@ -198,7 +183,7 @@ export function parseStatementText(rawText, isCreditCard = false) {
 
     // Try bank-specific parser first
     try {
-        const bankResult = parseBankStatement(text, isCreditCard);
+        const bankResult = parseBankStatement(text, '', isCreditCard);
         if (bankResult && bankResult.transactions.length > 0) {
             return bankResult.transactions;
         }

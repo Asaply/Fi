@@ -30,7 +30,7 @@ function parseAmt(s) {
 
 const DATE_PATTERN_RE = /\d{2}-(?:ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)-\d{4}/i;
 
-export function parseSantander(text) {
+export function parseSantander(text, isCreditCard = false) {
     const accountMatch = text.match(/(\d{2}-\d{8,}-\d)/i)
         ?? text.match(/SUPER NOMINA\s*([\d-]+)/i);
     const accountNumber = accountMatch?.[1] ?? '';
@@ -89,16 +89,15 @@ export function parseSantander(text) {
 
         if (amounts.length === 2) {
             monto = amounts[0];
-            // Determine by keyword
             const isIncome = /ABONO|RECIBIDO|TRANSFERENCIA.*SPEI|N[OÓ]MINA|DEVOLUC/i.test(description);
-            tipo = isIncome ? 'ingreso' : 'egreso';
+            tipo = isIncome ? (isCreditCard ? 'Transferencia' : 'ingreso') : 'egreso';
         } else if (amounts.length >= 3) {
             const v1 = amounts[0];
             const v2 = amounts[1];
             // Santander: DEPOSITO col before RETIRO col; one is 0 (absent)
-            if (v1 > 0 && v2 === 0) { monto = v1; tipo = 'ingreso'; }
+            if (v1 > 0 && v2 === 0) { monto = v1; tipo = isCreditCard ? 'Transferencia' : 'ingreso'; }
             else if (v2 > 0 && v1 === 0) { monto = v2; tipo = 'egreso'; }
-            else { monto = v1; tipo = 'ingreso'; } // fallback
+            else { monto = v1; tipo = isCreditCard ? 'Transferencia' : 'ingreso'; } // fallback
         }
 
         if (monto === 0 || description.length < 2) continue;

@@ -49,17 +49,18 @@ export function needsOCR(text) {
  * where transactions use format: { fecha, concepto, monto, tipo, categoria }
  * @param {string} text
  * @param {string} [filename]
+ * @param {boolean} [isCreditCard]
  */
-export function parseBankStatement(text, filename = '') {
+export function parseBankStatement(text, filename = '', isCreditCard = false) {
     const bank = detectBank(text, filename);
     if (!bank) return null;
 
     switch (bank) {
-        case 'hsbc':      return parseHSBC(text);
-        case 'inbursa':   return parseInbursa(text);
-        case 'santander': return parseSantander(text);
-        case 'banamex':   return parseBanamex(text);
-        case 'bbva':      return parseBBVA(text);
+        case 'hsbc':      return parseHSBC(text, isCreditCard);
+        case 'inbursa':   return parseInbursa(text, isCreditCard);
+        case 'santander': return parseSantander(text, isCreditCard);
+        case 'banamex':   return parseBanamex(text, isCreditCard);
+        case 'bbva':      return parseBBVA(text, isCreditCard);
         default:          return null;
     }
 }

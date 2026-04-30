@@ -74,7 +74,9 @@ function parseAmt(s) {
     return parseFloat((s || '').replace(/,/g, '')) || 0;
 }
 
-export function parseBanamex(text) {
+export function parseBanamex(text, isCreditCard = false) {
+    // Auto-detect TDC: credit card statements show "Tarjeta de Crédito" or have no "MiCuenta"
+    const isTDC = isCreditCard || /tarjeta\s+de\s+cr[eé]dito|TARJETA.*CR[EÉ]DITO/i.test(text);
     const accountMatch = text.match(/N[uú]mero de cuenta de cheques\s+(\d+)/i)
         ?? text.match(/N[uú]mero de contrato\s+(\d+)/i);
     const accountNumber = accountMatch?.[1] ?? '';
@@ -121,9 +123,11 @@ export function parseBanamex(text) {
 
         if (!desc) return;
 
-        const isIncome = saldo > prevSaldo + 0.005;
+        // Debit: saldo goes UP on deposits (ingreso), DOWN on spending (egreso)
+        // Credit (TDC): saldo (adeudo) goes UP on spending (egreso), DOWN on payments (Transferencia)
+        const isIncome = isTDC ? saldo < prevSaldo - 0.005 : saldo > prevSaldo + 0.005;
         prevSaldo = saldo > 0 ? saldo : prevSaldo;
-        const tipo = isIncome ? 'ingreso' : 'egreso';
+        const tipo = isIncome ? (isTDC ? 'Transferencia' : 'ingreso') : 'egreso';
 
         transactions.push({
             fecha: currentDate,

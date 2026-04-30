@@ -23,9 +23,9 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin m
 }
 
 REGLAS:
-${isCreditCard ? '- cargo = retiro/gasto/compra (monto positivo)\n- abono = PAGO DE TARJETA / abono recibido (monto positivo, se registrará como Transferencia interna)' : '- cargo = retiro/gasto/compra (monto positivo)\n- abono = depósito/ingreso/pago recibido (monto positivo)'}
-- cargo = retiro/gasto/compra (monto positivo)
-- abono = depósito/ingreso/pago recibido (monto positivo)
+${isCreditCard
+  ? '- tipo "cargo": compra/retiro/gasto (monto positivo) → tipo: "cargo"\n- tipo "abono": PAGO DE TARJETA recibido (monto positivo) → tipo: "abono" (se registrará como Transferencia interna, NO como ingreso real)\n- En tarjetas de crédito: los cargos aumentan el saldo adeudado, los abonos lo reducen'
+  : '- tipo "cargo": retiro/gasto/compra (monto positivo) → tipo: "cargo"\n- tipo "abono": depósito/ingreso/pago recibido (monto positivo) → tipo: "abono"'}
 - Excluye: saldo inicial, saldo final, totales, encabezados de columna
 - HSBC: excluye transferencias internas "Cajita"
 - BBVA TDC: pagos recibidos = abono, compras = cargo

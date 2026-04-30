@@ -14,7 +14,7 @@ function parseAmt(s) {
     return parseFloat(s.replace(/[$,\s]/g, '')) || 0;
 }
 
-export function parseHSBC(text) {
+export function parseHSBC(text, isCreditCard = false) {
     const accountMatch = text.match(/N[ÚU]MERO DE CUENTA\s+(\d+)/i)
         ?? text.match(/N[uú]mero de cuenta[:\s]+(\d+)/i);
     const accountNumber = accountMatch?.[1] ?? '';
@@ -37,13 +37,22 @@ export function parseHSBC(text) {
 
     const transactions = [];
 
+    // Track month progression: HSBC sometimes spans 2 months; day number resets signal month change
+    let currentMonth = parseInt(baseMonth, 10);
+    let prevDayNum = 0;
+
     // Primary: día (1-2 digits) + desc + optional ref digits + [retiro $X] + [abono $X] + saldo $X
     // Match lines: "01   APPLE.COM/BILL...   11771645     $49.00              $1,117.03"
     const txRegex = /^(\d{1,2})\s{2,}(.+?)\s{2,}(?:\d{6,}\s+)?(\$[\s\d,.]+)?\s*(\$[\s\d,.]+)?\s*(\$[\s\d,.]+)\s*$/gm;
     let match;
 
     while ((match = txRegex.exec(detailText)) !== null) {
-        const day = match[1].padStart(2, '0');
+        const dayNum = parseInt(match[1], 10);
+        // If day resets (e.g. 28→01), advance month
+        if (prevDayNum > 20 && dayNum < 8 && currentMonth < 12) currentMonth++;
+        prevDayNum = dayNum;
+        const day = String(dayNum).padStart(2, '0');
+        const monthStr = String(currentMonth).padStart(2, '0');
         const rawDesc = match[2].trim();
 
         // Skip header rows
@@ -65,11 +74,11 @@ export function parseHSBC(text) {
         if (col3 > 0 && col4 === 0) {
             monto = col3; tipo = 'egreso';
         } else if (col4 > 0 && col3 === 0) {
-            monto = col4; tipo = 'ingreso';
+            monto = col4; tipo = isCreditCard ? 'Transferencia' : 'ingreso';
         } else if (col3 > 0 && col4 > 0) {
             const isDeposit = /TRANSFERENCIA BPI|ABONO|DEPOSITO/i.test(description);
-            if (isDeposit) { monto = Math.max(col3, col4); tipo = 'ingreso'; }
-            else           { monto = Math.min(col3, col4); tipo = 'egreso';  }
+            if (isDeposit) { monto = Math.max(col3, col4); tipo = isCreditCard ? 'Transferencia' : 'ingreso'; }
+            else           { monto = Math.min(col3, col4); tipo = 'egreso'; }
         } else {
             continue;
         }
@@ -77,7 +86,7 @@ export function parseHSBC(text) {
         if (monto === 0) continue;
 
         transactions.push({
-            fecha: `${year}-${baseMonth}-${day}`,
+            fecha: `${year}-${monthStr}-${day}`,
             concepto: description,
             monto,
             tipo,
@@ -88,20 +97,27 @@ export function parseHSBC(text) {
 
     // Fallback: simpler line-by-line
     if (transactions.length === 0) {
+        let fbMonth = parseInt(baseMonth, 10);
+        let fbPrevDay = 0;
         for (const line of detailText.split('\n')) {
             const m = line.match(/^(\d{1,2})\s+(.+?)\s+\$\s*([\d,]+\.\d{2})/);
             if (!m) continue;
-            const day = m[1].padStart(2, '0');
+            const fbDayNum = parseInt(m[1], 10);
+            if (fbPrevDay > 20 && fbDayNum < 8 && fbMonth < 12) fbMonth++;
+            fbPrevDay = fbDayNum;
+            const day = String(fbDayNum).padStart(2, '0');
+            const monthStr2 = String(fbMonth).padStart(2, '0');
             const desc = m[2].replace(/^\d{10,}\s*/, '').replace(/_{3,}/g, '').trim().slice(0, 120);
             const monto = parseFloat(m[3].replace(/,/g, ''));
             if (!monto) continue;
             const isIncome = /TRANSFERENCIA BPI|ABONO|DEPOSITO/i.test(desc);
+            const tipo = isIncome ? (isCreditCard ? 'Transferencia' : 'ingreso') : 'egreso';
             transactions.push({
-                fecha: `${year}-${baseMonth}-${day}`,
+                fecha: `${year}-${monthStr2}-${day}`,
                 concepto: desc,
                 monto,
-                tipo: isIncome ? 'ingreso' : 'egreso',
-                categoria: categorize(desc, isIncome ? 'ingreso' : 'egreso'),
+                tipo,
+                categoria: categorize(desc, tipo),
                 banco: 'HSBC',
             });
         }
