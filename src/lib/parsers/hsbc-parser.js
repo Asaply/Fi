@@ -1,4 +1,4 @@
-import { categorize } from './categories';
+import { categorize } from './categories.js';
 
 // HSBC Nómina Flexible
 // This parser receives text extracted by pdfjs-dist (client) or OCR.

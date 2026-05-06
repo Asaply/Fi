@@ -1,14 +1,15 @@
-import { parseHSBC } from './hsbc-parser';
-import { parseInbursa } from './inbursa-parser';
-import { parseSantander } from './santander-parser';
-import { parseBanamex } from './banamex-parser';
-import { parseBBVA } from './bbva-parser';
+import { parseSantander } from './santander-parser.js';
+import { parseBanamex } from './banamex-parser.js';
+import { parseBBVA } from './bbva-parser.js';
+import { parseNu } from './nu-parser.js';
+import { parseHSBC } from './hsbc-parser.js';
+import { parseInbursa } from './inbursa-parser.js';
 
 /**
  * Detect bank from PDF text (or filename as fallback for image PDFs).
  * @param {string} text
  * @param {string} [filename]
- * @returns {'hsbc'|'inbursa'|'santander'|'banamex'|'bbva'|null}
+ * @returns {'hsbc'|'inbursa'|'santander'|'banamex'|'bbva'|'nu'|null}
  */
 export function detectBank(text, filename = '') {
     const f = filename.toLowerCase();
@@ -19,6 +20,7 @@ export function detectBank(text, filename = '') {
     if (/banco santander|super nomina.*santander|estado de cuenta n[oó]mina.*santander/i.test(text)) return 'santander';
     if (/banamex|micuenta|banco nacional de m[eé]xico/i.test(text)) return 'banamex';
     if (/bbva mexico|tarjeta oro bbva|bbva.*estado de cuenta/i.test(text)) return 'bbva';
+    if (/cuenta nu|nu mexico/i.test(text)) return 'nu';
 
     // Fallback to filename when text is empty/unreadable (image PDF)
     if (!text.trim() || text.trim().length < 50) {
@@ -27,6 +29,7 @@ export function detectBank(text, filename = '') {
         if (f.includes('santander')) return 'santander';
         if (f.includes('banamex')) return 'banamex';
         if (f.includes('bbva')) return 'bbva';
+        if (f.includes('nu')) return 'nu';
     }
 
     return null;
@@ -61,6 +64,7 @@ export function parseBankStatement(text, filename = '', isCreditCard = false) {
         case 'santander': return parseSantander(text, isCreditCard);
         case 'banamex':   return parseBanamex(text, isCreditCard);
         case 'bbva':      return parseBBVA(text, isCreditCard);
+        case 'nu':        return parseNu(text, isCreditCard);
         default:          return null;
     }
 }

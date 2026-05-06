@@ -7,15 +7,17 @@ import { TopbarProvider, TopbarLayout } from './TopbarContext';
 export default function ConditionalShell({ children }) {
     const pathname = usePathname();
 
-    if (pathname === '/login') {
+    if (pathname === '/login' || pathname === '/' || pathname.startsWith('/analyze')) {
         return <>{children}</>;
     }
 
     return (
-        <TopbarProvider>
-            <Sidebar />
-            <TopbarLayout>{children}</TopbarLayout>
-            <BottomNav />
-        </TopbarProvider>
+        <div className="app-layout">
+            <TopbarProvider>
+                <Sidebar />
+                <TopbarLayout>{children}</TopbarLayout>
+                <BottomNav />
+            </TopbarProvider>
+        </div>
     );
 }

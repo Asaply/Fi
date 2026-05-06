@@ -1,4 +1,4 @@
-import { categorize } from './categories';
+import { categorize } from './categories.js';
 
 // Santander — Super Nómina / Cuenta de Cheques
 // This parser receives OCR text (Santander PDFs are image-based).

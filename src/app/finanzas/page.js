@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Modal from "@/components/Modal";
 import PLCalendar from "@/components/PLCalendar";
@@ -179,6 +179,7 @@ export default function FinanzasPage() {
     const [portfolioAssets, setPortfolioAssets] = useState([]);
     const [userConfig, setUserConfig] = useState({ concepto_custom_label: 'Por Cobrar', concepto_custom_total: 0 });
     const [periodo, setPeriodo] = useState('1m');
+    const [accountType, setAccountType] = useState('debit'); // 'debit' | 'credit'
     const [mesFilter, setMesFilter] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -201,6 +202,32 @@ export default function FinanzasPage() {
     const [pdfPassword, setPdfPassword] = useState('');
     const [pdfPasswordError, setPdfPasswordError] = useState(false);
     const fileInputRef = useRef(null);
+
+    // Credit Mode Config State
+    const [isEditingCreditConfig, setIsEditingCreditConfig] = useState(false);
+    const [creditConfig, setCreditConfig] = useState({
+        limit: 50000,
+        statementBalance: '',
+        noInterestPayment: '',
+        cutoffDate: '',
+        paymentDate: ''
+    });
+
+    useEffect(() => {
+        const saved = localStorage.getItem('fnce_credit_config');
+        if (saved) {
+            try {
+                setCreditConfig(JSON.parse(saved));
+            } catch(e) {}
+        }
+    }, []);
+
+    const handleSaveCreditConfig = (e) => {
+        e.preventDefault();
+        localStorage.setItem('fnce_credit_config', JSON.stringify(creditConfig));
+        setIsEditingCreditConfig(false);
+        toast.success("Configuración de tarjeta guardada");
+    };
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -788,6 +815,71 @@ export default function FinanzasPage() {
     const heroAbs = formatCurrency(Math.abs(gananciaNeta));
     const [heroInt, heroDec] = heroAbs.split('.');
 
+    // Datos reales para el modo crédito
+    const cargosPeriodo = filteredTx.filter(t => t.type === 'Egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const pagosPeriodo = filteredTx.filter(t => t.type === 'Transferencia').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const ajustesPeriodo = filteredTx.filter(t => t.type === 'Ingreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+    const historicoCargos = transactions.filter(t => t.type === 'Egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const historicoPagos = transactions.filter(t => t.type === 'Transferencia').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const historicoAjustes = transactions.filter(t => t.type === 'Ingreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    
+    const deudaActual = Math.max(0, historicoCargos - historicoPagos - historicoAjustes);
+    
+    // Límite y cálculos
+    const creditLimite = Number(creditConfig.limit) || 50000;
+    const creditUtilizacion = creditLimite > 0 ? (deudaActual / creditLimite) * 100 : 0;
+    const utilizationColor = creditUtilizacion < 30 ? '#22c55e' : creditUtilizacion < 70 ? '#eab308' : '#ef4444';
+    
+    const heroDeudaAbs = formatCurrency(deudaActual);
+    const [heroDeudaInt, heroDeudaDec] = heroDeudaAbs.split('.');
+
+    // --- 🤖 Asistente Financiero & Simulador Lógica ---
+    const [simulatorMode, setSimulatorMode] = useState('total'); // 'minimo', 'corte', 'total'
+    const TASA_INTERES_MENSUAL = 0.0416; // ~50% APR mock
+
+    let recommendedAction = "Todo en orden. Registra tus pagos y cargos para mantener el control.";
+    let actionType = "neutral";
+    let actionIcon = "💡";
+
+    const paymentDay = parseInt(creditConfig.paymentDate);
+    const pagoCorte = Number(creditConfig.statementBalance) || 0;
+    const pagoNoInteres = Number(creditConfig.noInterestPayment) || pagoCorte || deudaActual;
+
+    if (!isNaN(paymentDay) && deudaActual > 0) {
+        const today = new Date();
+        const currentDay = today.getDate();
+        let daysLeft = 0;
+        if (currentDay <= paymentDay) daysLeft = paymentDay - currentDay;
+        else {
+            const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            daysLeft = (daysInMonth - currentDay) + paymentDay;
+        }
+
+        if (daysLeft <= 3) {
+            recommendedAction = `Paga ${formatCurrency(pagoNoInteres)} en los próximos ${daysLeft} días para evitar intereses.`;
+            actionType = "urgent";
+            actionIcon = "🚨";
+        } else if (daysLeft <= 10) {
+            recommendedAction = `Prepárate para pagar ${formatCurrency(pagoNoInteres)} antes del ${paymentDay}. Planifica tu liquidez.`;
+            actionType = "warning";
+            actionIcon = "⚠️";
+        } else {
+            recommendedAction = `Tienes ${daysLeft} días hasta tu límite de pago. Tu próximo objetivo es juntar ${formatCurrency(pagoNoInteres)}.`;
+            actionType = "good";
+            actionIcon = "✅";
+        }
+    }
+
+    const simulatedPayment = useMemo(() => {
+        if (simulatorMode === 'minimo') return deudaActual * 0.05;
+        if (simulatorMode === 'corte') return pagoCorte;
+        return pagoNoInteres;
+    }, [simulatorMode, deudaActual, pagoCorte, pagoNoInteres]);
+
+    const simulatedRemaining = Math.max(0, deudaActual - simulatedPayment);
+    const simulatedInterest = simulatorMode === 'total' ? 0 : simulatedRemaining * TASA_INTERES_MENSUAL;
+
     return (
         <div className="page-container">
             <OnboardingTour
@@ -796,6 +888,25 @@ export default function FinanzasPage() {
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />
+
+            {/* Selector provisional de cuenta (Crédito vs Débito Global) */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                <div className="period-filter-wrap fin-period-filter" style={{ background: 'var(--bg-elevated)', padding: '4px' }}>
+                    <button 
+                        className={`period-filter-btn ${accountType === 'debit' ? 'active' : ''}`} 
+                        onClick={() => setAccountType('debit')}
+                    >
+                        🌎 Balance Global
+                    </button>
+                    <button 
+                        className={`period-filter-btn ${accountType === 'credit' ? 'active' : ''}`} 
+                        onClick={() => setAccountType('credit')}
+                    >
+                        💳 Tarjeta de Crédito
+                    </button>
+                </div>
+            </div>
+
             {/* Hero Balance */}
             {isLoading ? (
                 <div className="fin-hero">
@@ -803,6 +914,34 @@ export default function FinanzasPage() {
                     <div className="skeleton" style={{ height: '52px', width: '220px', margin: '0 auto 12px', borderRadius: '8px' }} />
                     <div className="skeleton" style={{ height: '24px', width: '120px', margin: '0 auto', borderRadius: '20px' }} />
                 </div>
+            ) : accountType === 'credit' ? (
+                <>
+                    {/* 🤖 1. NEXT ACTION / ASISTENTE */}
+                    <div style={{ marginBottom: '16px', padding: '16px', borderRadius: '12px', background: actionType === 'urgent' ? 'rgba(239,68,68,0.1)' : actionType === 'warning' ? 'rgba(234,179,8,0.1)' : actionType === 'good' ? 'rgba(52,211,153,0.1)' : 'var(--bg-surface)', border: `1px solid ${actionType === 'urgent' ? 'rgba(239,68,68,0.2)' : actionType === 'warning' ? 'rgba(234,179,8,0.2)' : actionType === 'good' ? 'rgba(52,211,153,0.2)' : 'var(--bg-border)'}` }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '20px' }}>{actionIcon}</span>
+                            <div>
+                                <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: actionType === 'urgent' ? '#f87171' : actionType === 'warning' ? '#facc15' : actionType === 'good' ? '#4ade80' : 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Acción Recomendada
+                                </p>
+                                <p style={{ margin: '4px 0 0', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', lineHeight: '1.4' }}>
+                                    {recommendedAction}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="fin-hero" style={{ position: 'relative', background: 'radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent)', border: '1px solid var(--bg-border)', borderRadius: '16px' }}>
+                        <button className="btn-icon-sm" style={{ position: 'absolute', top: 16, right: 16, color: 'rgba(255,255,255,0.6)' }} onClick={() => setIsEditingCreditConfig(true)} title="Configurar Tarjeta">
+                            <Settings size={18} />
+                        </button>
+                        <p className="fin-hero-label" style={{ letterSpacing: '1.2px', opacity: 0.6, fontWeight: 500 }}>DEUDA ACTUAL</p>
+                        <div className="fin-hero-amount" style={{ color: '#fff' }}>
+                            <span className="fin-hero-int">{heroDeudaInt}</span>
+                            <span className="fin-hero-dec">.{heroDeudaDec}</span>
+                        </div>
+                    </div>
+                </>
             ) : (
                 <div className="fin-hero">
                     <p className="fin-hero-label">Balance Total</p>
@@ -819,10 +958,67 @@ export default function FinanzasPage() {
                 </div>
             )}
 
+            {/* 📊 2. UTILIZACIÓN Y TREND */}
+            {!isLoading && accountType === 'credit' && (
+                <div style={{ marginTop: '16px', padding: '20px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Nivel de Utilización</span>
+                            <span style={{ fontSize: '28px', fontWeight: 800, color: utilizationColor, letterSpacing: '-0.5px' }}>
+                                {Math.round(creditUtilizacion)}%
+                            </span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(deudaActual)}</span>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}> / {formatCurrency(creditLimite)}</span>
+                        </div>
+                    </div>
+                    <div style={{ height: '8px', borderRadius: '999px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(creditUtilizacion, 100)}%`, height: '100%', background: utilizationColor, borderRadius: '999px', transition: 'width 0.5s ease-out' }} />
+                    </div>
+                </div>
+            )}
+
             {/* 2x2 Metric grid */}
             {isLoading ? (
                 <div className="fin-metric-grid">
                     <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
+                </div>
+            ) : accountType === 'credit' ? (
+                <div className="fin-metric-grid" style={{ marginTop: '16px' }}>
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
+                            <ArrowUpRight size={14} />
+                        </div>
+                        <span className="fin-metric-label">Pagos Realizados</span>
+                        <span className="fin-metric-value">{formatCurrency(pagosPeriodo)}</span>
+                        <span className="fin-metric-hint">Este periodo</span>
+                    </div>
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171' }}>
+                            <ArrowDownRight size={14} />
+                        </div>
+                        <span className="fin-metric-label">Cargos del periodo</span>
+                        <span className="fin-metric-value">{formatCurrency(cargosPeriodo)}</span>
+                    </div>
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
+                            <Wallet size={14} />
+                        </div>
+                        <span className="fin-metric-label">Devoluciones / Ajustes</span>
+                        <span className="fin-metric-value">{formatCurrency(ajustesPeriodo)}</span>
+                        <span className="fin-metric-hint">Reembolsos</span>
+                    </div>
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}>
+                            <TrendingUp size={14} />
+                        </div>
+                        <span className="fin-metric-label">Flujo Neto</span>
+                        <span className="fin-metric-value" style={{ color: pagosPeriodo >= cargosPeriodo ? '#34d399' : '#f87171' }}>
+                            {pagosPeriodo >= cargosPeriodo ? '+' : '-'}{formatCurrency(Math.abs(pagosPeriodo - cargosPeriodo))}
+                        </span>
+                        <span className="fin-metric-hint">Este periodo</span>
+                    </div>
                 </div>
             ) : (
                 <div className="fin-metric-grid">
@@ -868,9 +1064,65 @@ export default function FinanzasPage() {
                 </div>
             )}
 
+            {/* 🧾 3. BREAKDOWN DE DEUDA Y SIMULADOR (Solo Crédito) */}
+            {!isLoading && accountType === 'credit' && (
+                <div style={{ marginTop: '16px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        {/* Breakdown */}
+                        <div style={{ padding: '16px', borderRadius: '16px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', display: 'flex', flexDirection: 'column' }}>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Desglose de Deuda</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>🛍️ Compras y Cargos</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600 }}>{formatCurrency(historicoCargos - historicoAjustes)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>💸 Pagos a la fecha</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#34d399' }}>-{formatCurrency(historicoPagos)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>📈 Intereses / Comis.</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600 }}>$0.00</span>
+                            </div>
+                            <div style={{ width: '100%', height: '1px', background: 'var(--bg-border)', margin: 'auto 0 16px' }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setIsEditingCreditConfig(true)} title="Configurar Fechas">
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>📅 Corte: {creditConfig.cutoffDate || '—'}</span>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>📅 Límite: {creditConfig.paymentDate || '—'}</span>
+                            </div>
+                        </div>
+
+                        {/* Simulator */}
+                        <div style={{ padding: '16px', borderRadius: '16px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', display: 'flex', flexDirection: 'column' }}>
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Simulador de Pago</p>
+                            
+                            <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '8px' }}>
+                                <button className={`btn-secondary ${simulatorMode === 'minimo' ? 'active' : ''}`} style={{ flex: 1, fontSize: '10px', padding: '6px 2px', background: simulatorMode === 'minimo' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === 'minimo' ? '#fff' : 'var(--text-secondary)' }} onClick={() => setSimulatorMode('minimo')}>Mín.</button>
+                                <button className={`btn-secondary ${simulatorMode === 'corte' ? 'active' : ''}`} style={{ flex: 1, fontSize: '10px', padding: '6px 2px', background: simulatorMode === 'corte' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === 'corte' ? '#fff' : 'var(--text-secondary)' }} onClick={() => setSimulatorMode('corte')}>Corte</button>
+                                <button className={`btn-secondary ${simulatorMode === 'total' ? 'active' : ''}`} style={{ flex: 1, fontSize: '10px', padding: '6px 2px', background: simulatorMode === 'total' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === 'total' ? '#fff' : 'var(--text-secondary)' }} onClick={() => setSimulatorMode('total')}>Total</button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, justifyContent: 'flex-end' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Si pagas:</span>
+                                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#34d399' }}>{formatCurrency(simulatedPayment)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Deuda Restante:</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 600 }}>{formatCurrency(simulatedRemaining)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: simulatedInterest > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)', padding: '8px 12px', borderRadius: '8px', marginTop: '4px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 600, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>Intereses mes prox:</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>
+                                        {simulatedInterest > 0 ? `~${formatCurrency(simulatedInterest)}` : '$0.00'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Action buttons */}
             <div className="fin-actions-col">
-                <BankConnectWidget onSuccess={handleBankConnected} />
                 <div className="fin-actions-row">
                     <button className="btn-cta-secondary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
                         <Plus size={14} /> Nueva
@@ -884,6 +1136,9 @@ export default function FinanzasPage() {
                         </button>
                     )}
                     <button className="btn-cta-tertiary" onClick={resetTour} title="¿Cómo usar esta sección?">?</button>
+                </div>
+                <div style={{ opacity: 0.8, marginTop: '8px' }}>
+                    <BankConnectWidget onSuccess={handleBankConnected} />
                 </div>
             </div>
 
@@ -900,13 +1155,18 @@ export default function FinanzasPage() {
 
             {/* Type filter tabs */}
             <div data-tour="filtros-tipo" className="fin-type-tabs">
-                {[
+                {(accountType === 'credit' ? [
+                    { value: 'Todos', label: 'Todos', count: filteredTx.length },
+                    { value: 'Transferencia', label: 'Pagos', count: filteredTx.filter(t=>t.type==='Transferencia').length },
+                    { value: 'Egreso', label: 'Cargos', count: filteredTx.filter(t=>t.type==='Egreso').length },
+                    { value: 'Ingreso', label: 'Ajustes', count: filteredTx.filter(t=>t.type==='Ingreso').length },
+                ] : [
                     { value: 'Todos', label: 'Todos', count: filteredTx.length },
                     { value: 'Ingreso', label: 'Ingreso', count: filteredTx.filter(t=>t.type==='Ingreso').length },
                     { value: 'Egreso', label: 'Egreso', count: filteredTx.filter(t=>t.type==='Egreso').length },
                     { value: 'Inversión', label: 'Inversión', count: filteredTx.filter(t=>t.type==='Inversión').length },
                     { value: userConfig.concepto_custom_label, label: userConfig.concepto_custom_label, count: filteredTx.filter(t=>t.type===userConfig.concepto_custom_label).length },
-                ].map(tab => (
+                ]).map(tab => (
                     <button
                         key={tab.value}
                         className={`period-filter-btn ${activeFilter === tab.value ? 'active' : ''}`}
@@ -922,7 +1182,7 @@ export default function FinanzasPage() {
 
             {!isLoading && (
                 <>
-                    <GastosPorCategoria startDate={fechaInicio} />
+                    <GastosPorCategoria startDate={fechaInicio} mode={accountType} />
 
                     <PLCalendar transactions={transactions} />
 
@@ -967,9 +1227,15 @@ export default function FinanzasPage() {
                                             <td>{t.client}</td>
                                             <td>{t.concept}</td>
                                             <td>
-                                                <span className={`badge badge-${t.type.toLowerCase().replace(' ', '-')}`}>
-                                                    {t.type}
-                                                </span>
+                                                {accountType === 'credit' ? (
+                                                    <span className={`badge badge-${t.type.toLowerCase().replace(' ', '-')}`}>
+                                                        {t.type === 'Transferencia' ? 'Pago' : t.type === 'Egreso' ? 'Cargo' : t.type === 'Ingreso' ? 'Ajuste' : t.type}
+                                                    </span>
+                                                ) : (
+                                                    <span className={`badge badge-${t.type.toLowerCase().replace(' ', '-')}`}>
+                                                        {t.type}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className={
                                                 (t.type === 'Ingreso' ? 'amount-positive' :
@@ -1000,12 +1266,16 @@ export default function FinanzasPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Tipo</label>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {[
-                                { value: 'Ingreso',    color: '#22c55e', bg: 'rgba(34,197,94,0.15)'   },
-                                { value: 'Egreso',     color: '#ef4444', bg: 'rgba(239,68,68,0.15)'   },
-                                { value: 'Inversión',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)'  },
-                                { value: userConfig.concepto_custom_label, color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
-                            ].map(({ value, color, bg }) => (
+                            {(accountType === 'credit' ? [
+                                { value: 'Transferencia', label: 'Pago', color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
+                                { value: 'Egreso', label: 'Cargo', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+                                { value: 'Ingreso', label: 'Ajuste', color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
+                            ] : [
+                                { value: 'Ingreso', label: 'Ingreso', color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
+                                { value: 'Egreso', label: 'Egreso', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+                                { value: 'Inversión', label: 'Inversión', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+                                { value: userConfig.concepto_custom_label, label: userConfig.concepto_custom_label, color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
+                            ]).map(({ value, label, color, bg }) => (
                                 <button
                                     key={value}
                                     type="button"
@@ -1023,7 +1293,7 @@ export default function FinanzasPage() {
                                         transition: 'all 0.15s',
                                     }}
                                 >
-                                    {value}
+                                    {label}
                                 </button>
                             ))}
                         </div>
@@ -1122,6 +1392,41 @@ export default function FinanzasPage() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                         <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsEditingCustomCard(false)}>Cancelar</button>
+                        <button type="submit" className="btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* ── Credit Config Modal ── */}
+            <Modal isOpen={isEditingCreditConfig} onClose={() => setIsEditingCreditConfig(false)} title="Configuración de Tarjeta">
+                <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={handleSaveCreditConfig}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                        Ajusta los parámetros de tu tarjeta para calcular tu utilización, saldo y cuenta regresiva.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Límite de Crédito</label>
+                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="Ej: 50000" step="0.01" value={creditConfig.limit} onChange={e => setCreditConfig(p => ({ ...p, limit: e.target.value }))} required />
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Día de Corte</label>
+                            <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="Ej: 18" min="1" max="31" value={creditConfig.cutoffDate} onChange={e => setCreditConfig(p => ({ ...p, cutoffDate: e.target.value }))} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Día Límite de Pago</label>
+                            <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="Ej: 25" min="1" max="31" value={creditConfig.paymentDate} onChange={e => setCreditConfig(p => ({ ...p, paymentDate: e.target.value }))} />
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Saldo al corte</label>
+                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.statementBalance} onChange={e => setCreditConfig(p => ({ ...p, statementBalance: e.target.value }))} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago para no generar intereses</label>
+                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.noInterestPayment} onChange={e => setCreditConfig(p => ({ ...p, noInterestPayment: e.target.value }))} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                        <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsEditingCreditConfig(false)}>Cancelar</button>
                         <button type="submit" className="btn-primary">Guardar</button>
                     </div>
                 </form>
@@ -1275,12 +1580,20 @@ export default function FinanzasPage() {
                         {/* Summary stats */}
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <div style={{ flex: 1, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>INGRESOS</div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--positive)' }}>{formatCurrency(pendingRows.filter(r => r.type === 'Ingreso').reduce((s, r) => s + r.amount, 0))}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                                    {isCreditCard ? 'PAGOS' : 'INGRESOS'}
+                                </div>
+                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--positive)' }}>
+                                    {formatCurrency(pendingRows.filter(r => r.type === (isCreditCard ? 'Transferencia' : 'Ingreso')).reduce((s, r) => s + r.amount, 0))}
+                                </div>
                             </div>
                             <div style={{ flex: 1, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>EGRESOS</div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--negative)' }}>{formatCurrency(pendingRows.filter(r => r.type === 'Egreso').reduce((s, r) => s + r.amount, 0))}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                                    {isCreditCard ? 'CARGOS' : 'EGRESOS'}
+                                </div>
+                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--negative)' }}>
+                                    {formatCurrency(pendingRows.filter(r => r.type === 'Egreso').reduce((s, r) => s + r.amount, 0))}
+                                </div>
                             </div>
                             <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '10px 14px' }}>
                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>TRANSACCIONES</div>
@@ -1294,9 +1607,17 @@ export default function FinanzasPage() {
                             </p>
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Todo:</span>
-                                {['Ingreso', 'Egreso', 'Inversión', 'Por Cobrar'].map(t => (
-                                    <button key={t} className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType(t)}>{t}</button>
-                                ))}
+                                {isCreditCard ? (
+                                    <>
+                                        <button className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType('Transferencia')}>Pago</button>
+                                        <button className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType('Egreso')}>Cargo</button>
+                                        <button className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType('Ingreso')}>Ajuste</button>
+                                    </>
+                                ) : (
+                                    ['Ingreso', 'Egreso', 'Inversión', 'Por Cobrar'].map(t => (
+                                        <button key={t} className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType(t)}>{t}</button>
+                                    ))
+                                )}
                             </div>
                         </div>
 
@@ -1324,10 +1645,20 @@ export default function FinanzasPage() {
                                                     value={r.type}
                                                     onChange={e => updatePendingRow(r._idx, 'type', e.target.value)}
                                                 >
-                                                    <option>Ingreso</option>
-                                                    <option>Egreso</option>
-                                                    <option>Inversión</option>
-                                                    <option>Por Cobrar</option>
+                                                    {isCreditCard ? (
+                                                        <>
+                                                            <option value="Transferencia">Pago</option>
+                                                            <option value="Egreso">Cargo</option>
+                                                            <option value="Ingreso">Ajuste</option>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <option value="Ingreso">Ingreso</option>
+                                                            <option value="Egreso">Egreso</option>
+                                                            <option value="Inversión">Inversión</option>
+                                                            <option value="Por Cobrar">Por Cobrar</option>
+                                                        </>
+                                                    )}
                                                 </select>
                                             </td>
                                             <td>

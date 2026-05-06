@@ -106,7 +106,7 @@ function StepLoading() {
         <div className="ob-step">
             <div className="ob-spinner-wrap">
                 <div className="ob-icon-circle ob-icon-orange">
-                    <img src="/img/finn-logo.svg" alt="FINN" className="ob-logo-sm" />
+                    <img src="/nva-icon.svg" alt="NVA" className="ob-logo-sm" />
                 </div>
                 <svg className="ob-spinner-svg" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="48" cy="48" r="44" stroke="rgba(255,102,0,0.12)" strokeWidth="3"/>
@@ -202,7 +202,7 @@ function StepName({ onNext }) {
 function StepUse({ selected, onSelect, onNext }) {
     return (
         <div className="ob-step ob-step-use">
-            <h1 className="ob-title ob-title-left">¿Para qué usarás FINN?</h1>
+            <h1 className="ob-title ob-title-left">¿Para qué usarás NVA?</h1>
             <p className="ob-subtitle ob-subtitle-left">
                 Personaliza tu experiencia desde el inicio.
             </p>
@@ -272,14 +272,14 @@ function StepDone({ onFinish }) {
             <div className="ob-icon-wrap">
                 <div className="ob-icon-ring ob-icon-ring-orange">
                     <div className="ob-icon-circle ob-icon-orange">
-                        <img src="/img/finn-logo.svg" alt="FINN" className="ob-logo-sm" />
+                        <img src="/nva-icon.svg" alt="NVA" className="ob-logo-sm" />
                     </div>
                 </div>
             </div>
 
             <h1 className="ob-title">¡Todo listo!</h1>
             <p className="ob-subtitle">
-                Ya puedes usar FINN al 100%. Tu dashboard te espera.
+                Ya puedes usar NVA al 100%. Tu dashboard te espera.
             </p>
 
             <div className="ob-actions">

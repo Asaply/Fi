@@ -33,7 +33,7 @@ function categorizarAutomatico(descripcion = '') {
     return 'Otros';
 }
 
-export default function GastosPorCategoria({ startDate, endDate }) {
+export default function GastosPorCategoria({ startDate, endDate, mode = 'debit' }) {
     const [data, setData] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -101,7 +101,7 @@ export default function GastosPorCategoria({ startDate, endDate }) {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
-                    Gastos por Categoría
+                    {mode === 'credit' ? 'CARGOS POR CATEGORÍA (CICLO ACTUAL)' : 'Gastos por Categoría'}
                 </h2>
                 {total > 0 && (
                     <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>

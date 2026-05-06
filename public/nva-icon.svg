@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <rect width="300" height="300" rx="80" fill="#000000"/>
+  <style>
+    .st1 { font-family: 'Arial-BoldMT', Arial, sans-serif; font-weight: 800; }
+  </style>
+  <text class="st1" font-size="130" y="205" x="50%"
+    text-anchor="middle" letter-spacing="-2">
+    <tspan fill="#FFFFFF">NV</tspan><tspan fill="#FF8700">A</tspan>
+  </text>
+</svg>

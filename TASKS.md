@@ -73,8 +73,18 @@ Ver archivo `v1-design-polish.md` para instrucciones detalladas.
 
 ---
 
+### ✅ TASK-06: Automatización de estados de cuenta
+Implementar soporte para nuevos bancos (Nu, BBVA Débito, Banamex vertical) y mejorar el parser genérico con IA como fallback.
+1. Crear parser para Nu ✅
+2. Mejorar parser genérico para formatos verticales ✅
+3. Actualizar prompt de IA y modelo (Claude 3.5 Sonnet) ✅
+4. Ampliar reglas de categorización con keywords reales ✅
+
+---
+
 ## ✅ Completadas
 
+- Bug Fix: ReferenceError TrendingDown en Portfolio page
 - Sprint 1: Sidebar limpio
 - Sprint 2: Dashboard fijo en `/dashboard`
 - Sprint 3: Bug fixes de datos

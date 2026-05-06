@@ -15,9 +15,9 @@ export default function Sidebar() {
         <aside className="sidebar">
             <div className="sidebar-brand">
                 <div className="brand-icon-wrap">
-                    <Image src="/img/finn-logo.svg" alt="FINN" width={18} height={18} />
+                    <Image src="/nva-icon.svg" alt="NVA" width={18} height={18} />
                 </div>
-                <span className="brand-name">FINN</span>
+                <span className="brand-name">NVA</span>
             </div>
 
             <nav className="sidebar-nav">

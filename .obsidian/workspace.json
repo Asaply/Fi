@@ -8,119 +8,133 @@
         "type": "tabs",
         "children": [
           {
-            "id": "10c625389e9d754f",
+            "id": "ebf8b7bc69ad20fb",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "node_modules/eslint-module-utils/node_modules/debug/README.md",
+                "file": "CONTEXT.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "CONTEXT"
             }
           },
           {
-            "id": "94afe248353321b0",
+            "id": "64118a30532f2784",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docsprompt-widgets-rewrite.md",
+                "file": "parse-bank-statements.md.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "docsprompt-widgets-rewrite"
+              "title": "parse-bank-statements.md"
             }
           },
           {
-            "id": "7fa75d7e4a655922",
+            "id": "b4bfc2512e578405",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docsprompt-finanzas-tipo-pdf.md.md",
+                "file": "design-03-onboarding.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "docsprompt-finanzas-tipo-pdf.md"
+              "title": "design-03-onboarding"
             }
           },
           {
-            "id": "c30f0850f0ed8410",
+            "id": "33de5e60f0af1c71",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docsprompt-pdf-parser-fix.md.md",
+                "file": "rebrand-nva-landing.md.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "docsprompt-pdf-parser-fix.md"
+              "title": "rebrand-nva-landing.md"
             }
           },
           {
-            "id": "2a5a3121d35ce775",
+            "id": "8b983de26d914126",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docsprompt-pdf-parser-debug.md.md",
+                "file": "fix-landing-nva.md.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "docsprompt-pdf-parser-debug.md"
+              "title": "fix-landing-nva.md"
             }
           },
           {
-            "id": "23040b8aaad1b6a3",
+            "id": "677e5ebdbba50c71",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
+                "file": "fix-completo-nva-v2.md.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "fix-completo-nva-v2.md"
             }
           },
           {
-            "id": "268eda8b0d194b0a",
+            "id": "13ded48091beeb72",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "fix-multiusuario-clients.md.md",
+                "file": "tasks-fix/analyze-flow/tasks-fix-analyze-flow-plan.md.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "fix-multiusuario-clients.md"
+              "title": "tasks-fix-analyze-flow-plan.md"
             }
           },
           {
-            "id": "260406dabbee376b",
+            "id": "336beff0983b6ec0",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Fix-Auth redirect URL para producción.md",
+                "file": "tasks-fix/analyze-flow/tasks-fix-analyze-flow-exec.md.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Fix-Auth redirect URL para producción"
+              "title": "tasks-fix-analyze-flow-exec.md"
+            }
+          },
+          {
+            "id": "07c94af9f24633b6",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "bbva-credit-card-parser.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "bbva-credit-card-parser"
             }
           }
         ],
-        "currentTab": 7
+        "currentTab": 8
       }
     ],
     "direction": "vertical"
@@ -139,7 +153,7 @@
             "state": {
               "type": "file-explorer",
               "state": {
-                "sortOrder": "alphabetical",
+                "sortOrder": "byModifiedTime",
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
@@ -279,53 +293,53 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "260406dabbee376b",
+  "active": "07c94af9f24633b6",
   "lastOpenFiles": [
-    "fix-multiusuario-clients.md.md",
-    "Fix-Auth redirect URL para producción.md",
-    "README.md",
-    "cat > fix-css-break.md",
-    "fix-buttons-dark-theme.md",
-    "src/components/onboarding/tourSteps.js",
-    "design-onboarding.md",
-    "files/v1-design-polish.md",
-    "files/fix-urgente-categoria-csv.md",
-    "files/design-onboarding.md",
-    "files",
-    "files.zip",
-    "node_modules/eslint-plugin-react/README.md",
-    "sprint5-auth.md",
-    "src/components/onboarding/OnboardingTour.jsx",
-    "src/hooks/useOnboarding.js",
-    "src/components/onboarding",
-    "src/hooks",
-    "design-03-onboarding.md",
-    "design-02-typography.md",
-    "design-01-tokens.md",
-    "files/design-03-onboarding.md",
-    "files/design-02-typography.md",
-    "files/design-01-tokens.md",
-    "fix-finanzas-import-categorias.md",
-    "CONTEXT.md",
-    "CONTEXT-DB.md",
+    "scratch/santander_response.json",
+    "scratch/test_generic.ts",
+    "scratch/nu_v2_text.txt",
+    "scratch/tmp.js",
+    "scratch/analyze_response.json",
+    "scratch/test_pdf.mjs",
+    "scratch/test_pdf_parse.mjs",
+    "scratch/dump_ui_extract.ts",
+    "scratch/bbva_ui_extract.txt",
+    "scratch/test_ui_extract.ts",
+    "scratch/test_ui_extract.mjs",
+    "tasks-fix/analyze-flow/tasks-fix-analyze-flow-validation.md.md",
+    "tasks-fix/analyze-flow/tasks-fix-analyze-flow-exec.md.md",
+    "tasks-fix/analyze-flow/tasks-fix-analyze-flow-plan.md.md",
+    "public/icon-192x192.png",
+    "public/apple-icon.png",
+    "public/favicon.png",
+    "docs/docs-rules.md.md",
+    "docs/docs-architecture.md.md",
+    "docs/docs-context.md.md",
+    "rebrand-nva-landing.md.md",
+    "CLAUDE.md",
     "CONTEXT-AUTH.md",
-    "files/CONTEXT.md",
-    "files/CONTEXT-DB.md",
-    "files/CONTEXT-AUTH.md",
-    "fix-auth-email-google.md",
-    "feature-dashboard-upgrade.md",
-    "fix-mobile-v2.css",
-    "src/components/ReporteMensual.jsx",
-    "src/components/Recordatorios.jsx",
-    "node_modules/@supabase/phoenix/priv/static/phoenix.png",
-    "node_modules/@supabase/phoenix/priv/static/phoenix-orange.png",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/toolbarButton-menuArrow.svg",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/toolbarButton-menuArrow.svg",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/toolbarButton-editorHighlight.svg",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/toolbarButton-editorHighlight.svg",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/messageBar_warning.svg",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/messageBar_warning.svg",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/web/images/messageBar_info.svg",
-    "node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/web/images/messageBar_info.svg"
+    "CONTEXT.md",
+    "docs/rules/function-component-definition.md",
+    "docs/rules/jsx-fragments.md",
+    "docs-rules.md.md",
+    "docs-architecture.md.md",
+    "public/nva-logo.svg",
+    "public/icon-512x512.png",
+    "public/window.svg",
+    "public/nva-icon.svg",
+    "public/vercel.svg",
+    "public/next.svg",
+    "public/file.svg",
+    "docsprompt-nu-parser.md.md",
+    "rules.md.md",
+    "architecture.md.md",
+    "context.md.md",
+    "fix-completo-nva-v2.md.md",
+    "architecture.md",
+    "fix-landing-nva.md.md",
+    "design-03-onboarding.md",
+    "fix-parser-universal.md.md",
+    "node_modules/@babel/runtime/README.md",
+    "node_modules/@anthropic-ai/sdk/src/_vendor/partial-json-parser/README.md"
   ]
 }

@@ -1,0 +1,428 @@
+¡Hola, Leonardo!
+Este es tu estado de cuenta
+de Marzo
+Si solo tienes unos minutos, hicimos
+un resumen para ti
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+RFC: XAXX010101000
+CLABE: 638180000124523823
+Periodo: del 01 al 31 mar 2026
+Saldo inicial $824.22
+Depósitos +$11,690.00
+Gastos -$12,392.26
+Comisiones cobradas por Nu $0.00
+Dinero generado este mes $0.89
+Saldo al generar este estado de cuenta $122.85
+Cómo está organizado tu dinero
+En su Cuenta
+$122.71
+Este es el monto en tu cuenta
+para realizar transacciones y
+compras por débito.
+En Cajitas
+$0.14
+Este dinero funciona como
+reserva para tus objetivos y se
+amortiza diariamente.
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+1 de 12
+
+-- 1 of 12 --
+
+Detalle de movimientos en tu cuenta
+FECHA DEL 01 AL 31 MAR 2026 (31 DÍAS) MONTO EN PESOS MEXICANOS
+30 MAR 2026 Blanca Cardenas Airbnb -$1,000.00
+Transferencia SPEI, Hora: 20:54:15, Enviado a INBURSA. Al cliente
+Blanca Cardenas (Dato no verificado por esta institución), por
+concepto Airbnb. A la cuenta 036158500607038545 clabe, Clave de
+rastreo NU39PCRL6V4G9L1ONTT76D3L3CL9, Clave de referencia
+300326
+28 MAR 2026 REST HECHO CON AMOR Compra -$185.00
+28 MAR 2026 ABRAHAM PEREZ PENA hospedaje +$1,300.00
+Depósito SPEI, Hora: 20:57:03, Recibido de BANORTE. Del cliente
+ABRAHAM PEREZ PENA (Dato no verificado por esta institución), por
+concepto hospedaje. De la cuenta 072180013541255686 clabe, Clave
+de rastreo 38432P02202603285131835114, Clave de referencia
+260328
+28 MAR 2026 OXXO JERONIMO Compra -$318.50
+27 MAR 2026 PAGANDO*LITTLE CAESAR1 Compra -$297.00
+27 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ Deposito +$300.00
+Depósito SPEI, Hora: 13:52:13, Recibido de INBURSA. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto Deposito. De la cuenta
+036158500607038545 clabe, Clave de rastreo
+036NAPP27032026263823617, Clave de referencia 2026032
+27 MAR 2026 ALSUPER PLUS EL RELIZ Compra -$263.00
+27 MAR 2026 GASOL RELIZ Compra -$500.00
+27 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ TRANSFERENCIA A
+LEONARDO HERNANDEZ +$1,000.00
+Depósito SPEI, Hora: 11:25:00, Recibido de SANTANDER. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto TRANSFERENCIA A LEONARDO
+HERNANDEZ. De la cuenta 014094568036611800 clabe, Clave de
+rastreo 2026032740014TRAPP000438216530, Clave de referencia
+496742
+26 MAR 2026 RESTAUR BAR BLACK LION Compra -$25.00
+26 MAR 2026 Blanca Cardenas airbnb -$1,300.00
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+2 de 12
+
+-- 2 of 12 --
+
+FECHA DEL 01 AL 31 MAR 2026 (31 DÍAS) MONTO EN PESOS MEXICANOS
+Transferencia SPEI, Hora: 09:12:38, Enviado a INBURSA. Al cliente
+Blanca Cardenas (Dato no verificado por esta institución), por
+concepto airbnb. A la cuenta 036158500607038545 clabe, Clave de
+rastreo NU39OL6DQ4PM8GCBD6KM7K0RLB4M, Clave de referencia
+260326
+25 MAR 2026 ABRAHAM PEREZ PENA hospedaje +$1,300.00
+Depósito SPEI, Hora: 20:34:51, Recibido de BANORTE. Del cliente
+ABRAHAM PEREZ PENA (Dato no verificado por esta institución), por
+concepto hospedaje. De la cuenta 072180013541255686 clabe, Clave
+de rastreo 3843CP06202603255118813806, Clave de referencia
+260325
+25 MAR 2026 BARBERSHOP Compra -$310.00
+25 MAR 2026 Blanca Cardenas Transferencia -$2,200.00
+Transferencia SPEI, Hora: 15:48:47, Enviado a INBURSA. Al cliente
+Blanca Cardenas (Dato no verificado por esta institución), por
+concepto Transferencia. A la cuenta 036158500607038545 clabe,
+Clave de rastreo NU39OHC3GFPB9OVO50U7RAUNI20L, Clave de
+referencia 250326
+24 MAR 2026 ABRAHAM PEREZ PENA hosedaje +$2,600.00
+Depósito SPEI, Hora: 21:57:32, Recibido de BANORTE. Del cliente
+ABRAHAM PEREZ PENA (Dato no verificado por esta institución), por
+concepto hosedaje. De la cuenta 072180013541255686 clabe, Clave
+de rastreo 38432P02202603245115820838, Clave de referencia
+260324
+24 MAR 2026 PORKBUN.COM Compra -$698.32
+USD 1.00 = MXN 17.778 USD 39.28
+24 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ Transferencia
+electronica +$700.00
+Depósito SPEI, Hora: 15:29:38, Recibido de INBURSA. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto Transferencia electronica. De la cuenta
+036158500607038545 clabe, Clave de rastreo
+036NAPP24032026263227400, Clave de referencia 2026032
+24 MAR 2026 NETLIFY Compra -$161.10
+USD 1.00 = MXN 17.90 USD 9
+24 MAR 2026 RESTAUR BAR BLACK LION Compra -$20.00
+24 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ Transferencia
+electronica +$200.00
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+3 de 12
+
+-- 3 of 12 --
+
+FECHA DEL 01 AL 31 MAR 2026 (31 DÍAS) MONTO EN PESOS MEXICANOS
+Depósito SPEI, Hora: 08:53:42, Recibido de INBURSA. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto Transferencia electronica. De la cuenta
+036158500607038545 clabe, Clave de rastreo
+036NAPP24032026263138620, Clave de referencia 2026032
+22 MAR 2026 Jorge Salazar Transferencia -$70.00
+Transferencia SPEI, Hora: 16:47:53, Enviado a SANTANDER. Al cliente
+Jorge Salazar (Dato no verificado por esta institución), por concepto
+Transferencia. A la cuenta 014150569364588315 clabe, Clave de
+rastreo NU39O1OOQSET9VTPQ4973PF46857, Clave de referencia
+220326
+22 MAR 2026 Retiro de Cajita: Cajita Turbo +$8.00
+21 MAR 2026 GASOL RELIZ Compra -$500.00
+21 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ Transferencia
+electronica +$500.00
+Depósito SPEI, Hora: 17:22:09, Recibido de INBURSA. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto Transferencia electronica. De la cuenta
+036158500607038545 clabe, Clave de rastreo
+036NAPP21032026262778746, Clave de referencia 2026032
+19 MAR 2026 OXXOTEOFILO CUF Compra -$80.00
+19 MAR 2026 OFFICE DEPOT CHIHUAHUA Compra -$348.00
+19 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ Transferencia
+electronica +$300.00
+Depósito SPEI, Hora: 16:42:46, Recibido de INBURSA. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto Transferencia electronica. De la cuenta
+036158500607038545 clabe, Clave de rastreo
+036NAPP19032026262346989, Clave de referencia 2026031
+19 MAR 2026 LITTLE CAESARS EL RELI Compra -$198.00
+18 MAR 2026 Blanca Cardenas Airbnb -$1,950.00
+Transferencia SPEI, Hora: 19:27:59, Enviado a INBURSA. Al cliente
+Blanca Cardenas (Dato no verificado por esta institución), por
+concepto Airbnb. A la cuenta 036158500607038545 clabe, Clave de
+rastreo NU39ND8H4MA29F39IVFPGI8L07UP, Clave de referencia
+180326
+18 MAR 2026 ABRAHAM PEREZ PENA hospedaje +$1,950.00
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+4 de 12
+
+-- 4 of 12 --
+
+FECHA DEL 01 AL 31 MAR 2026 (31 DÍAS) MONTO EN PESOS MEXICANOS
+Depósito SPEI, Hora: 18:28:39, Recibido de BANORTE. Del cliente
+ABRAHAM PEREZ PENA (Dato no verificado por esta institución), por
+concepto hospedaje. De la cuenta 072180013541255686 clabe, Clave
+de rastreo 38432P01202603185095809561, Clave de referencia
+260318
+18 MAR 2026 Ada Karina Leon Jimenez SPIN DE Ada Karina Leon Jimenez +$35.00
+Depósito SPEI, Hora: 13:52:35, Recibido de SPIN BY OXXO. Del cliente
+Ada Karina Leon Jimenez (Dato no verificado por esta institución), por
+concepto SPIN DE Ada Karina Leon Jimenez. De la cuenta
+728969000110445541 clabe, Clave de rastreo
+SPIN20260318135226760H35NOFUZG, Clave de referencia 8760871
+18 MAR 2026 Anabel Burrola Chavez pastel +$35.00
+Depósito SPEI, Hora: 13:50:10, Recibido de SPIN BY OXXO. Del cliente
+Anabel Burrola Chavez (Dato no verificado por esta institución), por
+concepto pastel . De la cuenta 728969000117595177 clabe, Clave de
+rastreo SPIN20260318135002852KA9MAAPUS, Clave de referencia
+1084999
+18 MAR 2026 MARIA ISELA MARRUFO CHAPARRO pay vale +$35.00
+Depósito SPEI, Hora: 13:48:22, Recibido de NU MEXICO. Del cliente
+MARIA ISELA MARRUFO CHAPARRO (Dato no verificado por esta
+institución), por concepto pay vale . De la cuenta
+638180000140200104 clabe, Clave de rastreo
+NU39NC0ODQ0P8OIO9NMTROOEQR2R, Clave de referencia 180326
+18 MAR 2026 JOSE RODRIGO MUNOZ GUERRA Transferencia +$35.00
+Depósito SPEI, Hora: 13:46:09, Recibido de NU MEXICO. Del cliente
+JOSE RODRIGO MUNOZ GUERRA (Dato no verificado por esta
+institución), por concepto Transferencia. De la cuenta
+638180000061133570 clabe, Clave de rastreo
+NU39NC0G0M7N900QMBBP6IIQ92T4, Clave de referencia 180326
+17 MAR 2026 ARCCA Compra -$24.00
+16 MAR 2026 OXXO SARATOGA CUF Compra -$107.00
+15 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ Transferencia
+electronica +$300.00
+Depósito SPEI, Hora: 22:02:38, Recibido de INBURSA. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto Transferencia electronica. De la cuenta
+036158500607038545 clabe, Clave de rastreo
+036NAPP15032026261675632, Clave de referencia 2026031
+14 MAR 2026 NETLIFY Compra -$179.04
+USD 1.00 = MXN 17.9219 USD 9.99
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+5 de 12
+
+-- 5 of 12 --
+
+FECHA DEL 01 AL 31 MAR 2026 (31 DÍAS) MONTO EN PESOS MEXICANOS
+14 MAR 2026 JOAQUIN ARTURO DE LA FUENTE BEJARANO leo +$200.00
+Depósito SPEI, Hora: 18:09:08, Recibido de BBVA MEXICO. Del
+cliente JOAQUIN ARTURO DE LA FUENTE BEJARANO (Dato no
+verificado por esta institución), por concepto leo. De la cuenta
+012150015285190969 clabe, Clave de rastreo
+MBAN01002603170085219642, Clave de referencia 2702260
+10 MAR 2026 OPENAI Compra -$88.84
+USD 1.00 = MXN 17.768 USD 5
+10 MAR 2026 Fong Transferencia -$20.00
+Transferencia SPEI, Hora: 09:01:26, Enviado a BANREGIO. Al cliente
+Fong (Dato no verificado por esta institución), por concepto
+Transferencia. A la cuenta 058150629151900109 clabe, Clave de
+rastreo NU39M0P3P0CU9VMRGK4TSMALBE2F, Clave de referencia
+100326
+10 MAR 2026 hector palace is Transferencia -$20.00
+Transferencia SPEI, Hora: 08:59:51, Enviado a NU MEXICO. Al cliente
+hector palace is (Dato no verificado por esta institución), por
+concepto Transferencia. A la cuenta 638180010181977460 clabe,
+Clave de rastreo NU39M0OUFGBM99O8EVJ6Q8MTF0R7, Clave de
+referencia 100326
+07 MAR 2026 OXXOTEOFILO CUF Compra -$80.00
+06 MAR
+2026 OXXO RINCONES CUU Compra -$97.50
+06 MAR
+2026 Retiro de Cajita: Cajita Turbo +$300.00
+05 MAR 2026 CLIP MX*REST PALETERIA Compra -$70.00
+04 MAR
+2026 AUTOZONE 7123 Compra -$288.00
+04 MAR
+2026
+BLANCA ESTELA CARDENAS RODRIGUEZ Transferencia
+electronica +$400.00
+Depósito SPEI, Hora: 19:38:44, Recibido de INBURSA. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto Transferencia electronica. De la cuenta
+036158500607038545 clabe, Clave de rastreo
+036NAPP04032026259475330, Clave de referencia 2026030
+04 MAR
+2026 Osmar Transferencia -$30.00
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+6 de 12
+
+-- 6 of 12 --
+
+FECHA DEL 01 AL 31 MAR 2026 (31 DÍAS) MONTO EN PESOS MEXICANOS
+Transferencia SPEI, Hora: 11:24:31, Enviado a SANTANDER. Al cliente
+Osmar (Dato no verificado por esta institución), por concepto
+Transferencia. A la cuenta 5579100410912644 debit-card, Clave de
+rastreo NU39L1LCBTLB8CRR13DBG8K90VUA, Clave de referencia
+40326
+04 MAR
+2026 Retiro de Cajita: Cajita Turbo +$30.00
+03 MAR 2026 hector palace is Transferencia -$40.00
+Transferencia SPEI, Hora: 10:37:27, Enviado a NU MEXICO. Al cliente
+hector palace is (Dato no verificado por esta institución), por
+concepto Transferencia. A la cuenta 638180010181977460 clabe,
+Clave de rastreo NU39KS74F11G8M3PMTSIIHEG75L9, Clave de
+referencia 30326
+03 MAR 2026 Retiro de Cajita: Cajita Turbo +$50.00
+02 MAR 2026 OXXO SANTUARIO CUU Compra -$80.00
+02 MAR 2026 Retiro de Cajita: Cajita Turbo +$30.00
+02 MAR 2026 GASOL ATE TEOFILO BORU Compra -$595.96
+02 MAR 2026 Retiro de Cajita: Cajita Turbo +$100.00
+02 MAR 2026 hector palace is Transferencia -$20.00
+Transferencia SPEI, Hora: 10:08:42, Enviado a NU MEXICO. Al cliente
+hector palace is (Dato no verificado por esta institución), por
+concepto Transferencia. A la cuenta 638180010181977460 clabe,
+Clave de rastreo NU39KMR0K7FN8QDP0LI841S36A7N, Clave de
+referencia 20326
+02 MAR 2026 BLANCA ESTELA CARDENAS RODRIGUEZ TRANSFERENCIA A
+LEONARDO HERNSNDE +$500.00
+Depósito SPEI, Hora: 07:59:19, Recibido de SANTANDER. Del cliente
+BLANCA ESTELA CARDENAS RODRIGUEZ (Dato no verificado por esta
+institución), por concepto TRANSFERENCIA A LEONARDO
+HERNSNDE. De la cuenta 014094568036611800 clabe, Clave de
+rastreo 2026030240014TRAPP000449987330, Clave de referencia
+5320281
+01 MAR 2026 SMARTPY*HAMBWENDYS2 Compra -$228.00
+01 MAR 2026 Retiro de Cajita: Cajita Turbo +$300.00
+01 MAR 2026 Depósito en Cajita: Cajita Turbo -$200.00
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+7 de 12
+
+-- 7 of 12 --
+
+Con estos movimientos, tu saldo promedio del periodo fue de $382.71
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+8 de 12
+
+-- 8 of 12 --
+
+Detalle de movimientos de tus cajitas
+FECHA DEL 01 AL 31 MAR 2026 (31 DÍAS) MONTO EN PESOS MEXICANOS
+22 MAR 2026 Retiro de Cajita: Cajita Turbo -$8.00
+06 MAR
+2026 Retiro de Cajita: Cajita Turbo -$300.00
+04 MAR
+2026 Retiro de Cajita: Cajita Turbo -$30.00
+03 MAR 2026 Retiro de Cajita: Cajita Turbo -$50.00
+02 MAR 2026 Retiro de Cajita: Cajita Turbo -$30.00
+02 MAR 2026 Retiro de Cajita: Cajita Turbo -$100.00
+01 MAR 2026 Retiro de Cajita: Cajita Turbo -$300.00
+01 MAR 2026 Depósito en Cajita: Cajita Turbo +$200.00
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+9 de 12
+
+-- 9 of 12 --
+
+DINERO GENERADO EN TU CUENTA NU DEL 01 AL 31 MAR 2026 (31 DÍAS)
+Dinero generado antes de impuestos (Interés Bruto Anual de 13%) $0.89
+Impuestos sobre el dinero generado (ISR de 0.9%) $0.00
+Dinero generado este mes $0.89
+GANANCIA ANUAL TOTAL ANTES DE IMPUESTOS
+GAT Nominal 13.88%
+GAT Real 9.76%
+Recuerda que las obtendrás desde $1.00 y que son calculadas de forma diaria. Fecha de cálculo al 06 de abril del 2026. Oferta
+vigente al 31 de marzo del 2026.
+Sabemos que puede ser confuso hablar de Ganancia Anual Total, por eso queremos decirte que la GAT real es el rendimiento que
+obtendría después de descontar la inflación estimada.
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+10 de 12
+
+-- 10 of 12 --
+
+CONTACTO
+Estamos para ayudarte 24/7
+Puedes abrir el chat dentro de tu app
+o llamar al 800 099 1133
+Nu México Financiera, S.A. de C.V., S.F.P. recibe las
+consultas, reclamaciones o aclaraciones, en su Unidad
+Especializada de Atención a Usuarios, ubicada en Manuel
+Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México,
+México y por correo electrónico consulta.une@nu.com.mx
+o teléfono +52 55 2875 1816, así como en cualquiera de
+sus sucursales u oficinas.
+En el caso de no obtener una respuesta satisfactoria,
+podrá acudir a la Comisión Nacional para la Protección y
+Defensa de los Usuarios de Servicios Financieros.
+Por último, al tener tus ahorros en Cuenta Nu, tu saldo
+está asegurado ante la ley por un fondo de protección
+hasta por 25000 UDIS, que son $220,141.75 (cantidad en
+pesos mexicanos calculada al 06 abril 2026).
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+11 de 12
+
+-- 11 of 12 --
+
+Número de serie: 00001000000515942699
+Número de serie certificado SAT: 00001000000719545303
+Fecha y hora de certificado: 06/04/2026 10:09:19 PM
+Fecha y hora de emisión: 06/04/2026 10:09:19 PM
+Sello digital emisor:
+qi12+/DogCdZPTASKJc+h5QDZyKY2K+RLuW7WIDUrhN04lmeXWNNHdXpJBJPD7cjzRkWda5+yGelEEkHIWfq
+CGlKxsNZL9P9ehHJM7I3u1opREXJhX2u9F/hfkSgQI9YrFsr7KIdI1ZqV0sFK8YD2DuOWhV3r+2rw2odD9WM3a
+LqnZwIZnJvwIzf9vaOJtHcrY686TzYyBctY3//cs3HCCetMkALsPiPD7e8tibvBH37R5wq3avUoU8+lvMjICYDG1+
+9CpMPU6qjhMQuQqXbwBqBrp2kQIWbrr0887PjpZD4vG3a5QVGa2D6mHelNtra7tsZHOlwVZTHmTzgMeapi
+Q==
+Sello digital del SAT:
+liSTk7G2VzyNL7QXhRygI9rXCe5AygI3bXXbyGipcGcA2tQiWk9a8g+UnMMHn8FVQBRU0NHmiFrbZXjl3plC
+XuZW0HOLcNczsEa6xINn7vKk//CPHa4JjT2KFdCyGwij6jyP7NTByx+0soShoxRtUGOrFI1yi6mF8VOq1uLEUX
+GsW2YG51O/nnwwpm2XkD5tyfJAqxDGbeExy4cro4rWU9qk2pxxRNua6V2U8OMoXFCfZQ0I6WWUNyF7jIH
+z8jjIx5GyzpeQx6lG1lzsf5kQWLdXK9LBuzwkoZW8o1HaAx4tLz+mKzm9eW36yV4pwn4JxwslSamJubi0Rdo9
+R4yUSA==
+Cadena original: ||1.1|a68e667f-f618-494b-a64f-d6cadf176cb5|2026-04-
+06T22:09:19|LSO1306189R5|qi12+/DogCdZPTASKJc+h5QDZyKY2K+RLuW7WIDUrhN04lmeXWNNHdXpJBJP
+D7cjzRkWda5+yGelEEkHIWfqCGlKxsNZL9P9ehHJM7I3u1opREXJhX2u9F/hfkSgQI9YrFsr7KIdI1ZqV0sFK8YD2
+DuOWhV3r+2rw2odD9WM3aLqnZwIZnJvwIzf9vaOJtHcrY686TzYyBctY3//cs3HCCetMkALsPiPD7e8tibvBH3
+7R5wq3avUoU8+lvMjICYDG1+9CpMPU6qjhMQuQqXbwBqBrp2kQIWbrr0887PjpZD4vG3a5QVGa2D6mHelN
+tra7tsZHOlwVZTHmTzgMeapiQ==|00001000000719545303||
+COMPROBANTE FISCAL DIGITAL POR INTERNET (CFDI)
+Folio fiscal: a68e667f-f618-494b-a64f-d6cadf176cb5
+RFC del receptor: XAXX010101000
+RFC del emisor: AKA060427QP2
+RFC del proveedor del certificado: LSO1306189R5
+Tipo de comprobante: I Ingreso
+Forma de pago: Transferencia electrónica de fondos (incluye
+SPEI)
+Método de pago: PUE (Pago en Una Exhibición)
+Uso del CFDI: S01 - Sin efectos fiscales
+Régimen fiscal: 616 - Sin obligaciones fiscales
+Moneda: Peso Mexicano (MXN)
+Leonardo Hernandez Cardenas
+Cuenta Nu: 00012452382
+Nu México Financiera, S.A. de C.V., S.F.P. Manuel Ávila Camacho #201, Piso 9, Colonia Polanco I Sección,
+C.P. 11510, Alcaldía Miguel Hidalgo, Ciudad de México, México. Teléfono: 800 099 1133
+12 de 12
+
+-- 12 of 12 --
+
+

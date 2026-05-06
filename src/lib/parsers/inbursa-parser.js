@@ -1,4 +1,4 @@
-import { categorize } from './categories';
+import { categorize } from './categories.js';
 
 // Banco Inbursa — Cuentaefe
 // REAL FORMAT (pdf-parse, mostly ONE LINE per tx):
