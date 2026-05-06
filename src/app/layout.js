@@ -14,17 +14,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "FINN",
-  description: "Tus finanzas personales en un solo lugar.",
+  title: "NVA - Tu dinero en claro",
+  description: "Sube tu estado de cuenta y descubre en que gastas en segundos.",
   manifest: "/manifest.json",
   icons: {
-    icon: '/favicon.png',
+    icon: [
+      { url: '/nva-icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+    ],
     apple: '/apple-icon.png',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "FINN",
+    title: "NVA",
   },
 };
 
@@ -39,9 +42,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body className={`${inter.variable} ${geistMono.variable}`}>
-        <div className="app-layout">
-          <ConditionalShell>{children}</ConditionalShell>
-        </div>
+        <ConditionalShell>{children}</ConditionalShell>
         <Toaster position="bottom-right" theme="dark" richColors />
       </body>
     </html>

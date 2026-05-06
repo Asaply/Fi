@@ -11,7 +11,7 @@ const CATEGORY_RULES = [
     { keywords: /OXXO|SEVEN|7-ELEVEN|ALSUPER|COSTCO|WALMART|WAL-MART|SAMS|SAM'S|CHEDRAUI|SORIANA|LA COMER|SUPERETTE|ABARR|MERCS POPULARES/i, category: 'Supermercado' },
 
     // Restaurantes
-    { keywords: /RESTAURANT|DELIPOLLO|BURGER|MCDONALD|KFC|PIZZA HUT|DOMINOS|LITTLE CAESAR|STARBUCKS|CAFET|BURRITOS|POLLO|CARNES|CARNICERIAS|CARNECE/i, category: 'Restaurantes' },
+    { keywords: /RESTAURANT|DELIPOLLO|BURGER|MCDONALD|KFC|PIZZA HUT|DOMINOS|LITTLE CAESAR|STARBUCKS|CAFET|BURRITOS|POLLO|CARNES|CARNICERIAS|CARNECE|KITCHEN|DAIRY QUEEN|PIZZERIA/i, category: 'Restaurantes' },
     { keywords: /UBER\s*EATS|RAPPI|DIDI\s*FOOD/i, category: 'Restaurantes' },
 
     // Gasolina / Transporte
@@ -53,6 +53,8 @@ const CATEGORY_RULES = [
     // Hogar
     { keywords: /FERRE|FERRETERIA|HOME DEPOT|TRUPER|CONSTRURAMA/i, category: 'Hogar' },
     { keywords: /VETERINAR/i, category: 'Mascotas' },
+    { keywords: /BARBER|PELUQUERIA|ESTETICA/i, category: 'Cuidado personal' },
+    { keywords: /GIFT CORNER|ARCCA/i, category: 'Otros gastos' },
 ];
 
 /**

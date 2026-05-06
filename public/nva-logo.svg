@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300">
+  <rect width="800" height="300" fill="#000000"/>
+  <style>
+    .st1 { font-family: 'Arial-BoldMT', Arial, sans-serif; font-weight: 800; }
+    .st2 { font-size: 200px; }
+    .st3 { letter-spacing: -4px; }
+  </style>
+  <text class="st1 st2 st3" y="225" x="60">
+    <tspan fill="#FFFFFF">NV</tspan><tspan fill="#FF8700">A</tspan>
+  </text>
+</svg>

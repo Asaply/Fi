@@ -32,7 +32,8 @@ ${isCreditCard
 - Santander: RETIRO = cargo, DEPOSITO = abono
 - Banamex: RETIROS = cargo, DEPÓSITOS = abono
 - Fechas siempre YYYY-MM-DD
-- Si la fecha solo tiene día y mes, usa el año del periodo`;
+- Si la fecha solo tiene día y mes, usa el año del periodo.
+- Si el texto está desordenado o las columnas están desplazadas, usa tu capacidad de razonamiento para reconstruir los movimientos.`;
 
 export async function POST(request) {
     try {
@@ -44,8 +45,8 @@ export async function POST(request) {
             );
         }
 
-        // Dynamic import para evitar problemas de worker en Vercel/NextJS Edge
-        const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default || (await import('pdf-parse')).default;
+        const pdfParseMod = await import('pdf-parse');
+        const pdfParse = pdfParseMod.default || pdfParseMod;
         const Anthropic = (await import('@anthropic-ai/sdk')).default;
 
         const client = new Anthropic({ apiKey });
@@ -68,7 +69,13 @@ export async function POST(request) {
             const password = formData.get('password') || '';
 
             try {
-                const pdfData = await pdfParse(buffer, password ? { password } : undefined);
+                const PDFParse = pdfParseMod.PDFParse || pdfParseMod.default?.PDFParse;
+                const parser = new PDFParse({ 
+                    data: new Uint8Array(buffer), 
+                    password: password || undefined,
+                    verbosity: 0 
+                });
+                const pdfData = await parser.getText();
                 text = pdfData.text;
             } catch (err) {
                 if (/password/i.test(err.message)) {
@@ -89,7 +96,7 @@ export async function POST(request) {
         }
 
         const response = await client.messages.create({
-            model: 'claude-opus-4-5',
+            model: 'claude-3-5-sonnet-20240620',
             max_tokens: 4096,
             messages: [{
                 role: 'user',

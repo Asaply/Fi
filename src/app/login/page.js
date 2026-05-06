@@ -1,13 +1,32 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import './Login.css';
 
 // mode: 'landing' | 'login' | 'register' | 'registered'
 
-export default function LoginPage() {
+function LoginBanner({ reason }) {
+    if (!reason) return null;
+    const msg = reason === 'free_analysis_used'
+        ? 'Ya usaste tu análisis gratis. Crea una cuenta para análisis ilimitados.'
+        : reason === 'more_analyses'
+        ? 'Crea tu cuenta para guardar y analizar más estados de cuenta.'
+        : null;
+    if (!msg) return null;
+    return (
+        <div style={{
+            background: '#FF8700', color: '#fff', fontWeight: 600,
+            fontSize: '0.9rem', textAlign: 'center', padding: '0.75rem 1rem',
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        }}>
+            {msg}
+        </div>
+    );
+}
+
+function LoginPageInner() {
     const [mode, setMode]           = useState('landing');
     const [tosAccepted, setTos]     = useState(false);
     const [email, setEmail]         = useState('');
@@ -17,6 +36,8 @@ export default function LoginPage() {
     const [error, setError]         = useState('');
     const [visible, setVisible]     = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const reason = searchParams.get('reason');
 
     useEffect(() => {
         const t = setTimeout(() => setVisible(true), 60);
@@ -58,6 +79,7 @@ export default function LoginPage() {
 
     return (
         <div className="login-root">
+            <LoginBanner reason={reason} />
             <div className="login-bg-glow"        aria-hidden />
             <div className="login-bg-speedlines"  aria-hidden />
 
@@ -67,8 +89,8 @@ export default function LoginPage() {
                 {mode === 'landing' && (
                     <div className="lp-landing">
                         <div className="lp-top">
-                            <img src="/img/finn-logo.svg" alt="FINN" className="lp-logo-img" />
-                            <h1 className="lp-brand">FINN</h1>
+                            <img src="/nva-icon.svg" alt="NVA" className="lp-logo-img" />
+                            <h1 className="lp-brand">NVA</h1>
                             <p className="lp-tagline">Tus finanzas personales, en un solo lugar.</p>
 
                             <label className="tos-row">
@@ -91,7 +113,7 @@ export default function LoginPage() {
                                     <a href="#" className="tos-link" onClick={e => e.stopPropagation()}>Términos y Condiciones</a>
                                     {' '}y la{' '}
                                     <a href="#" className="tos-link" onClick={e => e.stopPropagation()}>Política de Privacidad</a>
-                                    {' '}de FINN
+                                    {' '}de NVA
                                 </span>
                             </label>
                         </div>
@@ -139,7 +161,7 @@ export default function LoginPage() {
                             </h2>
                             <p className="lp-form-sub">
                                 {mode === 'login'
-                                    ? 'Entra a tu cuenta FINN'
+                                    ? 'Entra a tu cuenta NVA'
                                     : 'Empieza a controlar tus finanzas'}
                             </p>
                         </div>
@@ -213,6 +235,14 @@ export default function LoginPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="login-root" />}>
+            <LoginPageInner />
+        </Suspense>
     );
 }
 

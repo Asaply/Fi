@@ -1,5 +1,5 @@
-import { inferirCategoria } from './categorias';
-import { parseBankStatement } from './parsers/bank-statement-parser';
+import { inferirCategoria } from './categorias.js';
+import { parseBankStatement } from './parsers/bank-statement-parser.js';
 
 const MESES = {
     ENE: '01', FEB: '02', MAR: '03', ABR: '04', MAY: '05', JUN: '06',
@@ -85,7 +85,7 @@ function parsearNu(texto, isCreditCard) {
 const CARGO_RE  = /CARGO|RETIRO|D[EÉ]BITO|COMPRA|PAGO\sA|SPEI\sENVIADO|ENV[IÍ]O|COMISI[OÓ]N/i;
 const ABONO_RE  = /ABONO|DEP[OÓ]SITO|TRANSFERENCIA\s+RECIBIDA|CR[EÉ]DITO|SPEI\sRECIBIDO|RECIBISTE/i;
 const DATE_SLASH = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/;
-const DATE_DASH  = /\b(\d{1,2})[\s\-]+(?:de\s+)?(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)(?:\.?\s+de)?[\s\-]*(\d{2,4})?\b/i;
+const DATE_DASH  = /\b(\d{1,2})[\s\-\/]+(?:de\s+)?(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)(?:\.?\s+de)?(?:[\s\-\/]+(\d{2,4})(?!\/))?\b/i;
 const DATE_ISO   = /\b(\d{4})-(\d{2})-(\d{2})\b/;
 
 // Permite importes como "$1,000", "-$ 10.00", "500.00"
@@ -123,59 +123,89 @@ function parseFecha(linea) {
 
 function parseMexicanStatement(text, isCreditCard) {
     const transactions = [];
-    let lastTx = null;
-    let lineasSigue = 0;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+    
+    let currentTx = null;
+    const currentYear = new Date().getFullYear();
 
-    for (const line of text.split('\n')) {
-        const trimmed = line.trim();
-        if (trimmed.length < 5) continue;
-        
-        const dateMatch = parseFecha(trimmed);
-        if (!dateMatch) {
-            // Línea huérfana sin fecha: se asume que es el detalle/concepto de la transacción anterior
-            if (lastTx && lineasSigue < 4 && !/p[aá]gina|hoja|saldo|total|rfc/i.test(trimmed)) {
-                lastTx.concepto += ' ' + trimmed;
-                lastTx.categoria = inferirCategoria(lastTx.concepto);
-                lineasSigue++;
-            }
-            continue;
+    function flush() {
+        if (currentTx && currentTx.monto > 0) {
+            currentTx.concepto = currentTx.concepto.replace(/\s+/g, ' ').trim().slice(0, 150);
+            currentTx.categoria = inferirCategoria(currentTx.concepto);
+            transactions.push({ ...currentTx });
         }
-        const { fecha, endIdx: dateEnd } = dateMatch;
+        currentTx = null;
+    }
 
+    for (const line of lines) {
+        const dateMatch = parseFecha(line);
+        
+        if (dateMatch) {
+            flush();
+            currentTx = {
+                fecha: dateMatch.fecha,
+                concepto: line.substring(dateMatch.endIdx).trim(),
+                monto: 0,
+                tipo: 'egreso',
+                amounts: []
+            };
+            // Also check for amounts on the same line
+            extractAmountsAndType(line, currentTx, dateMatch);
+        } else if (currentTx) {
+            // Look for amounts in this line
+            extractAmountsAndType(line, currentTx, null);
+        }
+    }
+    flush();
+
+    return transactions;
+
+    function extractAmountsAndType(textLine, tx, dateMatch) {
         const amounts = [];
         AMOUNT_RE.lastIndex = 0;
         let m;
-        let firstAmtIdx = -1;
-        while ((m = AMOUNT_RE.exec(trimmed)) !== null) {
-            if (firstAmtIdx === -1) firstAmtIdx = m.index;
+        // Don't match the date as an amount if we are on the date line
+        const searchLine = dateMatch ? textLine.substring(dateMatch.endIdx) : textLine;
+        while ((m = AMOUNT_RE.exec(searchLine)) !== null) {
             const v = parseFloat(m[1].replace(/[,$\s]/g, ''));
             if (!isNaN(v) && Math.abs(v) >= 1) amounts.push(v);
         }
-        if (amounts.length === 0) continue;
 
-        const rawMonto = amounts[amounts.length - 1];
-        const monto = Math.abs(rawMonto);
-        
-        let tipo = 'egreso';
-        if (ABONO_RE.test(trimmed)) tipo = isCreditCard ? 'Transferencia' : 'ingreso';
-        else if (CARGO_RE.test(trimmed)) tipo = 'egreso';
-        else if (rawMonto < 0) tipo = 'egreso';
-        else if (rawMonto > 0 && amounts.length > 1) tipo = isCreditCard ? 'Transferencia' : 'ingreso';
-        // Single positive amount: ambiguous — for debit assume ingreso, for credit assume egreso (cargo)
-        else if (rawMonto > 0 && amounts.length === 1) tipo = isCreditCard ? 'egreso' : 'ingreso';
-
-        const conceptRaw = trimmed.substring(dateEnd, firstAmtIdx > dateEnd ? firstAmtIdx : undefined);
-        const concepto = conceptRaw.replace(/\s+/g, ' ').trim() || trimmed.substring(0, 60);
-
-        if (isCreditCard && tipo === 'ingreso') tipo = 'Transferencia';
-        if (monto > 0) {
-            const tx = { fecha, concepto, monto, tipo, categoria: inferirCategoria(concepto) };
-            transactions.push(tx);
-            lastTx = tx;
-            lineasSigue = 0;
+        if (amounts.length > 0) {
+            if (tx.monto === 0) {
+                const rawMonto = amounts[0];
+                tx.monto = Math.abs(rawMonto);
+                
+                if (ABONO_RE.test(searchLine) || ABONO_RE.test(tx.concepto)) {
+                    tx.tipo = isCreditCard ? 'Transferencia' : 'ingreso';
+                } else if (CARGO_RE.test(searchLine) || CARGO_RE.test(tx.concepto)) {
+                    tx.tipo = 'egreso';
+                } else if (rawMonto < 0) {
+                    tx.tipo = 'egreso';
+                } else if (amounts.length > 1) {
+                    tx.tipo = isCreditCard ? 'egreso' : 'ingreso';
+                }
+            }
+            
+            const textWithoutAmounts = searchLine.replace(AMOUNT_RE, '').trim();
+            if (textWithoutAmounts && !/saldo|total|periodo/i.test(textWithoutAmounts)) {
+                // if we are checking the date line, it's already in the concept, don't duplicate
+                if (dateMatch) {
+                    tx.concepto = textWithoutAmounts;
+                } else {
+                    tx.concepto += ' ' + textWithoutAmounts;
+                }
+            }
+        } else {
+            if (!/p[aá]gina|hoja|saldo|total|rfc|cliente|cuenta/i.test(searchLine)) {
+                if (dateMatch) {
+                    tx.concepto = searchLine;
+                } else {
+                    tx.concepto += ' ' + searchLine;
+                }
+            }
         }
     }
-    return transactions;
 }
 
 export function parseStatementText(rawText, isCreditCard = false) {

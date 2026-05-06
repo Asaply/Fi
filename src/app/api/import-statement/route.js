@@ -3,8 +3,10 @@ import { detectBank, needsOCR, parseBankStatement } from '@/lib/parsers/bank-sta
 
 async function extractPDFText(buffer) {
     try {
-        const pdfParse = (await import('pdf-parse')).default;
-        const data = await pdfParse(buffer);
+        const pdfParseMod = await import('pdf-parse');
+        const PDFParse = pdfParseMod.PDFParse || pdfParseMod.default?.PDFParse;
+        const parser = new PDFParse({ data: new Uint8Array(buffer), verbosity: 0 });
+        const data = await parser.getText();
         return data.text;
     } catch {
         return '';

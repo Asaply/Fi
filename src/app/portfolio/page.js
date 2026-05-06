@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
-import { Activity, TrendingUp, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, Info, ArrowUpRight, ArrowDownRight, Wallet, LayoutGrid } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, Info, ArrowUpRight, ArrowDownRight, Wallet, LayoutGrid } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Modal from "@/components/Modal";
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";

@@ -1,4 +1,4 @@
-import { categorize } from './categories';
+import { categorize } from './categories.js';
 
 // Banamex — MiCuenta
 // REAL FORMAT (pdf-parse):
