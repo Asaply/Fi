@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { TrendingDown, Lightbulb } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import styles from './results.module.css'
@@ -83,7 +84,7 @@ export default function ResultsPage() {
         {/* Top fugas */}
         {topLeaks.length > 0 && (
           <div className={styles.card}>
-            <p className={`${styles.label} ${styles.labelWhite}`}>🔥 Top {topLeaks.length} fugas de dinero</p>
+            <p className={`${styles.label} ${styles.labelWhite}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingDown size={13} /> Top {topLeaks.length} fugas de dinero</p>
             <ul className={styles.leakList}>
               {topLeaks.map((leak, i) => (
                 <li key={leak.name} className={styles.leakItem}>
@@ -103,7 +104,7 @@ export default function ResultsPage() {
         {/* Recomendación */}
         {recommendation && (
           <div className={`${styles.card} ${styles.cardGreen}`}>
-            <p className={`${styles.label} ${styles.labelGreen}`}>💡 Recomendación</p>
+            <p className={`${styles.label} ${styles.labelGreen}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Lightbulb size={13} /> Recomendación</p>
             <p className={styles.recText}>
               Si reduces {topLeaks[0]?.name} 30%, ahorras al mes:
             </p>

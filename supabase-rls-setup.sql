@@ -5,6 +5,11 @@
 
 -- 1. Add user_id column to each table (safe if already exists)
 ALTER TABLE transactions      ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id);
+
+-- account_type: 'debito' | 'credito' — distinguishes debit vs credit card statements
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS account_type text DEFAULT 'debito';
+-- bank: name of the bank/card issuer per transaction
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS bank text DEFAULT 'Desconocido';
 ALTER TABLE trading_operations ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id);
 ALTER TABLE portfolio_assets  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id);
 

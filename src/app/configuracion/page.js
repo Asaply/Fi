@@ -1,178 +1,350 @@
 'use client';
 
-import { useState } from 'react';
-import { Bell, LayoutTemplate, Shield, Database, Download, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+    Bell, Shield, Database, Download, AlertTriangle,
+    ChevronRight, Fingerprint, Lock, KeyRound, Delete, AlertCircle,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
+import { exportDataAsPDF } from '@/lib/exportPdf';
+import Modal from '@/components/Modal';
+import {
+    isPinEnabled, isBiometricEnabled, isBiometricSupported,
+    setPin, verifyPin, disablePin, disableBiometric,
+    registerBiometric,
+} from '@/lib/pinAuth';
 import './Configuracion.css';
 
+const NOTIF_KEY = 'fnce_notif_prefs';
+const PIN_LENGTH = 4;
+
 export default function ConfiguracionPage() {
-    const [notifState, setNotifState] = useState({
-        pagos: true,
-        airbnb: true,
-        prospectos: false,
-        portfolio: true,
-        resumen: false
-    });
-
-    const [modulesState, setModulesState] = useState({
-        trading: true,
-        airbnb: true,
-        prospectos: true
-    });
-
-    const handleNotifToggle = (key) => setNotifState(prev => ({ ...prev, [key]: !prev[key] }));
-    const handleModuleToggle = (key) => setModulesState(prev => ({ ...prev, [key]: !prev[key] }));
-
+    const [notif, setNotif] = useState({ portfolio: true, resumen: false });
+    const [pinEnabled, setPinEnabled] = useState(false);
+    const [bioEnabled, setBioEnabled] = useState(false);
+    const [bioSupported, setBioSupported] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
+    // PIN modal state
+    const [pinModal, setPinModal] = useState(null); // null | 'setup' | 'change' | 'disable' | 'disable-bio'
+    const [pinStep, setPinStep] = useState('enter'); // 'enter' | 'confirm'
+    const [pinInput, setPinInput] = useState('');
+    const [pinFirst, setPinFirst] = useState('');
+    const [pinError, setPinError] = useState('');
+
+    useEffect(() => {
+        try {
+            const n = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{}');
+            setNotif(prev => ({ ...prev, ...n }));
+        } catch {}
+        setPinEnabled(isPinEnabled());
+        setBioEnabled(isBiometricEnabled());
+        isBiometricSupported().then(setBioSupported);
+    }, []);
+
+    const toggleNotif = (key) => {
+        setNotif(prev => {
+            const next = { ...prev, [key]: !prev[key] };
+            localStorage.setItem(NOTIF_KEY, JSON.stringify(next));
+            return next;
+        });
+    };
+
+    /* ── PIN modal helpers ── */
+    const openModal = (mode) => {
+        setPinModal(mode);
+        setPinStep('enter');
+        setPinInput('');
+        setPinFirst('');
+        setPinError('');
+    };
+
+    const closeModal = () => {
+        setPinModal(null);
+        setPinInput('');
+        setPinFirst('');
+        setPinError('');
+        setPinStep('enter');
+    };
+
+    const handlePinDigit = async (d) => {
+        if (pinInput.length >= PIN_LENGTH) return;
+        const next = pinInput + d;
+        setPinInput(next);
+        setPinError('');
+
+        if (next.length < PIN_LENGTH) return;
+
+        // PIN complete — process based on modal mode
+        if (pinModal === 'setup' || pinModal === 'change') {
+            if (pinStep === 'enter') {
+                // If changing, verify current PIN first
+                if (pinModal === 'change') {
+                    const ok = await verifyPin(next);
+                    if (!ok) { setPinError('PIN incorrecto'); setPinInput(''); return; }
+                }
+                setPinFirst(next);
+                setPinInput('');
+                setPinStep('confirm');
+                setPinError('');
+            } else {
+                // confirm step
+                if (next !== pinFirst) {
+                    setPinError('Los PINs no coinciden');
+                    setPinInput('');
+                    setPinStep('enter');
+                    setPinFirst('');
+                    return;
+                }
+                await setPin(next);
+                setPinEnabled(true);
+                toast.success('PIN configurado correctamente.');
+                closeModal();
+            }
+        } else if (pinModal === 'disable') {
+            const ok = await verifyPin(next);
+            if (!ok) { setPinError('PIN incorrecto'); setPinInput(''); return; }
+            disablePin();
+            setPinEnabled(false);
+            setBioEnabled(false);
+            toast.success('PIN desactivado.');
+            closeModal();
+        } else if (pinModal === 'disable-bio') {
+            const ok = await verifyPin(next);
+            if (!ok) { setPinError('PIN incorrecto'); setPinInput(''); return; }
+            disableBiometric();
+            setBioEnabled(false);
+            toast.success('Biometría desactivada.');
+            closeModal();
+        }
+    };
+
+    const handlePinDelete = () => {
+        setPinInput(prev => prev.slice(0, -1));
+        setPinError('');
+    };
+
+    /* ── Biometric ── */
+    const handleBioToggle = async () => {
+        if (bioEnabled) {
+            openModal('disable-bio');
+            return;
+        }
+        try {
+            await registerBiometric();
+            setBioEnabled(true);
+            toast.success('Biometría activada.');
+        } catch (e) {
+            toast.error(e.message || 'Error al registrar biometría.');
+        }
+    };
+
+    /* ── Export ── */
     const handleExport = async () => {
         setIsExporting(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Sin sesión');
-
             const [{ data: transactions }, { data: clients }] = await Promise.all([
                 supabase.from('transactions').select('*').eq('user_id', user.id),
-                supabase.from('clients').select('*'),
+                supabase.from('clients').select('*').eq('user_id', user.id),
             ]);
-
-            const data = {
-                exportDate: new Date().toISOString(),
-                version: '1.0.0',
+            await exportDataAsPDF({
                 transactions: transactions || [],
                 clients: clients || [],
-                dashboards: JSON.parse(localStorage.getItem('fnce_custom_dashboards') || '[]'),
-            };
-
-            const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
-            const link = document.createElement("a");
-            link.href = jsonString;
-            link.download = `fnce_datos_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            toast.success('Datos exportados correctamente.');
-        } catch (e) {
-            console.error(e);
+                userEmail: user.email || '',
+            });
+            toast.success('PDF exportado correctamente.');
+        } catch {
             toast.error('Error al exportar los datos.');
         } finally {
             setIsExporting(false);
         }
     };
 
+    const handleDeleteAccount = () => {
+        toast.error('¿Eliminar tu cuenta permanentemente?', {
+            action: {
+                label: 'Confirmar',
+                onClick: () => toast.info('Contacta a soporte para eliminar tu cuenta.'),
+            },
+        });
+    };
+
+    /* ── PIN modal title ── */
+    const pinModalTitle = {
+        setup: pinStep === 'enter' ? 'Crea tu PIN' : 'Confirma tu PIN',
+        change: pinStep === 'enter' ? 'Ingresa tu PIN actual' : pinStep === 'new' ? 'Nuevo PIN' : 'Confirma nuevo PIN',
+        disable: 'Ingresa tu PIN para desactivar',
+        'disable-bio': 'Ingresa tu PIN para continuar',
+    }[pinModal] ?? '';
+
     return (
-        <div className="page-container config-page">
-            <div className="finanzas-header" style={{ marginBottom: '24px' }}>
-                <div>
-                    <h1 className="page-title">Configuración</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
-                        Administra notificaciones, módulos visibles y la seguridad de tu cuenta.
-                    </p>
-                </div>
-            </div>
+        <div className="page-container cfg-page">
+            <div className="cfg-sections">
 
-            <div className="config-grid">
                 {/* Notificaciones */}
-                <div className="card">
-                    <h3 className="section-title"><Bell size={18} /> Notificaciones</h3>
-                    <div className="toggle-list">
-                        <div className="toggle-item">
-                            <div>
-                                <div className="toggle-title">Pagos de clientes vencidos</div>
-                                <div className="toggle-desc">Alertas cuando una factura expira.</div>
-                            </div>
-                            <label className="switch">
-                                <input type="checkbox" checked={notifState.pagos} onChange={() => handleNotifToggle('pagos')} />
-                                <span className="slider round"></span>
-                            </label>
-                        </div>
-                        <div className="toggle-item">
-                            <div>
-                                <div className="toggle-title">Check-ins próximos (Airbnb)</div>
-                                <div className="toggle-desc">Recordatorio 24h antes del huésped.</div>
-                            </div>
-                            <label className="switch">
-                                <input type="checkbox" checked={notifState.airbnb} onChange={() => handleNotifToggle('airbnb')} />
-                                <span className="slider round"></span>
-                            </label>
-                        </div>
-                        <div className="toggle-item">
-                            <div>
-                                <div className="toggle-title">Alertas de Portafolio</div>
-                                <div className="toggle-desc">Movimientos inusuales del mercado (+5%).</div>
-                            </div>
-                            <label className="switch">
-                                <input type="checkbox" checked={notifState.portfolio} onChange={() => handleNotifToggle('portfolio')} />
-                                <span className="slider round"></span>
-                            </label>
-                        </div>
-                        <div className="toggle-item">
-                            <div>
-                                <div className="toggle-title">Resumen semanal por email</div>
-                                <div className="toggle-desc">Reporte consolidado los lunes por la mañana.</div>
-                            </div>
-                            <label className="switch">
-                                <input type="checkbox" checked={notifState.resumen} onChange={() => handleNotifToggle('resumen')} />
-                                <span className="slider round"></span>
-                            </label>
-                        </div>
+                <div className="cfg-section">
+                    <p className="cfg-section-label">Notificaciones</p>
+                    <div className="cfg-card">
+                        <CfgToggle
+                            icon={<Bell size={15} />}
+                            label="Alertas de Portafolio"
+                            sublabel="Movimientos inusuales del mercado (±5%)"
+                            checked={notif.portfolio}
+                            onChange={() => toggleNotif('portfolio')}
+                        />
+                        <CfgToggle
+                            icon={<Bell size={15} />}
+                            label="Resumen semanal por email"
+                            sublabel="Reporte consolidado los lunes"
+                            checked={notif.resumen}
+                            onChange={() => toggleNotif('resumen')}
+                            last
+                        />
                     </div>
                 </div>
 
-                {/* Módulos */}
-                <div className="card">
-                    <h3 className="section-title"><LayoutTemplate size={18} /> Módulos Visibles</h3>
-                    <p className="text-secondary" style={{ fontSize: '13px', marginBottom: '16px' }}>
-                        Desactiva los módulos que no utilices para simplificar tu Sidebar.
-                    </p>
-                    <div className="toggle-list">
-                        <div className="toggle-item">
-                            <span className="toggle-title">Trading</span>
-                            <label className="switch"><input type="checkbox" checked={modulesState.trading} onChange={() => handleModuleToggle('trading')} /><span className="slider round"></span></label>
-                        </div>
-                        <div className="toggle-item">
-                            <span className="toggle-title">Airbnb</span>
-                            <label className="switch"><input type="checkbox" checked={modulesState.airbnb} onChange={() => handleModuleToggle('airbnb')} /><span className="slider round"></span></label>
-                        </div>
-                        <div className="toggle-item">
-                            <span className="toggle-title">Prospectos</span>
-                            <label className="switch"><input type="checkbox" checked={modulesState.prospectos} onChange={() => handleModuleToggle('prospectos')} /><span className="slider round"></span></label>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Seguridad e Integridad */}
-                <div className="card">
-                    <h3 className="section-title"><Shield size={18} /> Seguridad Privada</h3>
-                    <div className="toggle-list" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
-                        <div className="toggle-item">
-                            <div>
-                                <div className="toggle-title">PIN de Acceso / Biometría</div>
-                                <div className="toggle-desc">Requerir Face ID al abrir la App (PWA).</div>
+                {/* Seguridad */}
+                <div className="cfg-section">
+                    <p className="cfg-section-label">Seguridad</p>
+                    <div className="cfg-card">
+                        <CfgToggle
+                            icon={<Lock size={15} />}
+                            label="PIN de Acceso"
+                            sublabel={pinEnabled ? 'Requerido al abrir la app' : 'Protege la app con un PIN de 4 dígitos'}
+                            checked={pinEnabled}
+                            onChange={() => pinEnabled ? openModal('disable') : openModal('setup')}
+                        />
+                        {pinEnabled && (
+                            <>
+                                <CfgToggle
+                                    icon={<Fingerprint size={15} />}
+                                    label="Biometría / Face ID"
+                                    sublabel={bioSupported ? 'Desbloquea con huella o Face ID' : 'No disponible en este dispositivo'}
+                                    checked={bioEnabled}
+                                    onChange={handleBioToggle}
+                                    disabled={!bioSupported}
+                                />
+                                <CfgAction
+                                    icon={<KeyRound size={15} />}
+                                    label="Cambiar PIN"
+                                    sublabel="Actualiza tu PIN de acceso"
+                                    onClick={() => openModal('change')}
+                                    last
+                                />
+                            </>
+                        )}
+                        {!pinEnabled && (
+                            <div className="cfg-row cfg-row-last cfg-pin-hint">
+                                <Shield size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    El PIN protege tus datos si alguien accede a tu dispositivo.
+                                </span>
                             </div>
-                            <label className="switch"><input type="checkbox" defaultChecked={false} /><span className="slider round"></span></label>
-                        </div>
+                        )}
                     </div>
-                    <button className="btn-secondary" style={{ width: '100%', marginBottom: '12px' }}>Ver dispositivos conectados</button>
-                    <button className="btn-danger-outline" style={{ width: '100%' }}>Cerrar todas las sesiones activas</button>
                 </div>
 
                 {/* Datos */}
-                <div className="card border-warning">
-                    <h3 className="section-title text-warning"><Database size={18} /> Gestión de Datos</h3>
-                    <p className="text-secondary" style={{ fontSize: '13px', marginBottom: '16px' }}>
-                        Tus datos te pertenecen. Puedes descargarlos o purgar el sistema permanentemente.
-                    </p>
-                    <button className="btn-secondary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }} onClick={handleExport} disabled={isExporting}>
-                        <Download size={16} className={isExporting ? 'spin-anim' : ''} /> {isExporting ? 'Recopilando datos...' : 'Exportar todos mis datos (JSON)'}
-                    </button>
-
-                    <button className="btn-danger" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <AlertTriangle size={16} /> Eliminar mi cuenta
-                    </button>
+                <div className="cfg-section">
+                    <p className="cfg-section-label">Mis datos</p>
+                    <div className="cfg-card">
+                        <CfgAction
+                            icon={<Download size={15} />}
+                            label={isExporting ? 'Exportando...' : 'Exportar mis datos'}
+                            sublabel="Descarga un JSON con toda tu información"
+                            onClick={handleExport}
+                            disabled={isExporting}
+                        />
+                        <CfgAction
+                            icon={<AlertTriangle size={15} />}
+                            label="Eliminar mi cuenta"
+                            sublabel="Acción permanente e irreversible"
+                            onClick={handleDeleteAccount}
+                            danger
+                            last
+                        />
+                    </div>
                 </div>
+
+            </div>
+
+            {/* PIN Modal */}
+            <Modal isOpen={!!pinModal} onClose={closeModal} title={pinModalTitle}>
+                <PinModalContent
+                    step={pinStep}
+                    input={pinInput}
+                    error={pinError}
+                    onDigit={handlePinDigit}
+                    onDelete={handlePinDelete}
+                />
+            </Modal>
+        </div>
+    );
+}
+
+/* ── PIN modal content ── */
+function PinModalContent({ step, input, error, onDigit, onDelete }) {
+    return (
+        <div className="cfg-pin-modal">
+            <div className="cfg-pin-dots">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className={`cfg-pin-dot${i < input.length ? ' filled' : ''}`} />
+                ))}
+            </div>
+            {error && (
+                <div className="cfg-pin-error">
+                    <AlertCircle size={13} /> {error}
+                </div>
+            )}
+            <div className="cfg-pin-pad">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+                    <button key={n} className="cfg-pin-key" onClick={() => onDigit(String(n))}>{n}</button>
+                ))}
+                <div />
+                <button className="cfg-pin-key" onClick={() => onDigit('0')}>0</button>
+                <button className="cfg-pin-key cfg-pin-key-del" onClick={onDelete}><Delete size={18} /></button>
             </div>
         </div>
+    );
+}
+
+/* ── Sub-components ── */
+
+function CfgToggle({ icon, label, sublabel, checked, onChange, last, disabled, badge }) {
+    return (
+        <div className={`cfg-row${last ? ' cfg-row-last' : ''}${disabled ? ' cfg-row-disabled' : ''}`}>
+            <span className="cfg-row-icon">{icon}</span>
+            <div className="cfg-row-body">
+                <div className="cfg-row-label-wrap">
+                    <span className="cfg-row-label">{label}</span>
+                    {badge && <span className="cfg-badge">{badge}</span>}
+                </div>
+                {sublabel && <span className="cfg-row-sublabel">{sublabel}</span>}
+            </div>
+            <label className="cfg-toggle">
+                <input type="checkbox" checked={checked} onChange={onChange} disabled={disabled} />
+                <span className="cfg-toggle-track" />
+            </label>
+        </div>
+    );
+}
+
+function CfgAction({ icon, label, sublabel, onClick, danger, disabled, last }) {
+    return (
+        <button
+            className={`cfg-row cfg-row-btn${last ? ' cfg-row-last' : ''}${danger ? ' cfg-row-danger' : ''}${disabled ? ' cfg-row-disabled' : ''}`}
+            onClick={onClick}
+            disabled={disabled}
+        >
+            <span className="cfg-row-icon">{icon}</span>
+            <div className="cfg-row-body">
+                <span className="cfg-row-label">{label}</span>
+                {sublabel && <span className="cfg-row-sublabel">{sublabel}</span>}
+            </div>
+            <ChevronRight size={15} className="cfg-row-chevron" />
+        </button>
     );
 }

@@ -10,7 +10,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: 1100;
     animation: fadeIn 0.2s ease;
 }
 
@@ -84,10 +84,30 @@
     }
 }
 
-/* Mobile Modal */
+/* Mobile Modal — bottom sheet */
 @media (max-width: 768px) {
-    .modal-content {
-        margin: 16px;
-        max-width: calc(100% - 32px);
+    .modal-backdrop {
+        align-items: flex-end;
+        padding: 0;
     }
+
+    .modal-content {
+        margin: 0;
+        max-width: 100%;
+        width: 100%;
+        max-height: 90dvh;
+        border-radius: 24px 24px 0 0;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+        animation: slideUpSheet 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+}
+
+/* Hide bottom nav while modal is open */
+body.modal-open .bottom-nav-wrapper {
+    display: none;
+}
+
+@keyframes slideUpSheet {
+    from { transform: translateY(100%); opacity: 0.6; }
+    to   { transform: translateY(0);    opacity: 1; }
 }

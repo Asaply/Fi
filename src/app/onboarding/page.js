@@ -31,12 +31,17 @@ export default function OnboardingPage() {
     const [selectedUse, setSelectedUse] = useState(null);
     const router = useRouter();
 
-    // Skip if already onboarded
+    // Skip if already onboarded (localStorage OR Supabase metadata)
     useEffect(() => {
         if (typeof window !== 'undefined' && localStorage.getItem(ONBOARDING_KEY)) {
-            router.replace('/dashboard');
+            router.replace('/finanzas');
             return;
         }
+        supabase.auth.getUser().then(({ data }) => {
+            if (data?.user?.user_metadata?.onboarded) {
+                router.replace('/finanzas');
+            }
+        });
         const t = setTimeout(() => setVisible(true), 60);
         return () => clearTimeout(t);
     }, [router]);
@@ -53,9 +58,13 @@ export default function OnboardingPage() {
         setTimeout(() => { setStep(next); setVisible(true); }, 200);
     }
 
-    function complete(dest = '/dashboard') {
+    async function complete(dest = '/finanzas') {
         if (selectedUse) localStorage.setItem('fnce_primary_use', selectedUse);
         localStorage.setItem(ONBOARDING_KEY, '1');
+        // Persist onboarded flag in Supabase so existing-user check works on any device
+        try {
+            await supabase.auth.updateUser({ data: { onboarded: true } });
+        } catch (_) {}
         router.push(dest);
     }
 
@@ -81,7 +90,7 @@ export default function OnboardingPage() {
                         onSkip={() => advance(5)}
                     />
                 )}
-                {step === 5 && <StepDone onFinish={() => complete('/dashboard')} />}
+                {step === 5 && <StepDone onFinish={() => complete('/finanzas')} />}
             </div>
 
             {/* Progress dots — hide on spinner */}

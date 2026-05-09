@@ -329,7 +329,7 @@ export default function PortfolioHealth() {
 
                 /* ONBOARDING — sin activos */
                 <div className="portfolio-onboarding card">
-                    <div className="onboarding-icon">📈</div>
+                    <div className="onboarding-icon"><TrendingUp size={32} /></div>
                     <h2>Bienvenido a Mis Inversiones</h2>
                     <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', lineHeight: 1.6 }}>
                         Aquí puedes ver cómo están tus inversiones, si estás bien diversificado

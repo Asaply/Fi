@@ -1,11 +1,32 @@
 "use client";
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import "./Modal.css";
 
 export default function Modal({ isOpen, onClose, title, children }) {
-    if (!isOpen) return null;
+    const portalRef = useRef(null);
 
-    return (
+    useEffect(() => {
+        if (typeof document !== "undefined") {
+            portalRef.current = document.body;
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        // Lock body scroll + hide bottom nav while modal open
+        document.body.style.overflow = "hidden";
+        document.body.classList.add("modal-open");
+        return () => {
+            document.body.style.overflow = "";
+            document.body.classList.remove("modal-open");
+        };
+    }, [isOpen]);
+
+    if (!isOpen || typeof document === "undefined") return null;
+
+    const modal = (
         <div className="modal-backdrop" onClick={onClose}>
             <div className="modal-content card" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
@@ -20,4 +41,6 @@ export default function Modal({ isOpen, onClose, title, children }) {
             </div>
         </div>
     );
+
+    return createPortal(modal, document.body);
 }

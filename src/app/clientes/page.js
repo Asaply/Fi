@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Calendar, Mail, Phone, Link as LinkIcon, Edit2, Trash2 } from "lucide-react";
+import { Plus, Calendar, Mail, Phone, Link as LinkIcon, Edit2, Trash2, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/Modal";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
@@ -257,8 +257,8 @@ export default function ClientesPage() {
                                                             </div>
                                                         )}
                                                         {pending === 0 && total > 0 && (
-                                                            <div style={{ fontSize: "11px", color: "var(--success)", marginTop: "4px", fontWeight: 600 }}>
-                                                                ✓ Pagado completo
+                                                            <div style={{ fontSize: "11px", color: "var(--success)", marginTop: "4px", fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <CheckCircle2 size={11} /> Pagado completo
                                                             </div>
                                                         )}
                                                     </div>

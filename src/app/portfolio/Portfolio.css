@@ -470,6 +470,10 @@
 .onboarding-icon {
     font-size: 52px;
     line-height: 1;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .portfolio-onboarding h2 {
