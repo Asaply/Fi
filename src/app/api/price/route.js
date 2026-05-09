@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { withCors, corsOptions } from '@/lib/cors';
+import { getAuthUser, unauthorized } from '@/lib/apiAuth';
+
+const TICKER_RE = /^[A-Z0-9.\-^=]{1,20}$/i;
+const VALID_RANGES = new Set(['1d', '7d', '1mo', '1y', 'ytd']);
 
 export async function OPTIONS(request) {
     return corsOptions(request);
 }
 
 export async function GET(request) {
+    const user = await getAuthUser();
+    if (!user) return unauthorized();
+
     const origin = request.headers.get('origin') || '';
     const { searchParams } = new URL(request.url);
     const ticker = searchParams.get('ticker');
@@ -13,6 +20,14 @@ export async function GET(request) {
 
     if (!ticker) {
         return withCors(NextResponse.json({ error: 'Ticker is required' }, { status: 400 }), origin);
+    }
+
+    if (!TICKER_RE.test(ticker)) {
+        return withCors(NextResponse.json({ error: 'Ticker inválido.' }, { status: 400 }), origin);
+    }
+
+    if (range && !VALID_RANGES.has(range)) {
+        return withCors(NextResponse.json({ error: 'Range inválido.' }, { status: 400 }), origin);
     }
 
     try {

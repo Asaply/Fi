@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAuthUser, unauthorized, serverError } from '@/lib/apiAuth';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 const SYSTEM_PROMPT = `Eres un experto en extracción de datos de estados de cuenta bancarios mexicanos.
 Tu tarea es extraer transacciones y devolverlas como JSON válido.
@@ -34,6 +36,18 @@ Reglas:
 const MAX_IMAGES = 8; // Limit to avoid oversized requests (each page ~1-2MB)
 
 export async function POST(req) {
+    const user = await getAuthUser();
+    if (!user) return unauthorized();
+
+    // Rate limit: 5 AI requests per minute per user
+    const rl = checkRateLimit(user.id, { maxRequests: 5, windowMs: 60_000 });
+    if (!rl.allowed) {
+        return NextResponse.json(
+            { error: 'Demasiadas solicitudes. Espera un momento antes de intentar de nuevo.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+        );
+    }
+
     try {
         const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
@@ -46,7 +60,17 @@ export async function POST(req) {
         const { images, mediaType = 'image/png' } = await req.json();
 
         if (!images?.length) {
-            return NextResponse.json({ error: 'No images provided' }, { status: 400 });
+            return NextResponse.json({ error: 'No se recibieron imágenes.' }, { status: 400 });
+        }
+
+        // Limit payload: max 10 images, each max ~4MB base64
+        if (images.length > MAX_IMAGES) {
+            return NextResponse.json({ error: 'Demasiadas páginas. Máximo 8.' }, { status: 400 });
+        }
+        for (const img of images) {
+            if (typeof img !== 'string' || img.length > 5_500_000) {
+                return NextResponse.json({ error: 'Una o más imágenes exceden el tamaño permitido.' }, { status: 400 });
+            }
         }
 
         const client = new Anthropic({ apiKey });
@@ -80,8 +104,9 @@ export async function POST(req) {
                 .trim();
             parsed = JSON.parse(clean);
         } catch {
+            console.error('[parse-ai] Non-parseable Claude response:', rawText.slice(0, 500));
             return NextResponse.json(
-                { error: `Claude devolvió respuesta no parseable: ${rawText.slice(0, 200)}` },
+                { error: 'El procesador no pudo interpretar el documento. Intenta con otro archivo.' },
                 { status: 422 }
             );
         }
@@ -89,18 +114,6 @@ export async function POST(req) {
         return NextResponse.json(parsed);
 
     } catch (err) {
-        console.error('[parse-ai]', err?.message ?? err);
-
-        if (err?.status === 401 || err?.message?.includes('API key')) {
-            return NextResponse.json(
-                { error: 'ANTHROPIC_API_KEY inválida o no configurada. Configúrala en Vercel → Settings → Environment Variables.' },
-                { status: 500 }
-            );
-        }
-
-        return NextResponse.json(
-            { error: err.message ?? 'Error interno en parse-ai' },
-            { status: 500 }
-        );
+        return serverError('parse-ai', err);
     }
 }

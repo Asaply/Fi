@@ -26,9 +26,21 @@ export async function GET(request) {
             }
         )
 
-        await supabase.auth.exchangeCodeForSession(code)
+        const { data } = await supabase.auth.exchangeCodeForSession(code)
+
+        // If a specific next route is requested (e.g. password reset), go there.
+        // Validate it's a relative path to prevent open redirect attacks.
+        const next = requestUrl.searchParams.get('next')
+        if (next && /^\/[^/]/.test(next)) {
+            return NextResponse.redirect(new URL(next, requestUrl.origin))
+        }
+
+        // Existing user (already onboarded) → skip walkthrough
+        if (data?.user?.user_metadata?.onboarded) {
+            return NextResponse.redirect(new URL('/finanzas', requestUrl.origin))
+        }
     }
 
-    // After verifying email or OAuth flow — send to onboarding (skips if already done)
+    // New user — show onboarding walkthrough
     return NextResponse.redirect(new URL('/onboarding', requestUrl.origin))
 }

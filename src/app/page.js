@@ -36,12 +36,29 @@ export default function LandingPage() {
       <div className={styles.demoGrid}>
         <div className={styles.demoCard}>
           <p className={styles.demoLabel}>Antes (Excel manual)</p>
-          <div className={styles.demoSkeleton}>
-            <div className={styles.skeletonLine} style={{ width: '75%' }} />
-            <div className={styles.skeletonLine} style={{ width: '100%' }} />
-            <div className={styles.skeletonLine} style={{ width: '85%' }} />
-            <div className={styles.skeletonLine} style={{ width: '60%' }} />
+          <div className={styles.excelRows}>
+            <div className={styles.excelRow}>
+              <span className={styles.excelDate}>12/04</span>
+              <span className={styles.excelDesc}>OXXO GASOLINERA...</span>
+              <span className={styles.excelAmt}>$580</span>
+            </div>
+            <div className={styles.excelRow}>
+              <span className={styles.excelDate}>13/04</span>
+              <span className={styles.excelDesc}>UBER *TRIP</span>
+              <span className={styles.excelAmt}>$145</span>
+            </div>
+            <div className={styles.excelRow}>
+              <span className={styles.excelDate}>14/04</span>
+              <span className={styles.excelDesc}>RAPPI RESTAURAN...</span>
+              <span className={styles.excelAmt}>$312</span>
+            </div>
+            <div className={styles.excelRow}>
+              <span className={styles.excelDate}>15/04</span>
+              <span className={styles.excelDesc}>NETFLIX.COM</span>
+              <span className={styles.excelAmt}>$219</span>
+            </div>
           </div>
+          <p className={styles.excelNote}>⏱ 2–3 horas categorizando a mano cada mes</p>
         </div>
         <div className={`${styles.demoCard} ${styles.demoCardActive}`}>
           <p className={`${styles.demoLabel} ${styles.demoLabelActive}`}>Con NVA (automático)</p>
