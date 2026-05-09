@@ -470,10 +470,44 @@
 }
 
 /* ── Mobile ──────────────────────────────────────────────────────── */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+    .fin-hero { padding: 16px 12px 12px; }
     .fin-hero-int { font-size: 2.25rem; }
-    .fin-hero-dec { font-size: 1.25rem; }
+    .fin-hero-dec { font-size: 1.15rem; }
+
     .fin-metric-grid { gap: 8px; }
     .fin-metric-card { padding: 12px; }
     .fin-metric-value { font-size: 14px; }
+
+    /* Action buttons — equal width, good tap size */
+    .fin-actions-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+        gap: 8px;
+    }
+    .fin-actions-row .btn-cta-secondary,
+    .fin-actions-row .btn-cta-tertiary {
+        flex: unset;
+        min-height: 44px;
+        font-size: 12px;
+        padding: 10px 8px;
+    }
+
+    /* Period filter pills compact */
+    .fin-period-filter .period-filter-btn {
+        padding: 7px 12px !important;
+        font-size: 12px !important;
+    }
+
+    /* Type tabs compact */
+    .fin-type-tabs .period-filter-btn {
+        padding: 7px 12px !important;
+        font-size: 12px !important;
+    }
+
+    /* Table — tighter padding, hide Cliente */
+    .data-table th:nth-child(2),
+    .data-table td:nth-child(2) {
+        display: none;
+    }
 }

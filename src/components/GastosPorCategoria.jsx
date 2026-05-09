@@ -33,7 +33,7 @@ function categorizarAutomatico(descripcion = '') {
     return 'Otros';
 }
 
-export default function GastosPorCategoria({ startDate, endDate, mode = 'debit' }) {
+export default function GastosPorCategoria({ startDate, endDate, mode = 'debit', accountType = 'debit', bank = 'global' }) {
     const [data, setData] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -54,13 +54,17 @@ export default function GastosPorCategoria({ startDate, endDate, mode = 'debit' 
             const from = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
             const to = endDate || new Date().toISOString().split('T')[0];
 
-            const { data: rows } = await supabase
+            const dbAccountType = accountType === 'credit' ? 'credito' : 'debito';
+            let query = supabase
                 .from('transactions')
-                .select('categoria, amount, type, concept, date')
+                .select('categoria, amount, type, concept, date, account_type, bank')
                 .eq('user_id', user?.id)
+                .eq('account_type', dbAccountType)
                 .in('type', ['Egreso', 'egreso', 'Gasto Personal', 'gasto personal'])
                 .gte('date', from)
                 .lte('date', to);
+            if (bank && bank !== 'global') query = query.eq('bank', bank);
+            const { data: rows } = await query;
 
             const egresos = (rows || []).filter(t =>
                 ['egreso', 'gasto personal'].includes(t.type?.toLowerCase().trim() ?? '')
@@ -86,7 +90,7 @@ export default function GastosPorCategoria({ startDate, endDate, mode = 'debit' 
             setLoading(false);
         };
         load();
-    }, [startDate, endDate]);
+    }, [startDate, endDate, accountType, bank]);
 
     if (loading) {
         return (

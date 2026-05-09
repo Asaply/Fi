@@ -125,11 +125,11 @@ export default function Topbar() {
             <Modal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} title="Centro de Ayuda">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '15px' }}>¿Necesitas ayuda con FNCE?</h4>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '15px' }}>¿Necesitas ayuda con NVA?</h4>
                         <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Escríbenos directamente y nuestro equipo de soporte te responderá en breve.</p>
                         <div style={{ marginTop: '12px', fontSize: '14px' }}>
                             <span style={{ color: 'var(--text-secondary)' }}>Email: </span>
-                            <a href="mailto:soporte@fnce.app" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>soporte@fnce.app</a>
+                            <a href="mailto:soporte@nva.app" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>soporte@nva.app</a>
                         </div>
                     </div>
 
@@ -145,11 +145,11 @@ export default function Topbar() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>FNCE v1.0.0</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>NVA v1.0.0</span>
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button className="btn-secondary" onClick={() => setIsSupportModalOpen(false)}>Cerrar</button>
                             <a
-                                href={`mailto:soporte@fnce.app?subject=Soporte FNCE v1.0.0&body=${encodeURIComponent(supportMessage)}`}
+                                href={`mailto:soporte@nva.app?subject=Soporte NVA v1.0.0&body=${encodeURIComponent(supportMessage)}`}
                                 className="btn-primary"
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
                                 onClick={() => setIsSupportModalOpen(false)}

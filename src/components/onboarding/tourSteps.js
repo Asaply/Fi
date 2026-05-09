@@ -12,7 +12,7 @@ export const FINANZAS_STEPS = [
 ];
 
 export const TRADING_STEPS = [
-    { target: '[data-tour="btn-nuevo-trade"]', title: 'Registra un trade', description: 'Agrega operaciones long o short. Al cerrar la posición, FNCE calcula tu P&L automáticamente.', position: 'bottom' },
+    { target: '[data-tour="btn-nuevo-trade"]', title: 'Registra un trade', description: 'Agrega operaciones long o short. Al cerrar la posición, NVA calcula tu P&L automáticamente.', position: 'bottom' },
     { target: '[data-tour="card-winrate"]', title: 'Win Rate', description: 'Porcentaje de trades ganadores sobre el total de operaciones cerradas.', position: 'bottom' },
     { target: '[data-tour="pl-calendar"]', title: 'Calendario P&L', description: 'Vista día a día de tus resultados. Verde = ganador, rojo = perdedor.', position: 'top' },
 ];

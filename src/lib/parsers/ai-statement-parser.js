@@ -72,7 +72,7 @@ export async function parseStatementTextWithAI(rawText, isCreditCard = false) {
     // parse-statement returns data.transactions already mapped
     const transactions = (data.transactions ?? []).filter(t => t.monto > 0 && t.fecha);
 
-    return { banco, transactions };
+    return { banco, transactions, nvaIntelligence: data.nvaIntelligence };
 }
 
 /**

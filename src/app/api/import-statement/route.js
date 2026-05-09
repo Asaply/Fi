@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { detectBank, needsOCR, parseBankStatement } from '@/lib/parsers/bank-statement-parser';
+import { getAuthUser, unauthorized, serverError, validateUpload } from '@/lib/apiAuth';
 
 async function extractPDFText(buffer) {
     try {
@@ -14,14 +15,16 @@ async function extractPDFText(buffer) {
 }
 
 export async function POST(req) {
+    const user = await getAuthUser();
+    if (!user) return unauthorized();
+
     try {
         const formData = await req.formData();
         const file = formData.get('file');
         const ocrTextInput = formData.get('ocrText');
 
-        if (!file) {
-            return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 });
-        }
+        const uploadError = validateUpload(file, { maxBytes: 10 * 1024 * 1024, allowedTypes: ['application/pdf'] });
+        if (uploadError) return NextResponse.json({ error: uploadError }, { status: 400 });
 
         const buffer = Buffer.from(await file.arrayBuffer());
         const filename = file.name;
@@ -68,7 +71,6 @@ export async function POST(req) {
         });
 
     } catch (err) {
-        console.error('[import-statement]', err);
-        return NextResponse.json({ error: err.message ?? 'Error interno' }, { status: 500 });
+        return serverError('import-statement', err);
     }
 }

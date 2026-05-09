@@ -1,5 +1,5 @@
 'use client';
-import { Home, Wallet, LineChart, PieChart, Plus } from "lucide-react";
+import { Wallet, Home, PieChart } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import "./BottomNav.css";
 
@@ -8,9 +8,8 @@ export default function BottomNav() {
     const router = useRouter();
 
     const navItems = [
-        { name: 'Resumen', path: '/dashboard', icon: Home },
-        { name: 'Finanzas', path: '/finanzas', icon: Wallet },
-        { name: 'Trading', path: '/trading', icon: LineChart },
+        { name: 'Resumen', path: '/dashboard', icon: Wallet },
+        { name: 'Finanzas', path: '/finanzas', icon: Home },
         { name: 'Portfolio', path: '/portfolio', icon: PieChart },
     ];
 
@@ -20,8 +19,10 @@ export default function BottomNav() {
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     // For dashboard, exact match. For others, startsWith
-                    const isActive = item.path === '/dashboard' 
-                        ? pathname === '/dashboard' 
+                    const isActive = item.path === '/finanzas'
+                        ? pathname === '/finanzas'
+                        : item.path === '/dashboard'
+                        ? pathname === '/dashboard'
                         : pathname.startsWith(item.path.split('?')[0]);
 
                     return (

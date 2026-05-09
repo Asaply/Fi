@@ -1,60 +1,100 @@
 // Comprehensive categorization for Mexican bank statements
 
 const CATEGORY_RULES = [
-    // Ingresos
-    { keywords: /TRANSFERENCIA BPI|ABONO.*NOMINA|NOMINA|NÓMINA|SUELDO|SALARIO/i, category: 'Salario', type: 'ingreso' },
-    { keywords: /INTERESES GANADOS|RENDIMIENTO/i, category: 'Intereses', type: 'ingreso' },
-    { keywords: /TRASPASO.*RECIB|PAGO RECIBIDO|DEPOSITO CANALES|SPIN BY OXXO/i, category: 'Transferencias', type: 'ingreso' },
-    { keywords: /DEVOLUC/i, category: 'Devoluciones', type: 'ingreso' },
 
-    // Supermercado
-    { keywords: /OXXO|SEVEN|7-ELEVEN|ALSUPER|COSTCO|WALMART|WAL-MART|SAMS|SAM'S|CHEDRAUI|SORIANA|LA COMER|SUPERETTE|ABARR|MERCS POPULARES/i, category: 'Supermercado' },
+    // =====================
+    // INGRESOS
+    // =====================
+    { keywords: /TRANSFERENCIA BPI|ABONO.*NOMINA|NOMINA|NÓMINA|SUELDO|SALARIO|PAYROLL/i, category: 'Salario', type: 'ingreso' },
+    { keywords: /INTERESES GANADOS|RENDIMIENTO|INTERES ABONADO/i, category: 'Intereses', type: 'ingreso' },
+    { keywords: /TRASPASO.*RECIB|PAGO RECIBIDO|DEPOSITO CANALES|SPIN BY OXXO|SPEI RECIBIDO/i, category: 'Transferencias', type: 'ingreso' },
+    { keywords: /DEVOLUC|REFUND|CASHBACK/i, category: 'Devoluciones', type: 'ingreso' },
 
-    // Restaurantes
-    { keywords: /RESTAURANT|DELIPOLLO|BURGER|MCDONALD|KFC|PIZZA HUT|DOMINOS|LITTLE CAESAR|STARBUCKS|CAFET|BURRITOS|POLLO|CARNES|CARNICERIAS|CARNECE|KITCHEN|DAIRY QUEEN|PIZZERIA/i, category: 'Restaurantes' },
-    { keywords: /UBER\s*EATS|RAPPI|DIDI\s*FOOD/i, category: 'Restaurantes' },
+    // =====================
+    // SUPERMERCADOS / CONVENIENCIA
+    // =====================
+    { keywords: /OXXO|7[-\s]?ELEVEN|SEVEN|EXTRA|CIRCLE\s*K|KIOSKO|GO MART/i, category: 'Conveniencia' },
+    { keywords: /WALMART|WAL[-\s]?MART|BODEGA AURRERA|SUPERAMA|SAMS|SAM'?S|COSTCO|CHEDRAUI|SORIANA|LA COMER|CITY MARKET|FRESKO|ALSUPER|HEB|H-E-B|CALIMAX/i, category: 'Supermercado' },
 
-    // Gasolina / Transporte
-    { keywords: /GASOL|GAS ESTAC|GASOLINERA|PEMEX|SHELL|BP |COMBUSTIBLE/i, category: 'Gasolina' },
-    { keywords: /CASETAS|CUOTA|AUTOPISTA/i, category: 'Casetas' },
-    { keywords: /\bUBER\b|\bDIDI\b|CABIFY|INDRIVER/i, category: 'Transporte' },
+    // =====================
+    // RESTAURANTES / COMIDA
+    // =====================
+    { keywords: /MCDONALD'?S|BURGER KING|KFC|CARL'?S JR|SUBWAY|DOMINO'?S|PIZZA HUT|LITTLE CAESAR|STARBUCKS|VIPS|TOKS|SANBORNS|CHILI'?S|ITALIANNI'?S|WINGSTOP|SHAKE SHACK|DUNKIN/i, category: 'Restaurantes' },
+    { keywords: /TAQUERIA|TACOS|BURRITOS|COCINA|FONDA|CAFETERIA|RESTAURANT|PIZZERIA|POLLO|MARISCOS|SUSHI/i, category: 'Restaurantes' },
+    { keywords: /UBER\s*EATS|RAPPI|DIDI\s*FOOD|SINDELANTAL/i, category: 'Delivery comida' },
 
-    // Suscripciones
-    { keywords: /NETFLIX|SPOTIFY|DISNEY|HBO|APPLE\.COM|APPLE COM|AMAZON PRIME|YOUTUBE PREMIUM/i, category: 'Suscripciones' },
-    { keywords: /PADDLE|SETGB|OPENAI|CLAUDE|NETLIFY|PORKBUN|VERCEL/i, category: 'Suscripciones' },
+    // =====================
+    // GASOLINA / TRANSPORTE
+    // =====================
+    { keywords: /PEMEX|OXXO GAS|BP\b|SHELL|TOTAL|REPSOL|ARCO|G500|HIDROSINA|FULLGAS|COSTCO GAS|PETROSEVEN|AKRON|LAGAS|ORO NEGRO/i, category: 'Gasolina' },
+    { keywords: /GASOL|COMBUSTIBLE|ESTACION DE SERVICIO/i, category: 'Gasolina' },
 
-    // Telefonía / Internet
-    { keywords: /TELCEL|AT&T|TELMEX|TOTALPLAY|IZZI|MEGACABLE|MOVISTAR|RECARGA\s+CEL/i, category: 'Telefonía' },
-    { keywords: /\bCFE\b|LUZ Y FUERZA|AGUA\s+MUN|MUNICIPIO/i, category: 'Servicios del hogar' },
+    { keywords: /UBER\b|DIDI\b|CABIFY|INDRIVER|BEAT/i, category: 'Transporte' },
+    { keywords: /METRO|METROBUS|RTP|TREN SUBURBANO/i, category: 'Transporte público' },
 
-    // Salud
-    { keywords: /FARMACIA|FARMA|SIMILAR|BENAVIDES|GUADALAJARA|MEDICA|HOSPITAL|CLINICA|DENTISTA|OPTICA|ORTHOMEDICA/i, category: 'Salud' },
+    { keywords: /CASETA|CUOTA|AUTOPISTA|PASE|TAG|IAVE|TELEVIA/i, category: 'Casetas' },
 
-    // Ropa / Moda
-    { keywords: /SEARS|LIVERPOOL|PALACIO\s+DE\s+HIERRO|ZARA|H&M|COPPEL|FAMA BOUT|SMILE INTIMATES|VICTORIA.*SECRET|MINISO/i, category: 'Ropa' },
+    // =====================
+    // SUSCRIPCIONES / SOFTWARE
+    // =====================
+    { keywords: /NETFLIX|SPOTIFY|DISNEY|HBO|MAX|APPLE\.COM|APPLE COM|ICLOUD|AMAZON PRIME|YOUTUBE PREMIUM|PARAMOUNT/i, category: 'Streaming' },
+    { keywords: /OPENAI|CHATGPT|CLAUDE|ANTHROPIC|NOTION|FIGMA|CANVA|ADOBE|ADOBE SYSTEMS|MIDJOURNEY|GITHUB|COPILOT/i, category: 'Software' },
+    { keywords: /PADDLE|STRIPE|VERCEL|NETLIFY|RAILWAY|DIGITALOCEAN|AWS|GOOGLE CLOUD|HEROKU/i, category: 'Infraestructura' },
 
-    // Educación
-    { keywords: /COLEGIO|ESCUELA|UNIVERSIDAD|UVM|ITESM|CLIP.*CLASES|CLASES|INGLES|ACADEMIA/i, category: 'Educación' },
+    // =====================
+    // TELEFONÍA / SERVICIOS
+    // =====================
+    { keywords: /TELCEL|AT&T|MOVISTAR/i, category: 'Telefonía móvil' },
+    { keywords: /TELMEX|IZZI|TOTALPLAY|MEGACABLE/i, category: 'Internet' },
+    { keywords: /\bCFE\b|LUZ|ENERGIA/i, category: 'Electricidad' },
+    { keywords: /AGUA|SACMEX/i, category: 'Agua' },
+    { keywords: /GAS NATURAL|GAS LP/i, category: 'Gas hogar' },
 
-    // Entretenimiento
-    { keywords: /CASINO|CINE|TICKETMASTER|CINEMA|BOLICHE|PARQUE\s+DE\s+DIVERT|STEAM|VIDEOJUEGO/i, category: 'Entretenimiento' },
+    // =====================
+    // SALUD
+    // =====================
+    { keywords: /FARMACIA|SIMILARES|BENAVIDES|GUADALAJARA|DEL AHORRO/i, category: 'Farmacia' },
+    { keywords: /HOSPITAL|CLINICA|MEDICO|DOCTOR|DENTISTA|OPTICA|LABORATORIO/i, category: 'Salud' },
 
-    // Compras online
-    { keywords: /AMAZON|MERCADOPAGO|MERPAGO|PAYPAL|TEMU|EBANX/i, category: 'Compras online' },
+    // =====================
+    // ROPA / RETAIL
+    // =====================
+    { keywords: /ZARA|H&M|BERSHKA|PULL&BEAR|STRADIVARIUS|MANGO|LIVERPOOL|SEARS|PALACIO DE HIERRO|COPPEL|SUBURBIA/i, category: 'Ropa' },
+    { keywords: /NIKE|ADIDAS|PUMA|INNOVASPORT/i, category: 'Ropa deportiva' },
 
-    // Seguros
-    { keywords: /QUALITAS|ALLIANZ|SEGUROS|GNP|MAPFRE|BBVA SEGUROS/i, category: 'Seguros' },
+    // =====================
+    // EDUCACIÓN
+    // =====================
+    { keywords: /UVM|ITESM|UNAM|IPN|COLEGIO|ESCUELA|UNIVERSIDAD/i, category: 'Educación' },
+    { keywords: /CURSO|CURSOS|CLASES|ACADEMIA|INGLES|PLATZI|UDEMY|COURSERA/i, category: 'Cursos online' },
 
-    // Servicios financieros
-    { keywords: /COMISION|ADMINISTRACION RENTA|IVA COMIS|INTERESES\s+COBR|ESTADO\s+DE\s+CUENTA/i, category: 'Comisiones bancarias' },
-    { keywords: /RETIRO CAJERO|CAJERO|DISP ATM|\bATM\b/i, category: 'Retiro efectivo' },
-    { keywords: /TRANSFERENCIA|PAGO INTERBANCARIO|SPEI|TRASPASO/i, category: 'Transferencias' },
+    // =====================
+    // ENTRETENIMIENTO
+    // =====================
+    { keywords: /CINEPOLIS|CINEMEX|CINE|TEATRO/i, category: 'Cine' },
+    { keywords: /TICKETMASTER|BOLETO|EVENTO/i, category: 'Eventos' },
+    { keywords: /STEAM|PLAYSTATION|XBOX|NINTENDO|EPIC GAMES/i, category: 'Videojuegos' },
 
-    // Hogar
-    { keywords: /FERRE|FERRETERIA|HOME DEPOT|TRUPER|CONSTRURAMA/i, category: 'Hogar' },
-    { keywords: /VETERINAR/i, category: 'Mascotas' },
-    { keywords: /BARBER|PELUQUERIA|ESTETICA/i, category: 'Cuidado personal' },
-    { keywords: /GIFT CORNER|ARCCA/i, category: 'Otros gastos' },
+    // =====================
+    // ECOMMERCE
+    // =====================
+    { keywords: /AMAZON|MERCADO\s*LIBRE|MERCADOPAGO|PAYPAL|TEMU|SHEIN|ALIEXPRESS|EBANX/i, category: 'Compras online' },
+
+    // =====================
+    // SEGUROS / FINANZAS
+    // =====================
+    { keywords: /QUALITAS|GNP|AXA|MAPFRE|ALLIANZ/i, category: 'Seguros' },
+    { keywords: /COMISION|ANUALIDAD|IVA COMIS|INTERES COBRADO/i, category: 'Comisiones bancarias' },
+    { keywords: /CAJERO|ATM|RETIRO/i, category: 'Retiro efectivo' },
+    { keywords: /SPEI|TRANSFERENCIA|TRASPASO|PAGO INTERBANCARIO/i, category: 'Transferencias' },
+
+    // =====================
+    // HOGAR / OTROS
+    // =====================
+    { keywords: /HOME DEPOT|TRUPER|FERRETERIA|CONSTRURAMA/i, category: 'Hogar' },
+    { keywords: /VETERINARIA|PETCO|MASKOTA/i, category: 'Mascotas' },
+    { keywords: /BARBER|ESTETICA|SPA|SALON/i, category: 'Cuidado personal' },
+
 ];
 
 /**

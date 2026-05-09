@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, Lightbulb, AlertTriangle, Lock, ShoppingBag, RefreshCw, TrendingDown, Calendar as CalendarIcon, Target, Zap, BarChart2, Info } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Modal from "@/components/Modal";
 import PLCalendar from "@/components/PLCalendar";
@@ -9,10 +9,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/categorias";
 import { getFilter, setFilter } from "@/lib/filterMemory";
-import { parseStatementText } from "@/lib/statementParser";
-import { parseStatementWithAI, parseStatementTextWithAI } from "@/lib/parsers/ai-statement-parser";
-import { pdfToImages } from "@/lib/parsers/pdf-to-images";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
+import NvaIntelligencePanel from "@/components/NvaIntelligencePanel";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { FINANZAS_STEPS } from "@/components/onboarding/tourSteps";
@@ -20,6 +18,7 @@ import { toast } from "sonner";
 import BankConnectWidget from "@/components/BankConnectWidget";
 import "./Finanzas.css";
 import { API_BASE } from "@/lib/apiBase";
+import { nvaEngine } from "@/nvaEngine";
 
 const MOCK_DATA = [
     { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },
@@ -180,6 +179,7 @@ export default function FinanzasPage() {
     const [userConfig, setUserConfig] = useState({ concepto_custom_label: 'Por Cobrar', concepto_custom_total: 0 });
     const [periodo, setPeriodo] = useState('1m');
     const [accountType, setAccountType] = useState('debit'); // 'debit' | 'credit'
+    const [selectedCard, setSelectedCard] = useState('global'); // 'global' | bank name
     const [mesFilter, setMesFilter] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -195,8 +195,11 @@ export default function FinanzasPage() {
     const [pendingRows, setPendingRows] = useState([]);
     const [isImporting, setIsImporting] = useState(false);
     const [importResult, setImportResult] = useState(null); // { ok, count }
+    const [nvaIntelligence, setNvaIntelligence] = useState(null);
     const [isParsing, setIsParsing] = useState(false);
     const [pendingPdfFile, setPendingPdfFile] = useState(null);
+    const [pdfBankInfo, setPdfBankInfo] = useState(null); // { banco, saldo_anterior, saldo_final }
+    const [bankBalance, setBankBalance] = useState(null); // persisted last import balance
     const [isCreditCard, setIsCreditCard] = useState(false);
     const [showPdfPassword, setShowPdfPassword] = useState(false);
     const [pdfPassword, setPdfPassword] = useState('');
@@ -213,18 +216,12 @@ export default function FinanzasPage() {
         paymentDate: ''
     });
 
-    useEffect(() => {
-        const saved = localStorage.getItem('fnce_credit_config');
-        if (saved) {
-            try {
-                setCreditConfig(JSON.parse(saved));
-            } catch(e) {}
-        }
-    }, []);
+    // creditConfig loaded per-user in the mount effect below
 
-    const handleSaveCreditConfig = (e) => {
+    const handleSaveCreditConfig = async (e) => {
         e.preventDefault();
-        localStorage.setItem('fnce_credit_config', JSON.stringify(creditConfig));
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) localStorage.setItem(`fnce_credit_config_${user.id}_${selectedCard}`, JSON.stringify(creditConfig));
         setIsEditingCreditConfig(false);
         toast.success("Configuración de tarjeta guardada");
     };
@@ -265,12 +262,60 @@ export default function FinanzasPage() {
         }
     };
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => {
+        fetchData();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user?.id) return;
+            try {
+                // Try legacy key first for backward compat
+                const raw = localStorage.getItem(`nva_bank_balance_${user.id}`);
+                if (raw) setBankBalance(JSON.parse(raw));
+            } catch (_) {}
+            try {
+                const rawCC = localStorage.getItem(`fnce_credit_config_${user.id}`);
+                if (rawCC) setCreditConfig(JSON.parse(rawCC));
+            } catch (_) {}
+        });
+    }, []);
 
     useEffect(() => {
         const saved = getFilter('finanzas');
         if (saved) setPeriodo(saved);
     }, []);
+
+
+    // Load per-card creditConfig + bankBalance when selectedCard changes
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user?.id) return;
+            // Credit config
+            const ccKey = `fnce_credit_config_${user.id}_${selectedCard}`;
+            const rawCC = localStorage.getItem(ccKey);
+            if (rawCC) {
+                try { setCreditConfig(JSON.parse(rawCC)); } catch (_) {}
+            } else {
+                setCreditConfig({ limit: 50000, statementBalance: '', noInterestPayment: '', cutoffDate: '', paymentDate: '' });
+            }
+            // Bank balance (debit) — per-card key
+            if (selectedCard !== 'global') {
+                const bbKey = `nva_bank_balance_${user.id}_${selectedCard.toLowerCase().replace(/\s+/g, '_')}`;
+                const rawBB = localStorage.getItem(bbKey);
+                if (rawBB) {
+                    try { setBankBalance(JSON.parse(rawBB)); } catch (_) {}
+                } else {
+                    setBankBalance(null);
+                }
+            } else {
+                // Global: try legacy key
+                const rawBB = localStorage.getItem(`nva_bank_balance_${user.id}`);
+                if (rawBB) {
+                    try { setBankBalance(JSON.parse(rawBB)); } catch (_) {}
+                } else {
+                    setBankBalance(null);
+                }
+            }
+        });
+    }, [selectedCard]);
 
     // One-time migration: rename 'Gasto Personal' → 'Egreso' in Supabase
     useEffect(() => {
@@ -319,151 +364,86 @@ export default function FinanzasPage() {
 
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
-        let rawText = null;
         try {
-            // Cargamos pdf.js por CDN puro para evitar problemas de Webpack en build/Vercel
-            if (!window.pdfjsLib) {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            }
+            const fd = new FormData();
+            fd.append('file', file);
 
-            const pdfjsLib = window.pdfjsLib;
-            const buffer = await file.arrayBuffer();
+            const res = await fetch('/api/analyze', { method: 'POST', body: fd });
+            const data = await res.json();
 
-            const loadingTask = pdfjsLib.getDocument({
-                data: buffer,
-                password: password || undefined,
-                cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                cMapPacked: true,
-                standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
-            });
-            const pdfDoc = await loadingTask.promise;
-            
-            for (let i = 1; i <= pdfDoc.numPages; i++) {
-                const page = await pdfDoc.getPage(i);
-                const content = await page.getTextContent();
-                
-                const items = content.items.filter(item => item.str.trim().length > 0);
-                
-                items.sort((a, b) => {
-                    const yA = a.transform[5];
-                    const yB = b.transform[5];
-                    if (Math.abs(yA - yB) > 5) return yB - yA;
-                    return a.transform[4] - b.transform[4];
-                });
-
-                let lastY;
-                let pageText = '';
-                for (const item of items) {
-                    const y = item.transform[5];
-                    if (lastY !== undefined && Math.abs(lastY - y) > 5) {
-                        pageText += '\n';
-                    } else if (lastY !== undefined) {
-                        pageText += ' ';
-                    }
-                    pageText += item.str.trim();
-                    lastY = y;
-                }
-                rawText = (rawText || '') + pageText + '\n\n';
-            }
-        } catch (err) {
-            console.warn("Client PDF error:", err);
-            if (err.name === 'PasswordException' || err.message?.includes('Password') || err.message?.includes('contraseña')) {
-                setPdfPasswordError(true);
-                setIsParsing(false);
+            if (!res.ok || !data.success) {
+                toast.error(data.error || 'No se pudo analizar el archivo.');
                 return;
             }
-            toast.error("No se pudo descifrar o leer el documento en este dispositivo.");
-            setIsParsing(false);
-            return;
-        }
 
-        // Try regex parsers first (fast, free, no API key needed)
-        let transacciones = rawText?.trim() ? parseStatementText(rawText, isCreditCard) : [];
-
-        if (transacciones.length < 3) {
-            const toastId = toast.loading("Analizando con IA...", { duration: 40000 });
-            let aiError = null;
-
-            // Path A: text-based AI (digital PDF — fast, cheap, any bank)
-            if (rawText?.trim().length > 200) {
-                try {
-                    const aiResult = await parseStatementTextWithAI(rawText, isCreditCard);
-                    if (aiResult.transactions.length > 0) {
-                        transacciones = aiResult.transactions;
-                        toast.dismiss(toastId);
-                        toast.success(`IA detectó ${transacciones.length} transacciones de ${aiResult.banco}.`);
-                    }
-                } catch (err) {
-                    aiError = err;
-                    console.error("AI text parse error:", err.message);
-                }
-            }
-
-            // Path B: vision-based AI (scanned/image PDF — only if text path failed or no text)
-            if (transacciones.length < 3) {
-                try {
-                    const images = await pdfToImages(file, { scale: 1.5, maxPages: 8, skipFirst: false });
-                    const aiResult = await parseStatementWithAI(images);
-                    if (aiResult.transactions.length > 0) {
-                        transacciones = aiResult.transactions;
-                        toast.dismiss(toastId);
-                        toast.success(`IA (visión) detectó ${transacciones.length} transacciones de ${aiResult.banco}.`);
-                    }
-                } catch (visionErr) {
-                    console.error("AI vision parse error:", visionErr.message);
-                    aiError = aiError ?? visionErr;
-                }
-            }
-
-            toast.dismiss(toastId);
-
-            if (transacciones.length === 0) {
-                const msg = aiError?.message?.includes('ANTHROPIC_API_KEY')
-                    ? 'Falta configurar ANTHROPIC_API_KEY en el servidor.'
-                    : aiError?.message ?? 'No se encontraron transacciones. Verifica que sea un estado de cuenta válido.';
-                toast.error(msg);
-                setIsParsing(false);
-                return;
-            }
-        }
-
-        if (transacciones.length === 0) {
-            toast.error("No se encontraron transacciones. Formato no reconocido.");
-            setIsParsing(false);
-            return;
-        }
-
-        const rows = transacciones.map((tx, i) => {
-            let mappedType = tx.tipo?.toLowerCase() === 'ingreso' ? 'Ingreso' : 'Egreso';
-            if (isCreditCard) {
-                if (mappedType === 'Ingreso') mappedType = 'Transferencia'; // Pagos a tarjeta de crédito
-                else if (mappedType === 'Egreso') mappedType = 'Egreso'; // Cargos a tarjeta de crédito
-            }
-            
-            return {
-                _idx: i,
-                date: tx.fecha,
-                concept: tx.concepto,
-                amount: tx.monto,
-                type: mappedType,
+            const tipoCuenta = data.tipo_cuenta === 'credito' ? 'credito' : 'debito';
+            const rows = (data.transactions ?? []).map((t, idx) => ({
+                _idx: idx,
+                date: t.fecha,
+                concept: t.concepto || `Transacción ${idx + 1}`,
+                amount: Math.abs(Number(t.monto) || 0),
+                type: t.tipo === 'ajuste' ? 'Ajuste' : (t.tipo === 'ingreso' || t.tipo === 'abono') ? 'Ingreso' : 'Egreso',
                 client: 'N/A',
-                categoria: tx.categoria || 'Otros',
-            };
-        });
+                categoria: t.categoria || 'Otros',
+                account_type: tipoCuenta,
+                bank: t.banco || data.bank || 'Desconocido',
+            })).filter(r => r.amount > 0);
 
-        setShowPdfPassword(false);
-        setPendingPdfFile(null);
-        setPdfPassword('');
-        setPendingRows(rows);
-        setImportStep(2);
-        setIsParsing(false);
+            if (rows.length === 0) {
+                toast.warning('No se encontraron transacciones en el archivo.');
+                return;
+            }
+
+            setPendingRows(rows);
+            setPdfBankInfo({ banco: data.bank || 'Banco', tipo_cuenta: tipoCuenta, saldo_anterior: data.saldo_anterior || 0, saldo_final: data.saldo_final || 0, periodo: data.periodo || '' });
+            // Auto-populate creditConfig if credit card statement
+            if (tipoCuenta === 'credito' && data.credito_info) {
+                const ci = data.credito_info;
+                const newCreditConfig = {
+                    limit: ci.limite_credito || creditConfig.limit || 50000,
+                    statementBalance: ci.pago_sin_intereses || ci.pago_minimo || '',
+                    noInterestPayment: ci.pago_sin_intereses || '',
+                    cutoffDate: ci.dia_corte || creditConfig.cutoffDate || '',
+                    paymentDate: ci.dia_pago || creditConfig.paymentDate || '',
+                    pagoMinimo: ci.pago_minimo || '',
+                    interesesPeriodo: ci.intereses_periodo || 0,
+                    deudaAlCorte: data.saldo_final || 0,
+                    mesesPagoMinimo: ci.meses_pago_minimo || 0,
+                    totalInteresesMinimo: ci.total_intereses_minimo || 0,
+                    cat: ci.cat || 0,
+                };
+                setCreditConfig(newCreditConfig);
+                // Persist per-user (user id available in outer try block)
+                const { data: { user: u } } = await (await import('@/lib/supabaseClient')).supabase.auth.getUser();
+                if (u?.id) localStorage.setItem(`fnce_credit_config_${u.id}_${data.bank || 'global'}`, JSON.stringify(newCreditConfig));
+            }
+            // Persist balance for dashboard
+            try {
+                const { data: { user } } = await (await import('@/lib/supabaseClient')).supabase.auth.getUser();
+                if (user?.id) {
+                    const balanceData = {
+                        banco: data.bank || 'Banco',
+                        saldo_anterior: data.saldo_anterior || 0,
+                        saldo_final: data.saldo_final || 0,
+                        periodo: data.periodo || '',
+                        updated_at: new Date().toISOString(),
+                    };
+                    const bankKey = `nva_bank_balance_${user.id}_${(data.bank || 'global').toLowerCase().replace(/\s+/g, '_')}`;
+                    localStorage.setItem(bankKey, JSON.stringify(balanceData));
+                    setBankBalance(balanceData);
+                }
+            } catch (_) {}
+            setImportStep(2);
+            toast.success(`${rows.length} transacciones detectadas de ${data.bank || 'tu banco'}.`);
+        } catch (err) {
+            console.error('[parsePdfFile]', err);
+            toast.error('Error al procesar el archivo PDF.');
+        } finally {
+            setShowPdfPassword(false);
+            setPendingPdfFile(null);
+            setPdfPassword('');
+            setIsParsing(false);
+        }
     };
 
     const handleFileUpload = async (e) => {
@@ -531,6 +511,8 @@ export default function FinanzasPage() {
                 date: r.date, concept: r.concept, amount: r.amount,
                 type: r.type, client: r.client || 'N/A',
                 categoria: r.categoria || 'Otros',
+                account_type: r.account_type || (isCreditCard ? 'credito' : 'debito'),
+                bank: r.bank || 'Desconocido',
                 user_id: user.id,
             }));
             const { error } = await supabase.from('transactions').insert(payload);
@@ -562,6 +544,8 @@ export default function FinanzasPage() {
         setPendingPdfFile(null);
         setPdfPassword('');
         setPdfPasswordError(false);
+        setPdfBankInfo(null);
+        if (importStep !== 2) setNvaIntelligence(null); // Keep it visible after successful import or reset manually
     };
 
     const [modalType, setModalType] = useState("Ingreso"); // Ingreso or Egreso
@@ -580,10 +564,31 @@ export default function FinanzasPage() {
     const fechaInicio = getFechaInicioFin(periodo);
 
     // Period-filtered transactions for totals and table
-    const filteredTx = useMemo(
-        () => transactions.filter(t => t.date >= fechaInicio),
-        [transactions, fechaInicio]
-    );
+    // Available cards per account type (for card switcher)
+    const availableDebitCards = useMemo(() =>
+        [...new Set(transactions.filter(t => (t.account_type || 'debito') === 'debito' && t.bank && t.bank !== 'Desconocido').map(t => t.bank))].sort()
+    , [transactions]);
+    const availableCreditCards = useMemo(() =>
+        [...new Set(transactions.filter(t => t.account_type === 'credito' && t.bank && t.bank !== 'Desconocido').map(t => t.bank))].sort()
+    , [transactions]);
+
+    // Reset selectedCard when switching account type; auto-select if only 1 card
+    useEffect(() => {
+        const cards = accountType === 'credit' ? availableCreditCards : availableDebitCards;
+        if (cards.length === 1) setSelectedCard(cards[0]);
+        else setSelectedCard('global');
+    }, [accountType, availableCreditCards, availableDebitCards]);
+
+    const filteredTx = useMemo(() => {
+        const targetType = accountType === 'credit' ? 'credito' : 'debito';
+        return transactions.filter(t => {
+            if (t.date < fechaInicio) return false;
+            const at = t.account_type || 'debito';
+            if (at !== targetType) return false;
+            if (selectedCard !== 'global' && t.bank !== selectedCard) return false;
+            return true;
+        });
+    }, [transactions, fechaInicio, accountType, selectedCard]);
 
     const totalIngresosBase = filteredTx.filter(t => t.type?.toLowerCase().trim() === 'ingreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     const totalEgresos = filteredTx.filter(t => t.type?.toLowerCase().trim() === 'egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
@@ -630,9 +635,28 @@ export default function FinanzasPage() {
 
     const [itemToDelete, setItemToDelete] = useState(null);
     const [showClearAll, setShowClearAll] = useState(false);
+    const [showClearMemory, setShowClearMemory] = useState(false);
+    const [multiCardHintDismissed, setMultiCardHintDismissed] = useState(
+        typeof window !== 'undefined' && !!localStorage.getItem('fnce_multi_card_hint')
+    );
 
     const handleDelete = (id) => {
         setItemToDelete(id);
+    };
+
+    const confirmClearMemory = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id) return;
+        // Remove all per-user localStorage keys
+        const keysToRemove = Object.keys(localStorage).filter(k =>
+            k.includes(user.id) || k.startsWith('fnce_') || k.startsWith('nva_')
+        );
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        // Reset state
+        setBankBalance(null);
+        setCreditConfig({ limit: 50000, statementBalance: '', noInterestPayment: '', cutoffDate: '', paymentDate: '' });
+        setShowClearMemory(false);
+        toast.success(`Memoria limpiada (${keysToRemove.length} entradas eliminadas).`);
     };
 
     const confirmClearAll = async () => {
@@ -647,6 +671,10 @@ export default function FinanzasPage() {
             toast.error("Error al limpiar las transacciones.");
         } else {
             setTransactions([]);
+            setBankBalance(null);
+            localStorage.removeItem(`nva_bank_balance_${user.id}`);
+            localStorage.removeItem(`fnce_credit_config_${user.id}`);
+            setCreditConfig({ limit: 50000, statementBalance: '', noInterestPayment: '', cutoffDate: '', paymentDate: '' });
             toast.success("Transacciones eliminadas.");
         }
         setShowClearAll(false);
@@ -816,66 +844,164 @@ export default function FinanzasPage() {
     const [heroInt, heroDec] = heroAbs.split('.');
 
     // Datos reales para el modo crédito
+    // En tarjeta crédito: Ingreso = pago recibido, Ajuste = devolución/reembolso
     const cargosPeriodo = filteredTx.filter(t => t.type === 'Egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const pagosPeriodo = filteredTx.filter(t => t.type === 'Transferencia').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const ajustesPeriodo = filteredTx.filter(t => t.type === 'Ingreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const pagosPeriodo = filteredTx.filter(t => t.type === 'Ingreso' || t.type === 'Transferencia').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const ajustesPeriodo = filteredTx.filter(t => t.type === 'Ajuste').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-    const historicoCargos = transactions.filter(t => t.type === 'Egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const historicoPagos = transactions.filter(t => t.type === 'Transferencia').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const historicoAjustes = transactions.filter(t => t.type === 'Ingreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const creditTx = transactions.filter(t =>
+        t.account_type === 'credito' &&
+        (selectedCard === 'global' || t.bank === selectedCard)
+    );
+    const historicoCargos = creditTx.filter(t => t.type === 'Egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const historicoPagos = creditTx.filter(t => t.type === 'Ingreso' || t.type === 'Transferencia').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const historicoAjustes = creditTx.filter(t => t.type === 'Ajuste').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     
-    const deudaActual = Math.max(0, historicoCargos - historicoPagos - historicoAjustes);
-    
+    const deudaActual = Number(creditConfig.deudaAlCorte) || Math.max(0, historicoCargos - historicoPagos - historicoAjustes);
+
     // Límite y cálculos
     const creditLimite = Number(creditConfig.limit) || 50000;
     const creditUtilizacion = creditLimite > 0 ? (deudaActual / creditLimite) * 100 : 0;
     const utilizationColor = creditUtilizacion < 30 ? '#22c55e' : creditUtilizacion < 70 ? '#eab308' : '#ef4444';
-    
+
     const heroDeudaAbs = formatCurrency(deudaActual);
     const [heroDeudaInt, heroDeudaDec] = heroDeudaAbs.split('.');
 
-    // --- 🤖 Asistente Financiero & Simulador Lógica ---
-    const [simulatorMode, setSimulatorMode] = useState('total'); // 'minimo', 'corte', 'total'
-    const TASA_INTERES_MENSUAL = 0.0416; // ~50% APR mock
-
-    let recommendedAction = "Todo en orden. Registra tus pagos y cargos para mantener el control.";
-    let actionType = "neutral";
-    let actionIcon = "💡";
-
-    const paymentDay = parseInt(creditConfig.paymentDate);
+    // Simulador
+    const [simulatorMode, setSimulatorMode] = useState('total');
+    const TASA_INTERES_MENSUAL = 0.0416;
     const pagoCorte = Number(creditConfig.statementBalance) || 0;
     const pagoNoInteres = Number(creditConfig.noInterestPayment) || pagoCorte || deudaActual;
 
-    if (!isNaN(paymentDay) && deudaActual > 0) {
+    // Liquidez y cashflow
+    const liquidezRestante = Math.max(0, creditLimite - deudaActual);
+    const diasDelPeriodo = 30;
+    const burnRateDiario = cargosPeriodo > 0 ? cargosPeriodo / diasDelPeriodo : 0;
+    const diasHastaSaturacion = burnRateDiario > 0 ? Math.floor(liquidezRestante / burnRateDiario) : 999;
+
+    // Debt intelligence
+    const suscripcionesTx = filteredTx.filter(t => t.type === 'Egreso' && t.categoria === 'Suscripciones');
+    const msiTx = filteredTx.filter(t => t.type === 'Egreso' && /\bmsi\b|meses sin inter/i.test(t.concept || ''));
+    const totalSuscripciones = suscripcionesTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const totalMSI = msiTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const interesesPeriodo = Number(creditConfig.interesesPeriodo) || 0;
+    const deudaComprometidaProxMes = totalSuscripciones + totalMSI;
+
+    // Minimum payment consequence (from statement or calculated)
+    const mesesPagoMinimo = Number(creditConfig.mesesPagoMinimo) || 0;
+    const totalInteresesMinimo = Number(creditConfig.totalInteresesMinimo) || 0;
+    const cat = Number(creditConfig.cat) || 0;
+    // Fallback calculation if not in statement
+    const pagoMinimoNum = Number(creditConfig.pagoMinimo) || deudaActual * 0.05;
+    const tasaMensual = cat > 0 ? (cat / 100 / 12) : TASA_INTERES_MENSUAL;
+    const mesesCalc = (deudaActual > 0 && pagoMinimoNum > deudaActual * tasaMensual)
+        ? Math.ceil(Math.log(pagoMinimoNum / (pagoMinimoNum - deudaActual * tasaMensual)) / Math.log(1 + tasaMensual))
+        : 0;
+    const totalInteresesCalc = mesesCalc > 0 ? Math.round((pagoMinimoNum * mesesCalc) - deudaActual) : 0;
+    const mesesMostrar = mesesPagoMinimo || mesesCalc;
+    const interesesMostrar = totalInteresesMinimo || totalInteresesCalc;
+
+    // Monthly historical analysis (all credit transactions, grouped by month)
+    const creditMonthlyHistory = useMemo(() => {
+        const map = {};
+        creditTx.forEach(t => {
+            if (!t.date) return;
+            const month = t.date.slice(0, 7); // "2026-03"
+            if (!map[month]) map[month] = { cargos: 0, pagos: 0, ajustes: 0 };
+            if (t.type === 'Egreso') map[month].cargos += Number(t.amount) || 0;
+            else if (t.type === 'Ingreso' || t.type === 'Transferencia') map[month].pagos += Number(t.amount) || 0;
+            else if (t.type === 'Ajuste') map[month].ajustes += Number(t.amount) || 0;
+        });
+        return Object.entries(map)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, d]) => ({
+                month,
+                label: new Date(month + '-15').toLocaleDateString('es-MX', { month: 'short', year: '2-digit' }),
+                cargos: Math.round(d.cargos),
+                pagos: Math.round(d.pagos),
+                ajustes: Math.round(d.ajustes),
+                neto: Math.round(d.pagos - d.cargos + d.ajustes), // positive = pagó más de lo que gastó
+            }));
+    }, [creditTx]);
+
+    // Evolution narrative
+    const firstMonth = creditMonthlyHistory[0];
+    const lastMonth = creditMonthlyHistory[creditMonthlyHistory.length - 1];
+    const prevMonth = creditMonthlyHistory[creditMonthlyHistory.length - 2];
+    const maxCargos = Math.max(...creditMonthlyHistory.map(m => m.cargos), 1);
+
+    // Last month narrative
+    const lastMonthNarrative = lastMonth ? (() => {
+        const { label, cargos, pagos, neto } = lastMonth;
+        const partes = [`En ${label}:`];
+        if (cargos > 0) partes.push(`gastaste ${formatCurrency(cargos)}`);
+        if (pagos > 0) partes.push(`pagaste ${formatCurrency(pagos)}`);
+        if (neto > 0) partes.push('evitaste intereses');
+        else if (neto < -cargos * 0.1) partes.push('tu deuda creció');
+        return partes.join(' · ');
+    })() : null;
+
+    // Trend vs previous month
+    let trendVsPrev = null;
+    if (prevMonth && lastMonth && prevMonth.cargos > 0) {
+        const pct = ((lastMonth.cargos - prevMonth.cargos) / prevMonth.cargos) * 100;
+        trendVsPrev = { pct: Math.round(Math.abs(pct)), direction: pct >= 0 ? 'up' : 'down' };
+    }
+
+    // Financial Health Score (0-100) — penaliza burn rate alto + deuda comprometida
+    const scoreUtil = Math.max(0, (1 - Math.min(creditUtilizacion, 100) / 100) * 25);
+    const scorePagoCompleto = historicoCargos > 0 ? Math.min(20, (historicoPagos / historicoCargos) * 20) : 20;
+    const scoreLiquidez = creditLimite > 0 ? Math.min(10, (liquidezRestante / creditLimite) * 10) : 10;
+    const scoreIntereses = interesesPeriodo > 0 ? 0 : 10;
+    // Burn rate penalty: si burn > 50% del límite en el mes, penaliza
+    const burnRateMensual = burnRateDiario * 30;
+    const scoreBurn = creditLimite > 0 ? Math.max(0, 20 - (burnRateMensual / creditLimite) * 40) : 20;
+    const scoreDeudaComp = deudaComprometidaProxMes < burnRateMensual * 0.2 ? 15 : Math.max(0, 15 - (deudaComprometidaProxMes / Math.max(burnRateMensual, 1)) * 20);
+    const healthScore = Math.min(100, Math.round(scoreUtil + scorePagoCompleto + scoreLiquidez + scoreIntereses + scoreBurn + scoreDeudaComp));
+
+    const riskLevel = healthScore >= 75 ? 'saludable' : healthScore >= 50 ? 'moderado' : healthScore >= 30 ? 'presion' : 'critico';
+    const RISK = {
+        saludable: { label: 'Saludable', color: '#22c55e', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)',  dotColor: '#22c55e' },
+        moderado:  { label: 'Moderado',  color: '#eab308', bg: 'rgba(234,179,8,0.08)',  border: 'rgba(234,179,8,0.2)',  dotColor: '#eab308' },
+        presion:   { label: 'Presión',   color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)', dotColor: '#f97316' },
+        critico:   { label: 'Crítico',   color: '#ef4444', bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.2)',  dotColor: '#ef4444' },
+    };
+    const risk = RISK[riskLevel];
+
+    // Auto-insights — human language (consecuencias, no métricas)
+    const autoInsights = [];
+    if (creditUtilizacion >= 70) autoInsights.push({ Icon: AlertTriangle, iconColor: '#ef4444', text: `Ya usaste más del 70% de tu línea. Zona de presión financiera.` });
+    else if (creditUtilizacion >= 30) autoInsights.push({ Icon: AlertTriangle, iconColor: '#eab308', text: `Usaste el ${Math.round(creditUtilizacion)}% de tu crédito disponible.` });
+    else if (creditUtilizacion > 0) autoInsights.push({ Icon: CheckCircle2, iconColor: '#22c55e', text: `Usas solo el ${Math.round(creditUtilizacion)}% de tu línea. Muy bien.` });
+
+    if (cargosPeriodo > 0 && historicoPagos < historicoCargos) autoInsights.push({ Icon: TrendingDown, iconColor: '#f87171', text: 'Tu deuda creció más de lo que pagaste este período.' });
+    else if (historicoPagos > 0 && historicoPagos >= historicoCargos) autoInsights.push({ Icon: CheckCircle2, iconColor: '#22c55e', text: 'Pagaste más de lo que gastaste. Tu deuda disminuye.' });
+
+    if (diasHastaSaturacion < 30 && burnRateDiario > 0) autoInsights.push({ Icon: AlertTriangle, iconColor: '#ef4444', text: `Gastando así agotarías tu crédito en ~${diasHastaSaturacion} días.` });
+    else if (burnRateDiario > 0 && diasHastaSaturacion < 120) autoInsights.push({ Icon: BarChart2, iconColor: '#a78bfa', text: `Al ritmo actual, tu línea disponible dura ~${diasHastaSaturacion} días.` });
+
+    if (totalSuscripciones > 0) autoInsights.push({ Icon: RefreshCw, iconColor: '#fb923c', text: `Tienes ${formatCurrency(totalSuscripciones)} en suscripciones que se cobran automáticamente.` });
+    if (interesesPeriodo > 0) autoInsights.push({ Icon: TrendingDown, iconColor: '#f87171', text: `Pagaste ${formatCurrency(interesesPeriodo)} en intereses este período — dinero que no genera nada.` });
+    if (deudaComprometidaProxMes > 0) autoInsights.push({ Icon: Lock, iconColor: '#a78bfa', text: `Ya comprometiste ${formatCurrency(deudaComprometidaProxMes)} del próximo mes (MSI + suscripciones).` });
+
+    // Pago countdown
+    const paymentDay = parseInt(creditConfig.paymentDate);
+    let daysToPayment = null;
+    if (!isNaN(paymentDay)) {
         const today = new Date();
-        const currentDay = today.getDate();
-        let daysLeft = 0;
-        if (currentDay <= paymentDay) daysLeft = paymentDay - currentDay;
+        const cur = today.getDate();
+        if (cur <= paymentDay) daysToPayment = paymentDay - cur;
         else {
             const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-            daysLeft = (daysInMonth - currentDay) + paymentDay;
-        }
-
-        if (daysLeft <= 3) {
-            recommendedAction = `Paga ${formatCurrency(pagoNoInteres)} en los próximos ${daysLeft} días para evitar intereses.`;
-            actionType = "urgent";
-            actionIcon = "🚨";
-        } else if (daysLeft <= 10) {
-            recommendedAction = `Prepárate para pagar ${formatCurrency(pagoNoInteres)} antes del ${paymentDay}. Planifica tu liquidez.`;
-            actionType = "warning";
-            actionIcon = "⚠️";
-        } else {
-            recommendedAction = `Tienes ${daysLeft} días hasta tu límite de pago. Tu próximo objetivo es juntar ${formatCurrency(pagoNoInteres)}.`;
-            actionType = "good";
-            actionIcon = "✅";
+            daysToPayment = (daysInMonth - cur) + paymentDay;
         }
     }
 
     const simulatedPayment = useMemo(() => {
-        if (simulatorMode === 'minimo') return deudaActual * 0.05;
+        if (simulatorMode === 'minimo') return Number(creditConfig.pagoMinimo) || deudaActual * 0.05;
         if (simulatorMode === 'corte') return pagoCorte;
         return pagoNoInteres;
-    }, [simulatorMode, deudaActual, pagoCorte, pagoNoInteres]);
+    }, [simulatorMode, deudaActual, pagoCorte, pagoNoInteres, creditConfig.pagoMinimo]);
 
     const simulatedRemaining = Math.max(0, deudaActual - simulatedPayment);
     const simulatedInterest = simulatorMode === 'total' ? 0 : simulatedRemaining * TASA_INTERES_MENSUAL;
@@ -889,23 +1015,82 @@ export default function FinanzasPage() {
                 onSkip={tourSkip}
             />
 
-            {/* Selector provisional de cuenta (Crédito vs Débito Global) */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+            {/* Account type selector */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
                 <div className="period-filter-wrap fin-period-filter" style={{ background: 'var(--bg-elevated)', padding: '4px' }}>
-                    <button 
-                        className={`period-filter-btn ${accountType === 'debit' ? 'active' : ''}`} 
-                        onClick={() => setAccountType('debit')}
-                    >
-                        🌎 Balance Global
+                    <button className={`period-filter-btn ${accountType === 'debit' ? 'active' : ''}`} onClick={() => setAccountType('debit')} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Landmark size={12} /> Débito
                     </button>
-                    <button 
-                        className={`period-filter-btn ${accountType === 'credit' ? 'active' : ''}`} 
-                        onClick={() => setAccountType('credit')}
-                    >
-                        💳 Tarjeta de Crédito
+                    <button className={`period-filter-btn ${accountType === 'credit' ? 'active' : ''}`} onClick={() => setAccountType('credit')} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <CreditCardIcon size={12} /> Crédito
                     </button>
                 </div>
             </div>
+
+            {/* Multi-card discovery hint — shown once when user has transactions */}
+            {!isLoading && !multiCardHintDismissed && transactions.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,135,0,0.06)', border: '1px solid rgba(255,135,0,0.18)' }}>
+                    <Info size={14} style={{ flexShrink: 0, color: 'var(--accent)', marginTop: '2px' }} />
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, flex: 1 }}>
+                        Puedes importar estados de cuenta de múltiples tarjetas. Cada una tendrá su propio resumen — cambia entre ellas con las pestañas arriba.
+                    </p>
+                    <button
+                        onClick={() => { localStorage.setItem('fnce_multi_card_hint', '1'); setMultiCardHintDismissed(true); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, flexShrink: 0, padding: '0 2px' }}
+                        aria-label="Cerrar"
+                    >×</button>
+                </div>
+            )}
+
+            {/* Card switcher — shows per-bank tabs */}
+            {!isLoading && (() => {
+                const cards = accountType === 'credit' ? availableCreditCards : availableDebitCards;
+                if (cards.length === 0) return null;
+                return (
+                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '12px', scrollbarWidth: 'none' }}>
+                        {cards.length > 1 && (
+                            <button
+                                onClick={() => setSelectedCard('global')}
+                                style={{ flexShrink: 0, padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: selectedCard === 'global' ? 700 : 400, border: `1px solid ${selectedCard === 'global' ? 'var(--accent)' : 'var(--bg-border)'}`, background: selectedCard === 'global' ? 'rgba(255,135,0,0.12)' : 'transparent', color: selectedCard === 'global' ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer' }}
+                            >
+                                Global
+                            </button>
+                        )}
+                        {cards.map(card => (
+                            <button
+                                key={card}
+                                onClick={() => setSelectedCard(card)}
+                                style={{ flexShrink: 0, padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: selectedCard === card ? 700 : 400, border: `1px solid ${selectedCard === card ? 'var(--accent)' : 'var(--bg-border)'}`, background: selectedCard === card ? 'rgba(255,135,0,0.12)' : 'transparent', color: selectedCard === card ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer' }}
+                            >
+                                {card}
+                            </button>
+                        ))}
+                    </div>
+                );
+            })()}
+            {/* Reset to global if card no longer exists */}
+            {!isLoading && selectedCard !== 'global' && !(accountType === 'credit' ? availableCreditCards : availableDebitCards).includes(selectedCard) && setSelectedCard('global')}
+
+            {/* Per-card page header */}
+            {!isLoading && selectedCard !== 'global' && (
+                <div style={{ marginBottom: '14px', padding: '14px 16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.4px', lineHeight: 1 }}>{selectedCard}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{accountType === 'credit' ? <><CreditCardIcon size={11} /> Tarjeta de Crédito</> : <><Landmark size={11} /> Cuenta de Débito</>}</span>
+                            {bankBalance?.periodo ? ` · ${bankBalance.periodo}` : ''}
+                        </div>
+                    </div>
+                    {(accountType === 'credit' ? availableCreditCards : availableDebitCards).length > 1 && (
+                        <button
+                            onClick={() => setSelectedCard('global')}
+                            style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '5px 12px', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                            ← Global
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Hero Balance */}
             {isLoading ? (
@@ -914,37 +1099,76 @@ export default function FinanzasPage() {
                     <div className="skeleton" style={{ height: '52px', width: '220px', margin: '0 auto 12px', borderRadius: '8px' }} />
                     <div className="skeleton" style={{ height: '24px', width: '120px', margin: '0 auto', borderRadius: '20px' }} />
                 </div>
+            ) : accountType === 'credit' && creditTx.length === 0 ? (
+                <div className="fin-hero" style={{ border: '1px dashed var(--bg-border)', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '120px' }}>
+                    <CreditCardIcon size={32} style={{ color: 'var(--text-muted)' }} />
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Sin datos de tarjeta de crédito</p>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Importa un estado de cuenta para ver tu análisis</p>
+                </div>
             ) : accountType === 'credit' ? (
                 <>
-                    {/* 🤖 1. NEXT ACTION / ASISTENTE */}
-                    <div style={{ marginBottom: '16px', padding: '16px', borderRadius: '12px', background: actionType === 'urgent' ? 'rgba(239,68,68,0.1)' : actionType === 'warning' ? 'rgba(234,179,8,0.1)' : actionType === 'good' ? 'rgba(52,211,153,0.1)' : 'var(--bg-surface)', border: `1px solid ${actionType === 'urgent' ? 'rgba(239,68,68,0.2)' : actionType === 'warning' ? 'rgba(234,179,8,0.2)' : actionType === 'good' ? 'rgba(52,211,153,0.2)' : 'var(--bg-border)'}` }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '20px' }}>{actionIcon}</span>
+                    {/* RISK STATUS BANNER */}
+                    <div style={{ marginBottom: '12px', padding: '14px 16px', borderRadius: '12px', background: risk.bg, border: `1px solid ${risk.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: risk.dotColor, boxShadow: `0 0 6px ${risk.dotColor}`, flexShrink: 0, display: 'inline-block' }} />
                             <div>
-                                <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: actionType === 'urgent' ? '#f87171' : actionType === 'warning' ? '#facc15' : actionType === 'good' ? '#4ade80' : 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Acción Recomendada
+                                <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: risk.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                    Riesgo {risk.label}
                                 </p>
-                                <p style={{ margin: '4px 0 0', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', lineHeight: '1.4' }}>
-                                    {recommendedAction}
+                                <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                                    {daysToPayment !== null
+                                        ? daysToPayment <= 3 ? `¡Fecha límite en ${daysToPayment} días! Paga ahora.`
+                                        : daysToPayment <= 10 ? `${daysToPayment} días para tu fecha límite de pago`
+                                        : `Tu próximo pago vence en ${daysToPayment} días`
+                                        : 'Configura tu tarjeta para activar alertas'}
                                 </p>
                             </div>
                         </div>
+                        <button className="btn-icon-sm" style={{ color: 'rgba(255,255,255,0.5)', flexShrink: 0 }} onClick={() => setIsEditingCreditConfig(true)} title="Configurar">
+                            <Settings size={16} />
+                        </button>
                     </div>
 
-                    <div className="fin-hero" style={{ position: 'relative', background: 'radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent)', border: '1px solid var(--bg-border)', borderRadius: '16px' }}>
-                        <button className="btn-icon-sm" style={{ position: 'absolute', top: 16, right: 16, color: 'rgba(255,255,255,0.6)' }} onClick={() => setIsEditingCreditConfig(true)} title="Configurar Tarjeta">
-                            <Settings size={18} />
-                        </button>
-                        <p className="fin-hero-label" style={{ letterSpacing: '1.2px', opacity: 0.6, fontWeight: 500 }}>DEUDA ACTUAL</p>
-                        <div className="fin-hero-amount" style={{ color: '#fff' }}>
+                    {/* HEALTH SCORE */}
+                    <div style={{ marginBottom: '12px', padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Score de Salud Financiera</span>
+                            <span style={{ fontSize: '20px', fontWeight: 800, color: risk.color }}>{healthScore}<span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>/100</span></span>
+                        </div>
+                        <div style={{ height: '6px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                            <div style={{ width: `${healthScore}%`, height: '100%', background: `linear-gradient(90deg, ${risk.color}, ${healthScore > 70 ? '#22c55e' : risk.color})`, borderRadius: '999px', transition: 'width 0.6s ease-out' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Crítico</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Moderado</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Saludable</span>
+                        </div>
+                    </div>
+
+                    {/* DEUDA HERO */}
+                    <div className="fin-hero" style={{ position: 'relative', background: 'radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent)', border: '1px solid var(--bg-border)', borderRadius: '16px', paddingBottom: '16px' }}>
+                        <p className="fin-hero-label" style={{ letterSpacing: '1.2px', opacity: 0.6, fontWeight: 500 }}>DEUDA REVOLVENTE</p>
+                        <div className="fin-hero-amount" style={{ color: deudaActual === 0 ? '#34d399' : '#fff' }}>
                             <span className="fin-hero-int">{heroDeudaInt}</span>
                             <span className="fin-hero-dec">.{heroDeudaDec}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '10px' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Crédito disponible</div>
+                                <div style={{ fontSize: '14px', fontWeight: 700, color: '#34d399' }}>{formatCurrency(liquidezRestante)}</div>
+                            </div>
+                            {deudaComprometidaProxMes > 0 && (
+                                <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '16px' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Comprometido próx. mes</div>
+                                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#a78bfa' }}>{formatCurrency(deudaComprometidaProxMes)}</div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </>
             ) : (
                 <div className="fin-hero">
-                    <p className="fin-hero-label">Balance Total</p>
+                    <p className="fin-hero-label">{selectedCard !== 'global' ? 'Balance Neto' : 'Balance Total'}</p>
                     <div className="fin-hero-amount">
                         <span className={`fin-hero-int${gananciaNeta < 0 ? ' negative' : ''}`}>{heroInt}</span>
                         <span className="fin-hero-dec">.{heroDec}</span>
@@ -958,23 +1182,48 @@ export default function FinanzasPage() {
                 </div>
             )}
 
-            {/* 📊 2. UTILIZACIÓN Y TREND */}
-            {!isLoading && accountType === 'credit' && (
-                <div style={{ marginTop: '16px', padding: '20px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Nivel de Utilización</span>
-                            <span style={{ fontSize: '28px', fontWeight: 800, color: utilizationColor, letterSpacing: '-0.5px' }}>
+            {/* 💳 Saldos del último estado de cuenta importado */}
+            {!isLoading && accountType === 'debit' && bankBalance && (bankBalance.saldo_anterior > 0 || bankBalance.saldo_final > 0) && (
+                <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                    <div style={{ flex: 1, background: 'rgba(255,135,0,0.07)', border: '1px solid rgba(255,135,0,0.22)', borderRadius: '12px', padding: '12px 14px' }}>
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: 600, color: 'rgba(255,135,0,0.8)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Saldo Anterior</p>
+                        <p style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700, color: '#FF8700' }}>{formatCurrency(bankBalance.saldo_anterior)}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: '10px', color: 'var(--text-secondary)' }}>{bankBalance.banco}</p>
+                    </div>
+                    <div style={{ flex: 1, background: 'rgba(255,135,0,0.07)', border: '1px solid rgba(255,135,0,0.22)', borderRadius: '12px', padding: '12px 14px' }}>
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: 600, color: 'rgba(255,135,0,0.8)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Saldo al Corte</p>
+                        <p style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700, color: '#FF8700' }}>{formatCurrency(bankBalance.saldo_final)}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: '10px', color: 'var(--text-secondary)' }}>{bankBalance.periodo || bankBalance.banco}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* UTILIZACIÓN — human language */}
+            {!isLoading && accountType === 'credit' && creditTx.length > 0 && (
+                <div style={{ marginTop: '12px', padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <div style={{ fontSize: '22px', fontWeight: 800, color: utilizationColor, letterSpacing: '-0.5px', lineHeight: 1 }}>
                                 {Math.round(creditUtilizacion)}%
-                            </span>
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '200px', lineHeight: 1.3 }}>
+                                {creditUtilizacion >= 70 ? 'Ya usaste más de la mitad de tu línea.' :
+                                 creditUtilizacion >= 30 ? `Usaste ${Math.round(creditUtilizacion)}% de tu crédito.` :
+                                 creditUtilizacion > 0 ? 'Tienes mucho margen disponible.' : 'Sin deuda registrada.'}
+                            </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(deudaActual)}</span>
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}> / {formatCurrency(creditLimite)}</span>
+                            <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(deudaActual)}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>de {formatCurrency(creditLimite)}</div>
                         </div>
                     </div>
-                    <div style={{ height: '8px', borderRadius: '999px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                    <div style={{ height: '6px', borderRadius: '999px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
                         <div style={{ width: `${Math.min(creditUtilizacion, 100)}%`, height: '100%', background: utilizationColor, borderRadius: '999px', transition: 'width 0.5s ease-out' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                        <span style={{ color: '#22c55e' }}>0–30% Óptimo</span>
+                        <span style={{ color: '#eab308' }}>30–70% Moderado</span>
+                        <span style={{ color: '#ef4444' }}>70%+ Presión</span>
                     </div>
                 </div>
             )}
@@ -984,40 +1233,39 @@ export default function FinanzasPage() {
                 <div className="fin-metric-grid">
                     <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
                 </div>
-            ) : accountType === 'credit' ? (
-                <div className="fin-metric-grid" style={{ marginTop: '16px' }}>
+            ) : accountType === 'credit' && creditTx.length > 0 ? (
+                <div className="fin-metric-grid" style={{ marginTop: '12px' }}>
                     <div className="fin-metric-card">
-                        <div className="fin-metric-icon" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
-                            <ArrowUpRight size={14} />
+                        <div className="fin-metric-icon" style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}>
+                            <Wallet size={14} />
                         </div>
-                        <span className="fin-metric-label">Pagos Realizados</span>
-                        <span className="fin-metric-value">{formatCurrency(pagosPeriodo)}</span>
-                        <span className="fin-metric-hint">Este periodo</span>
+                        <span className="fin-metric-label">Puedes gastar</span>
+                        <span className="fin-metric-value" style={{ color: '#60a5fa' }}>{formatCurrency(liquidezRestante)}</span>
+                        <span className="fin-metric-hint">antes de saturar</span>
+                    </div>
+                    <div className="fin-metric-card">
+                        <div className="fin-metric-icon" style={{ background: burnRateDiario > creditLimite / 60 ? 'rgba(248,113,113,0.12)' : 'rgba(251,191,36,0.12)', color: burnRateDiario > creditLimite / 60 ? '#f87171' : '#fbbf24' }}>
+                            <TrendingUp size={14} />
+                        </div>
+                        <span className="fin-metric-label">Gastas por día</span>
+                        <span className="fin-metric-value">{formatCurrency(burnRateDiario)}</span>
+                        <span className="fin-metric-hint">este período</span>
                     </div>
                     <div className="fin-metric-card">
                         <div className="fin-metric-icon" style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171' }}>
                             <ArrowDownRight size={14} />
                         </div>
-                        <span className="fin-metric-label">Cargos del periodo</span>
+                        <span className="fin-metric-label">Cargos totales</span>
                         <span className="fin-metric-value">{formatCurrency(cargosPeriodo)}</span>
+                        <span className="fin-metric-hint">este período</span>
                     </div>
                     <div className="fin-metric-card">
-                        <div className="fin-metric-icon" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
-                            <Wallet size={14} />
+                        <div className="fin-metric-icon" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
+                            <ArrowUpRight size={14} />
                         </div>
-                        <span className="fin-metric-label">Devoluciones / Ajustes</span>
-                        <span className="fin-metric-value">{formatCurrency(ajustesPeriodo)}</span>
-                        <span className="fin-metric-hint">Reembolsos</span>
-                    </div>
-                    <div className="fin-metric-card">
-                        <div className="fin-metric-icon" style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}>
-                            <TrendingUp size={14} />
-                        </div>
-                        <span className="fin-metric-label">Flujo Neto</span>
-                        <span className="fin-metric-value" style={{ color: pagosPeriodo >= cargosPeriodo ? '#34d399' : '#f87171' }}>
-                            {pagosPeriodo >= cargosPeriodo ? '+' : '-'}{formatCurrency(Math.abs(pagosPeriodo - cargosPeriodo))}
-                        </span>
-                        <span className="fin-metric-hint">Este periodo</span>
+                        <span className="fin-metric-label">Pagaste</span>
+                        <span className="fin-metric-value" style={{ color: '#34d399' }}>{formatCurrency(pagosPeriodo)}</span>
+                        <span className="fin-metric-hint">este período</span>
                     </div>
                 </div>
             ) : (
@@ -1064,60 +1312,184 @@ export default function FinanzasPage() {
                 </div>
             )}
 
-            {/* 🧾 3. BREAKDOWN DE DEUDA Y SIMULADOR (Solo Crédito) */}
-            {!isLoading && accountType === 'credit' && (
-                <div style={{ marginTop: '16px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        {/* Breakdown */}
-                        <div style={{ padding: '16px', borderRadius: '16px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', display: 'flex', flexDirection: 'column' }}>
-                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Desglose de Deuda</p>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>🛍️ Compras y Cargos</span>
-                                <span style={{ fontSize: '13px', fontWeight: 600 }}>{formatCurrency(historicoCargos - historicoAjustes)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>💸 Pagos a la fecha</span>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#34d399' }}>-{formatCurrency(historicoPagos)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>📈 Intereses / Comis.</span>
-                                <span style={{ fontSize: '13px', fontWeight: 600 }}>$0.00</span>
-                            </div>
-                            <div style={{ width: '100%', height: '1px', background: 'var(--bg-border)', margin: 'auto 0 16px' }} />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setIsEditingCreditConfig(true)} title="Configurar Fechas">
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>📅 Corte: {creditConfig.cutoffDate || '—'}</span>
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>📅 Límite: {creditConfig.paymentDate || '—'}</span>
-                            </div>
-                        </div>
+            {/* DEBT INTELLIGENCE + FORECASTING + SIMULATOR + INSIGHTS */}
+            {!isLoading && accountType === 'credit' && creditTx.length > 0 && (
+                <div style={{ marginTop: '12px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-                        {/* Simulator */}
-                        <div style={{ padding: '16px', borderRadius: '16px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', display: 'flex', flexDirection: 'column' }}>
-                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Simulador de Pago</p>
-                            
-                            <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '8px' }}>
-                                <button className={`btn-secondary ${simulatorMode === 'minimo' ? 'active' : ''}`} style={{ flex: 1, fontSize: '10px', padding: '6px 2px', background: simulatorMode === 'minimo' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === 'minimo' ? '#fff' : 'var(--text-secondary)' }} onClick={() => setSimulatorMode('minimo')}>Mín.</button>
-                                <button className={`btn-secondary ${simulatorMode === 'corte' ? 'active' : ''}`} style={{ flex: 1, fontSize: '10px', padding: '6px 2px', background: simulatorMode === 'corte' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === 'corte' ? '#fff' : 'var(--text-secondary)' }} onClick={() => setSimulatorMode('corte')}>Corte</button>
-                                <button className={`btn-secondary ${simulatorMode === 'total' ? 'active' : ''}`} style={{ flex: 1, fontSize: '10px', padding: '6px 2px', background: simulatorMode === 'total' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === 'total' ? '#fff' : 'var(--text-secondary)' }} onClick={() => setSimulatorMode('total')}>Total</button>
+                    {/* DEBT INTELLIGENCE */}
+                    <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                        <p style={{ margin: '0 0 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Inteligencia de Deuda</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {[
+                                { label: 'Compras y Cargos', value: historicoCargos, color: 'var(--text-primary)' },
+                                { label: 'Pagos realizados', value: -historicoPagos, color: '#34d399' },
+                                { label: 'Devoluciones', value: -historicoAjustes, color: '#60a5fa' },
+                                ...(interesesPeriodo > 0 ? [{ label: 'Intereses / Comis.', value: interesesPeriodo, color: '#f87171' }] : []),
+                                ...(totalMSI > 0 ? [{ label: 'MSI activos', value: totalMSI, color: '#a78bfa' }] : []),
+                                ...(totalSuscripciones > 0 ? [{ label: 'Suscripciones', value: totalSuscripciones, color: '#fb923c' }] : []),
+                            ].map(({ label, value, color }) => (
+                                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{label}</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color }}>{value < 0 ? '-' : ''}{formatCurrency(Math.abs(value))}</span>
+                                </div>
+                            ))}
+                            <div style={{ height: '1px', background: 'var(--bg-border)', margin: '2px 0' }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Deuda neta</span>
+                                <span style={{ fontSize: '14px', fontWeight: 800, color: deudaActual > 0 ? '#f87171' : '#34d399' }}>{formatCurrency(deudaActual)}</span>
                             </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, justifyContent: 'flex-end' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Si pagas:</span>
-                                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#34d399' }}>{formatCurrency(simulatedPayment)}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Deuda Restante:</span>
-                                    <span style={{ fontSize: '13px', fontWeight: 600 }}>{formatCurrency(simulatedRemaining)}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: simulatedInterest > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)', padding: '8px 12px', borderRadius: '8px', marginTop: '4px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 600, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>Intereses mes prox:</span>
-                                    <span style={{ fontSize: '13px', fontWeight: 700, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>
-                                        {simulatedInterest > 0 ? `~${formatCurrency(simulatedInterest)}` : '$0.00'}
-                                    </span>
-                                </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer', paddingTop: '4px' }} onClick={() => setIsEditingCreditConfig(true)}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CalendarIcon size={10} /> Corte: {creditConfig.cutoffDate || '—'}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CalendarIcon size={10} /> Límite: {creditConfig.paymentDate || '—'}</span>
                             </div>
                         </div>
                     </div>
+
+                    {/* FORECASTING */}
+                    <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                        <p style={{ margin: '0 0 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>¿Qué pasa si...?</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {burnRateDiario > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                        {diasHastaSaturacion < 60
+                                            ? <AlertTriangle size={13} style={{ color: '#ef4444', flexShrink: 0 }} />
+                                            : diasHastaSaturacion < 120
+                                            ? <AlertTriangle size={13} style={{ color: '#eab308', flexShrink: 0 }} />
+                                            : <CheckCircle2 size={13} style={{ color: '#22c55e', flexShrink: 0 }} />
+                                        } ...sigues gastando igual
+                                    </span>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: diasHastaSaturacion < 30 ? '#ef4444' : diasHastaSaturacion < 60 ? '#eab308' : '#34d399' }}>
+                                        {diasHastaSaturacion > 365 ? 'línea aguanta 1+ año' : `saturarías en ~${diasHastaSaturacion} días`}
+                                    </span>
+                                </div>
+                            )}
+                            {deudaComprometidaProxMes > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Lock size={13} style={{ color: '#a78bfa', flexShrink: 0 }} /> ...no cancelas nada fijo</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#a78bfa' }}>{formatCurrency(deudaComprometidaProxMes)} comprometido</span>
+                                </div>
+                            )}
+                            {pagoNoInteres > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Target size={13} style={{ color: '#34d399', flexShrink: 0 }} /> ...pagas para evitar intereses</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#34d399' }}>paga {formatCurrency(pagoNoInteres)}</span>
+                                </div>
+                            )}
+                            {Number(creditConfig.pagoMinimo) > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Zap size={13} style={{ color: '#eab308', flexShrink: 0 }} /> ...pagas el mínimo</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#eab308' }}>{formatCurrency(Number(creditConfig.pagoMinimo))}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* MINIMUM PAYMENT CONSEQUENCE — killer feature */}
+                    {deudaActual > 0 && mesesMostrar > 0 && (
+                        <div style={{ padding: '16px', borderRadius: '14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                            <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 600, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '5px' }}><AlertTriangle size={11} /> Si solo pagas el mínimo...</p>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
+                                    <div style={{ fontSize: '22px', fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{mesesMostrar}</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>meses para liquidar</div>
+                                </div>
+                                <div style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
+                                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{formatCurrency(interesesMostrar)}</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>en intereses totales</div>
+                                </div>
+                            </div>
+                            {cat > 0 && (
+                                <p style={{ margin: '10px 0 0', fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center' }}>CAT: {cat}% anual</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* SIMULATOR */}
+                    <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                        <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Simulador de Pago</p>
+                        <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', background: 'rgba(0,0,0,0.2)', padding: '3px', borderRadius: '8px' }}>
+                            {[['minimo', 'Mínimo'], ['corte', 'Sin intereses'], ['total', 'Total']].map(([mode, label]) => (
+                                <button key={mode} style={{ flex: 1, fontSize: '11px', padding: '6px 4px', background: simulatorMode === mode ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === mode ? '#fff' : 'var(--text-secondary)', borderRadius: '6px', cursor: 'pointer', fontWeight: simulatorMode === mode ? 600 : 400 }} onClick={() => setSimulatorMode(mode)}>{label}</button>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Si pagas:</span>
+                                <span style={{ fontSize: '15px', fontWeight: 700, color: '#34d399' }}>{formatCurrency(simulatedPayment)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Deuda restante:</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(simulatedRemaining)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '8px', background: simulatedInterest > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.08)', border: `1px solid ${simulatedInterest > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'}` }}>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>Intereses próx. mes:</span>
+                                <span style={{ fontSize: '13px', fontWeight: 700, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>{simulatedInterest > 0 ? `~${formatCurrency(simulatedInterest)}` : '$0.00'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* AUTO-INSIGHTS */}
+                    {autoInsights.length > 0 && (
+                        <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                            <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Lo que dice tu estado</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {autoInsights.map((ins, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                        <ins.Icon size={14} style={{ flexShrink: 0, marginTop: '2px', color: ins.iconColor }} />
+                                        <span style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4 }}>{ins.text}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* HISTORIAL MENSUAL */}
+                    {creditMonthlyHistory.length > 1 && (
+                        <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Evolución mensual</p>
+                                {trendVsPrev && (
+                                    <span style={{ fontSize: '11px', fontWeight: 600, color: trendVsPrev.direction === 'up' ? '#f87171' : '#34d399', padding: '2px 8px', borderRadius: '20px', background: trendVsPrev.direction === 'up' ? 'rgba(248,113,113,0.1)' : 'rgba(52,211,153,0.1)' }}>
+                                        {trendVsPrev.direction === 'up' ? '↑' : '↓'} {trendVsPrev.pct}% vs mes anterior
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Narrative */}
+                            {lastMonthNarrative && (
+                                <p style={{ margin: '0 0 14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: `3px solid ${lastMonth.neto >= 0 ? '#34d399' : '#f87171'}` }}>
+                                    {lastMonthNarrative}
+                                </p>
+                            )}
+
+                            {/* Monthly bars */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {creditMonthlyHistory.slice(-6).reverse().map(m => (
+                                    <div key={m.month}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{m.label}</span>
+                                            <div style={{ display: 'flex', gap: '12px' }}>
+                                                <span style={{ fontSize: '11px', color: '#f87171' }}>{formatCurrency(m.cargos)}</span>
+                                                <span style={{ fontSize: '11px', color: '#34d399' }}>{formatCurrency(m.pagos)}</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ position: 'relative', height: '6px', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                                            {/* Cargos bar */}
+                                            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, (m.cargos / maxCargos) * 100)}%`, background: '#f87171', borderRadius: '999px', opacity: 0.7 }} />
+                                            {/* Pagos overlay */}
+                                            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, (m.pagos / maxCargos) * 100)}%`, background: '#34d399', borderRadius: '999px', opacity: 0.5 }} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f87171', display: 'inline-block' }} /> Cargos</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} /> Pagos</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1135,10 +1507,10 @@ export default function FinanzasPage() {
                             <Trash2 size={14} /> Limpiar
                         </button>
                     )}
+                    <button className="btn-cta-secondary" style={{ color: 'var(--danger)', opacity: 0.7 }} onClick={() => setShowClearMemory(true)} title="Limpiar memoria local de la app">
+                        <Trash2 size={14} /> Memoria
+                    </button>
                     <button className="btn-cta-tertiary" onClick={resetTour} title="¿Cómo usar esta sección?">?</button>
-                </div>
-                <div style={{ opacity: 0.8, marginTop: '8px' }}>
-                    <BankConnectWidget onSuccess={handleBankConnected} />
                 </div>
             </div>
 
@@ -1157,9 +1529,9 @@ export default function FinanzasPage() {
             <div data-tour="filtros-tipo" className="fin-type-tabs">
                 {(accountType === 'credit' ? [
                     { value: 'Todos', label: 'Todos', count: filteredTx.length },
-                    { value: 'Transferencia', label: 'Pagos', count: filteredTx.filter(t=>t.type==='Transferencia').length },
+                    { value: 'Ingreso', label: 'Pagos', count: filteredTx.filter(t=>t.type==='Ingreso'||t.type==='Transferencia').length },
                     { value: 'Egreso', label: 'Cargos', count: filteredTx.filter(t=>t.type==='Egreso').length },
-                    { value: 'Ingreso', label: 'Ajustes', count: filteredTx.filter(t=>t.type==='Ingreso').length },
+                    { value: 'Ajuste', label: 'Ajustes', count: filteredTx.filter(t=>t.type==='Ajuste').length },
                 ] : [
                     { value: 'Todos', label: 'Todos', count: filteredTx.length },
                     { value: 'Ingreso', label: 'Ingreso', count: filteredTx.filter(t=>t.type==='Ingreso').length },
@@ -1182,9 +1554,9 @@ export default function FinanzasPage() {
 
             {!isLoading && (
                 <>
-                    <GastosPorCategoria startDate={fechaInicio} mode={accountType} />
+                    <GastosPorCategoria startDate={fechaInicio} mode={accountType} accountType={accountType} bank={selectedCard} />
 
-                    <PLCalendar transactions={transactions} />
+                    <PLCalendar transactions={transactions} accountType={accountType} />
 
                     <div className="card table-section fnce-dynamic-panel">
                         <div className="table-header">
@@ -1363,6 +1735,23 @@ export default function FinanzasPage() {
                 </div>
             </Modal>
 
+            <Modal isOpen={showClearMemory} onClose={() => setShowClearMemory(false)} title="Limpiar memoria local">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
+                        Se eliminará toda la memoria local de la app: saldos guardados, configuración de tarjeta, filtros y preferencias.<br /><br />
+                        <strong style={{ color: 'var(--text-primary)' }}>Las transacciones en la base de datos NO se eliminan.</strong>
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                        <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setShowClearMemory(false)}>
+                            Cancelar
+                        </button>
+                        <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmClearMemory}>
+                            Limpiar memoria
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
             {/* ── Custom Card Edit Modal ── */}
             <Modal isOpen={isEditingCustomCard} onClose={() => setIsEditingCustomCard(false)} title="Editar tarjeta personalizada">
                 <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={async (e) => {
@@ -1422,6 +1811,10 @@ export default function FinanzasPage() {
                         <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.statementBalance} onChange={e => setCreditConfig(p => ({ ...p, statementBalance: e.target.value }))} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago mínimo</label>
+                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.pagoMinimo || ''} onChange={e => setCreditConfig(p => ({ ...p, pagoMinimo: e.target.value }))} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago para no generar intereses</label>
                         <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.noInterestPayment} onChange={e => setCreditConfig(p => ({ ...p, noInterestPayment: e.target.value }))} />
                     </div>
@@ -1443,7 +1836,19 @@ export default function FinanzasPage() {
                             <>
                                 <CheckCircle2 size={48} color="var(--success)" />
                                 <p style={{ fontWeight: 600, fontSize: '16px' }}>{importResult.count} transacciones importadas</p>
-                                <button className="btn-primary" onClick={resetImport}>Listo</button>
+                                <div style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', background: 'rgba(255,135,0,0.07)', border: '1px solid rgba(255,135,0,0.2)', textAlign: 'center' }}>
+                                    <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                        ¿Tienes otra tarjeta o cuenta? Puedes importar múltiples estados de cuenta y ver el análisis de cada una por separado.
+                                    </p>
+                                    <button
+                                        className="btn-cta-secondary"
+                                        style={{ width: '100%', justifyContent: 'center' }}
+                                        onClick={() => { setImportResult(null); setImportStep(1); setPendingRows([]); setPdfBankInfo(null); }}
+                                    >
+                                        <Upload size={14} /> Importar otra tarjeta
+                                    </button>
+                                </div>
+                                <button className="btn-primary" style={{ width: '100%' }} onClick={resetImport}>Listo</button>
                             </>
                         ) : (
                             <>
@@ -1462,6 +1867,9 @@ export default function FinanzasPage() {
                         <p style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
                             Sube tu estado de cuenta en PDF o CSV. Los PDF de BBVA, Banorte, Santander, HSBC, Citibanamex y Nu se procesan automáticamente.
                         </p>
+                        <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--bg-border)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                            Puedes importar estados de múltiples tarjetas y cuentas. Cada una tendrá su propio análisis y podrás verlas de forma individual o en vista global.
+                        </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                             <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Tipo de Tarjeta (para clasificar abonos y retiros)</label>
                             <div style={{ display: 'flex', gap: '8px' }}>
@@ -1497,7 +1905,7 @@ export default function FinanzasPage() {
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '18px' }}>🔒</span>
+                                    <Lock size={18} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
                                     <div>
                                         <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>PDF protegido con contraseña</p>
                                         <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Ingresa la contraseña para continuar</p>
@@ -1600,6 +2008,31 @@ export default function FinanzasPage() {
                                 <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{pendingRows.length}</div>
                             </div>
                         </div>
+                        
+                        {pdfBankInfo && (pdfBankInfo.saldo_anterior > 0 || pdfBankInfo.saldo_final > 0) && (
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ flex: 1, background: 'rgba(255,135,0,0.08)', border: '1px solid rgba(255,135,0,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>SALDO ANTERIOR</div>
+                                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#FF8700' }}>
+                                        {formatCurrency(pdfBankInfo.saldo_anterior)}
+                                    </div>
+                                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>{pdfBankInfo.banco}</div>
+                                </div>
+                                <div style={{ flex: 1, background: 'rgba(255,135,0,0.08)', border: '1px solid rgba(255,135,0,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>SALDO AL CORTE</div>
+                                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#FF8700' }}>
+                                        {formatCurrency(pdfBankInfo.saldo_final)}
+                                    </div>
+                                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>{pdfBankInfo.periodo || pdfBankInfo.banco}</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {nvaIntelligence && (
+                            <div className="mb-4">
+                                <NvaIntelligencePanel intelligence={nvaIntelligence} />
+                            </div>
+                        )}
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
                             <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>

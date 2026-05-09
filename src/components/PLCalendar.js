@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './PLCalendar.css';
 
-const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
+const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 'debit' }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarDays, setCalendarDays] = useState([]);
 
@@ -34,6 +34,11 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
 
         let days = [];
 
+        // Filter once per account type (trading passes all)
+        const filteredTx = mode === 'finanzas'
+            ? transactions.filter(t => (t.account_type || 'debito') === (accountType === 'credit' ? 'credito' : 'debito'))
+            : transactions;
+
         // Add empty slots for days before the 1st of the month
         for (let i = 0; i < firstDayOfMonth; i++) {
             days.push({ day: null, dateStr: '', pnl: 0, hasData: false });
@@ -52,7 +57,7 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
             let tradingPnl = 0;
             let hasData = false;
 
-            transactions.forEach(t => {
+            filteredTx.forEach(t => {
                 if (t.date === dateStr) {
                     hasData = true;
                     if (mode === 'finanzas') {
@@ -85,7 +90,7 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas' }) => {
 
     useEffect(() => {
         generateCalendar();
-    }, [currentDate, transactions]);
+    }, [currentDate, transactions, accountType]);
 
     const nextMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
