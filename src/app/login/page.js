@@ -396,9 +396,19 @@ function LoginPageInner() {
     );
 }
 
+function NVALoader() {
+    return (
+        <div className="nva-loader">
+            <div className="nva-loader-ring">
+                <img src="/nva-icon.svg" alt="" className="nva-loader-logo" />
+            </div>
+        </div>
+    );
+}
+
 export default function LoginPage() {
     return (
-        <Suspense fallback={<div className="login-root" />}>
+        <Suspense fallback={<NVALoader />}>
             <LoginPageInner />
         </Suspense>
     );
