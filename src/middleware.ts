@@ -25,15 +25,17 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
+  // Public routes — no auth required
+  const isPublic = pathname === '/' || pathname === '/login' ||
+    pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
+    pathname.startsWith('/terms') || pathname.startsWith('/privacy') ||
+    pathname.startsWith('/paywall') || pathname.startsWith('/api/mp/webhook')
+
   if (!user) {
-    // API routes → 401 JSON (not redirect)
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
     }
-    // /login and / are public — let unauthenticated users through
-    if (pathname === '/login' || pathname === '/') {
-      return response
-    }
+    if (isPublic) return response
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -42,17 +44,29 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/finanzas', request.url))
   }
 
+  // Paywall check — skip for paywall pages and API routes
+  const isPaid = user.user_metadata?.subscription_status === 'active'
+  const isPaywallRoute = pathname.startsWith('/paywall')
+  const isApiRoute = pathname.startsWith('/api/')
+
+  if (!isPaid && !isPaywallRoute && !isApiRoute) {
+    return NextResponse.redirect(new URL('/paywall', request.url))
+  }
+
+  // Paid user trying to access paywall → send to app
+  if (isPaid && isPaywallRoute) {
+    return NextResponse.redirect(new URL('/finanzas', request.url))
+  }
+
   return response
 }
 
 export const config = {
   matcher: [
-    // Public entry points — redirect authenticated users away
     '/',
     '/login',
-    // Dev tools — require auth (never exposed to anonymous users in production)
+    '/paywall/:path*',
     '/dev/:path*',
-    // App pages — require auth
     '/dashboard/:path*',
     '/finanzas/:path*',
     '/trading/:path*',
@@ -62,13 +76,12 @@ export const config = {
     '/clientes/:path*',
     '/prospectos/:path*',
     '/airbnb/:path*',
-    // Sensitive API routes
     '/api/parse-statement/:path*',
     '/api/parse-ai/:path*',
     '/api/import-statement/:path*',
-    // /api/analyze is intentionally public — handles anonymous free-tier with IP rate limiting
     '/api/price/:path*',
     '/api/crypto/:path*',
     '/api/belvo/:path*',
+    '/api/mp/create-preference/:path*',
   ],
 }
