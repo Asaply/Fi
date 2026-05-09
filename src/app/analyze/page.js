@@ -17,7 +17,7 @@ export default function AnalyzePage() {
     async function gateCheck() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        router.replace('/dashboard')
+        router.replace('/finanzas')
         return
       }
       if (localStorage.getItem('nva_free_analysis_used')) {
@@ -43,7 +43,17 @@ export default function AnalyzePage() {
       const res = await fetch('/api/analyze', { method: 'POST', body: fd })
 
       setStatusMsg('Generando insights...')
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        throw new Error('Error del servidor. Intenta de nuevo.')
+      }
       const data = await res.json()
+
+      if (res.status === 429 || data.limitReached) {
+        localStorage.setItem('nva_free_analysis_used', new Date().toISOString())
+        router.replace('/login?reason=free_analysis_used')
+        return
+      }
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Error al analizar el archivo')
@@ -94,7 +104,7 @@ export default function AnalyzePage() {
               <p className={styles.dropzoneText}>
                 {file ? file.name : 'Arrastra tu archivo o haz clic'}
               </p>
-              <p className={styles.dropzoneHint}>PDF o CSV (max 10MB)</p>
+              <p className={styles.dropzoneHint}>PDF o CSV (max 15MB)</p>
             </label>
 
             {error && <p style={{ color: '#ff4d4d', fontSize: '0.85rem', textAlign: 'center', marginTop: '1rem' }}>{error}</p>}

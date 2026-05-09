@@ -1,11 +1,35 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import './Login.css';
 
 // mode: 'landing' | 'login' | 'register' | 'registered'
+
+function getPasswordStrength(password) {
+    let score = 0;
+    if (password.length >= 8)           score++;
+    if (/[A-Z]/.test(password))         score++;
+    if (/[0-9]/.test(password))         score++;
+    if (/[^A-Za-z0-9]/.test(password))  score++;
+    return score; // 0-4
+}
+
+const STRENGTH_LABELS = ['', 'Débil', 'Regular', 'Buena', 'Fuerte'];
+const STRENGTH_COLORS = ['#333', '#ef4444', '#f97316', '#eab308', '#22c55e'];
+
+function translateError(msg) {
+    if (!msg) return '';
+    if (msg.includes('Invalid login credentials'))   return 'Email o contraseña incorrectos.';
+    if (msg.includes('Email not confirmed'))          return 'Confirma tu email antes de entrar.';
+    if (msg.includes('User already registered'))      return 'Este email ya tiene una cuenta. Inicia sesión.';
+    if (msg.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres.';
+    if (msg.includes('rate limit'))                   return 'Demasiados intentos. Espera un momento.';
+    if (msg.includes('Unable to validate email'))     return 'Email inválido.';
+    if (msg.includes('Signup requires a valid password')) return 'La contraseña no es válida.';
+    return msg;
+}
 
 function LoginBanner({ reason }) {
     if (!reason) return null;
@@ -27,14 +51,16 @@ function LoginBanner({ reason }) {
 }
 
 function LoginPageInner() {
-    const [mode, setMode]           = useState('landing');
-    const [tosAccepted, setTos]     = useState(false);
-    const [email, setEmail]         = useState('');
-    const [password, setPassword]   = useState('');
-    const [showPass, setShowPass]   = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError]         = useState('');
-    const [visible, setVisible]     = useState(false);
+    const [mode, setMode]               = useState('landing');
+    const [tosAccepted, setTos]         = useState(false);
+    const [email, setEmail]             = useState('');
+    const [password, setPassword]       = useState('');
+    const [confirmPass, setConfirmPass] = useState('');
+    const [showPass, setShowPass]       = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [isLoading, setIsLoading]     = useState(false);
+    const [error, setError]             = useState('');
+    const [visible, setVisible]         = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const reason = searchParams.get('reason');
@@ -44,9 +70,23 @@ function LoginPageInner() {
         return () => clearTimeout(t);
     }, []);
 
+    async function handleForgotPassword(e) {
+        e.preventDefault();
+        if (!email) { setError('Ingresa tu email.'); return; }
+        setIsLoading(true);
+        setError('');
+        const redirectTo = `${window.location.origin}/auth/callback?next=/auth/reset-password`;
+        const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        if (err) setError(translateError(err.message));
+        else transition('forgot-sent');
+        setIsLoading(false);
+    }
+
     function transition(next) {
         setVisible(false);
         setError('');
+        setPassword('');
+        setConfirmPass('');
         setTimeout(() => { setMode(next); setVisible(true); }, 180);
     }
 
@@ -56,15 +96,37 @@ function LoginPageInner() {
         setError('');
 
         if (mode === 'login') {
-            const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-            if (err) setError(err.message);
-            else router.push('/dashboard');
+            const { data: loginData, error: err } = await supabase.auth.signInWithPassword({ email, password });
+            if (err) setError(translateError(err.message));
+            else {
+                // Clear PIN if user came from "forgot PIN" flow
+                if (localStorage.getItem('fnce_pin_clear_on_login') === '1') {
+                    localStorage.removeItem('fnce_pin_clear_on_login');
+                    localStorage.removeItem('fnce_pin_hash');
+                    localStorage.removeItem('fnce_pin_enabled');
+                    localStorage.removeItem('fnce_biometric_credential');
+                    localStorage.removeItem('fnce_biometric_enabled');
+                    localStorage.removeItem('fnce_pin_attempts');
+                }
+                const onboarded = loginData?.user?.user_metadata?.onboarded;
+                router.push(onboarded ? '/finanzas' : '/onboarding');
+            }
         } else {
+            if (password !== confirmPass) {
+                setError('Las contraseñas no coinciden.');
+                setIsLoading(false);
+                return;
+            }
+            if (getPasswordStrength(password) < 3) {
+                setError('Elige una contraseña más segura (mayúscula + número + 8 caracteres).');
+                setIsLoading(false);
+                return;
+            }
             const { error: err } = await supabase.auth.signUp({
                 email, password,
                 options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
             });
-            if (err) setError(err.message);
+            if (err) setError(translateError(err.message));
             else transition('registered');
         }
         setIsLoading(false);
@@ -110,9 +172,9 @@ function LoginPageInner() {
                                 </span>
                                 <span className="tos-text">
                                     Acepto los{' '}
-                                    <a href="#" className="tos-link" onClick={e => e.stopPropagation()}>Términos y Condiciones</a>
+                                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="tos-link" onClick={e => e.stopPropagation()}>Términos y Condiciones</a>
                                     {' '}y la{' '}
-                                    <a href="#" className="tos-link" onClick={e => e.stopPropagation()}>Política de Privacidad</a>
+                                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="tos-link" onClick={e => e.stopPropagation()}>Política de Privacidad</a>
                                     {' '}de NVA
                                 </span>
                             </label>
@@ -196,20 +258,116 @@ function LoginPageInner() {
                                 </button>
                             </div>
 
+                            {/* Register-only: strength meter + confirm password */}
+                            {mode === 'register' && password.length > 0 && (
+                                <PasswordStrength password={password} />
+                            )}
+
+                            {mode === 'register' && (
+                                <div className="auth-input-wrap">
+                                    <input
+                                        type={showConfirm ? 'text' : 'password'}
+                                        placeholder="Confirmar contraseña"
+                                        value={confirmPass}
+                                        onChange={e => setConfirmPass(e.target.value)}
+                                        className={`auth-input auth-input-pass${confirmPass && confirmPass !== password ? ' auth-input-error' : ''}`}
+                                        required
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="auth-eye"
+                                        onClick={() => setShowConfirm(v => !v)}
+                                        tabIndex={-1}
+                                    >
+                                        {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            )}
+
                             {error && <p className="auth-error">{error}</p>}
 
-                            <button type="submit" className="auth-btn-primary" disabled={isLoading}>
+                            <button
+                                type="submit"
+                                className="auth-btn-primary"
+                                disabled={isLoading || (mode === 'register' && (
+                                    getPasswordStrength(password) < 3 ||
+                                    password !== confirmPass ||
+                                    !confirmPass
+                                ))}
+                            >
                                 {isLoading
                                     ? 'Cargando...'
                                     : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
                             </button>
                         </form>
 
+                        {mode === 'login' && (
+                            <button
+                                type="button"
+                                className="auth-btn-link"
+                                onClick={() => transition('forgot')}
+                                style={{ marginTop: '-4px' }}
+                            >
+                                ¿Olvidaste tu contraseña?
+                            </button>
+                        )}
+
                         <div className="auth-divider"><span>o</span></div>
 
                         <button onClick={handleGoogle} className="auth-btn-google">
                             <GoogleIcon />
                             Continuar con Google
+                        </button>
+                    </div>
+                )}
+
+                {/* ── FORGOT PASSWORD ──────────────────────── */}
+                {mode === 'forgot' && (
+                    <div className="lp-form">
+                        <button className="lp-back" onClick={() => transition('login')}>
+                            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+                                <path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </button>
+                        <div className="lp-form-header">
+                            <h2 className="lp-form-title">Recuperar contraseña</h2>
+                            <p className="lp-form-sub">Te enviaremos un enlace para restablecer tu contraseña.</p>
+                        </div>
+                        <form onSubmit={handleForgotPassword} className="lp-fields">
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                className="auth-input"
+                                required
+                                autoComplete="email"
+                            />
+                            {error && <p className="auth-error">{error}</p>}
+                            <button type="submit" className="auth-btn-primary" disabled={isLoading}>
+                                {isLoading ? 'Enviando...' : 'Enviar enlace'}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                {/* ── FORGOT SENT ──────────────────────────── */}
+                {mode === 'forgot-sent' && (
+                    <div className="lp-registered">
+                        <div className="lp-check-wrap">
+                            <div className="lp-check-circle">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+                                    <path d="M5 13L9 17L19 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <h2 className="lp-form-title">Revisa tu email</h2>
+                        <p className="lp-form-sub" style={{ maxWidth: 300, textAlign: 'center' }}>
+                            Enviamos un enlace de recuperación. Haz click en él para crear una nueva contraseña.
+                        </p>
+                        <button className="auth-btn-link" onClick={() => transition('login')}>
+                            Volver al inicio
                         </button>
                     </div>
                 )}
@@ -243,6 +401,43 @@ export default function LoginPage() {
         <Suspense fallback={<div className="login-root" />}>
             <LoginPageInner />
         </Suspense>
+    );
+}
+
+function PasswordStrength({ password }) {
+    const score = getPasswordStrength(password);
+    const reqs = [
+        { label: '8+ caracteres',  met: password.length >= 8 },
+        { label: 'Mayúscula',      met: /[A-Z]/.test(password) },
+        { label: 'Número',         met: /[0-9]/.test(password) },
+        { label: 'Símbolo',        met: /[^A-Za-z0-9]/.test(password) },
+    ];
+
+    return (
+        <div className="auth-strength">
+            <div className="auth-strength-bar">
+                {[1,2,3,4].map(i => (
+                    <div
+                        key={i}
+                        className="auth-strength-seg"
+                        style={{ background: i <= score ? STRENGTH_COLORS[score] : '#222' }}
+                    />
+                ))}
+            </div>
+            {score > 0 && (
+                <span className="auth-strength-label" style={{ color: STRENGTH_COLORS[score] }}>
+                    {STRENGTH_LABELS[score]}
+                </span>
+            )}
+            <div className="auth-reqs">
+                {reqs.map(r => (
+                    <span key={r.label} className={`auth-req${r.met ? ' auth-req-met' : ''}`}>
+                        <Check size={10} strokeWidth={3} />
+                        {r.label}
+                    </span>
+                ))}
+            </div>
+        </div>
     );
 }
 

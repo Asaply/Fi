@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { nvaEngine } from '../../../nvaEngine';
+import { getAuthUser, unauthorized, serverError, validateUpload } from '@/lib/apiAuth';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs'; // Fix para Vercel (evita fallos de dependencias nativas de pdf-parse)
 
@@ -36,6 +39,18 @@ ${isCreditCard
 - Si el texto está desordenado o las columnas están desplazadas, usa tu capacidad de razonamiento para reconstruir los movimientos.`;
 
 export async function POST(request) {
+    const user = await getAuthUser();
+    if (!user) return unauthorized();
+
+    // Rate limit: 5 AI requests per minute per user
+    const rl = checkRateLimit(user.id, { maxRequests: 5, windowMs: 60_000 });
+    if (!rl.allowed) {
+        return NextResponse.json(
+            { error: 'Demasiadas solicitudes. Espera un momento antes de intentar de nuevo.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+        );
+    }
+
     try {
         const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
@@ -59,10 +74,16 @@ export async function POST(request) {
         let text;
 
         if (rawTextInput) {
+            // Limit raw text size
+            if (String(rawTextInput).length > 100000) {
+                return NextResponse.json({ error: 'El texto es demasiado largo.' }, { status: 400 });
+            }
             text = rawTextInput;
         } else {
+            const uploadError = validateUpload(file, { maxBytes: 10 * 1024 * 1024, allowedTypes: ['application/pdf'] });
+            if (uploadError) return NextResponse.json({ error: uploadError }, { status: 400 });
             if (!file) {
-                return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 });
+                return NextResponse.json({ error: 'No se recibió archivo.' }, { status: 400 });
             }
 
             const buffer = Buffer.from(await file.arrayBuffer());
@@ -96,7 +117,7 @@ export async function POST(request) {
         }
 
         const response = await client.messages.create({
-            model: 'claude-3-5-sonnet-20240620',
+            model: 'claude-sonnet-4-6',
             max_tokens: 4096,
             messages: [{
                 role: 'user',
@@ -108,7 +129,25 @@ export async function POST(request) {
         const jsonText = rawText.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
         const parsed = JSON.parse(jsonText);
 
-        // Map movimientos → transactions format compatible with finanzas page
+        // Map movimientos → NVA transactions format
+        const nvaTransactions = (parsed.movimientos ?? []).map((m, i) => {
+            let type = m.tipo === 'abono' ? 'payment' : 'charge';
+            return {
+                id: `claude_tx_${i}_${Date.now()}`,
+                date: m.fecha,
+                rawDescription: m.descripcion,
+                normalizedMerchant: m.descripcion, // Will be cleaned later in UI or via nvaEngine
+                amount: Math.abs(Number(m.monto) || 0),
+                currency: 'MXN',
+                type,
+                category: 'other' // Base category before categorization
+            };
+        });
+
+        // Run NVA Engine to get metrics, insights, and recommendations
+        const engineResult = nvaEngine.processParsedTransactions(nvaTransactions, isCreditCard);
+
+        // Map movimientos → legacy format compatible with finanzas page
         const transactions = (parsed.movimientos ?? []).map(m => {
             let tipo = m.tipo === 'abono' ? 'ingreso' : 'egreso';
             if (isCreditCard && m.tipo === 'abono') {
@@ -127,14 +166,11 @@ export async function POST(request) {
             transactions,
             success: true,
             data: parsed,
+            nvaIntelligence: engineResult, // Exposing new engine layer
             tokens_used: response.usage.input_tokens + response.usage.output_tokens,
         });
 
     } catch (error) {
-        console.error('[parse-statement]', error);
-        return NextResponse.json(
-            { error: error.message || 'Error procesando el estado de cuenta' },
-            { status: 500 }
-        );
+        return serverError('parse-statement', error);
     }
 }

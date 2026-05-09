@@ -60,33 +60,63 @@
 }
 
 [data-theme="light"] {
-  --bg-base:           #ffffff;
-  --bg-surface:        #ffffff;
-  --bg-elevated:       #f3f4f6;   /* inputs */
-  --bg-surface-hover:  #f9fafb;
-  --bg-hover:          #f9fafb;
-  --bg-border:         #e5e7eb;
-  --bg-border-subtle:  #f3f4f6;
+  /* ── NVA Light — Papaya Orange palette ─────────────────── */
+
+  /* Orange scale */
+  --orange-500:        #FF7A1A;
+  --orange-400:        #FF933F;
+  --orange-50:         #FFF3EB;
+
+  /* Backgrounds */
+  --bg-base:           #F6F5F3;
+  --bg-surface:        #FFFFFF;
+  --bg-elevated:       #F1F0EE;
+  --bg-surface-hover:  #FAFAF9;
+  --bg-hover:          #FAFAF9;
+  --bg-border:         #E7E5E4;
+  --bg-border-subtle:  #EEECEA;
+  --sidebar-bg:        #F1F0EE;
 
   --bg-primary:        var(--bg-base);
   --bg-card:           var(--bg-surface);
   --bg-card-hover:     var(--bg-surface-hover);
-  --bg-subtle:         #f9fafb;
+  --bg-subtle:         var(--bg-elevated);
 
-  --border:            #e5e7eb;
-  --border-subtle:     #f3f4f6;
-
-  --text-primary:      #000000;
-  --text-secondary:    #374151;
-  --text-muted:        #6b7280;
-  --text-tertiary:     #9ca3af;
-
-  --border-color:      var(--bg-border);
+  /* Borders */
+  --border:            #E7E5E4;
+  --border-subtle:     #EEECEA;
+  --border-color:      var(--border);
   --card-border:       1px solid var(--border);
-  
-  --shadow-sm:         0 1px 3px rgba(0,0,0,0.05);
-  --shadow-md:         0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg:         0 8px 24px rgba(0,0,0,0.12);
+
+  /* Text */
+  --text-primary:      #111111;
+  --text-secondary:    #6B6B6B;
+  --text-muted:        #A1A1AA;
+  --text-tertiary:     #C8C8CC;
+
+  /* Accent — orange as signal, not decoration */
+  --accent:            var(--orange-500);
+  --accent-hover:      var(--orange-400);
+  --brand:             var(--orange-500);
+  --brand-hover:       var(--orange-400);
+  --accent-color:      var(--orange-500);
+  --purple:            var(--orange-500);
+  --purple-light:      var(--orange-400);
+  --brand-blue:        var(--orange-500);
+
+  /* Semantic */
+  --positive:          #16A34A;
+  --success:           #16A34A;
+  --warning:           #EAB308;
+  --negative:          #EF4444;
+  --danger:            #EF4444;
+  --color-gain:        #16A34A;
+  --color-loss:        #EF4444;
+
+  /* Shadows — very subtle, editorial */
+  --shadow-sm:         0 1px 2px rgba(0,0,0,0.02), 0 1px 4px rgba(0,0,0,0.03);
+  --shadow-md:         0 1px 2px rgba(0,0,0,0.02), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg:         0 2px 4px rgba(0,0,0,0.02), 0 8px 24px rgba(0,0,0,0.06);
 }
 
 html,
@@ -107,7 +137,7 @@ body {
 }
 
 [data-theme="light"] {
-  --bg-image: linear-gradient(to bottom, var(--brand) 0%, var(--bg-base) 40%, var(--bg-base) 100%);
+  --bg-image: none;
 }
 
 * {
@@ -142,22 +172,22 @@ button {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   padding: 24px;
-  border: none;
+  border: var(--card-border);
   transition: all 0.2s ease;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .fnce-card {
   background: var(--bg-card);
-  border: none;
+  border: var(--card-border);
   border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-md);
 }
 
 /* Dynamic transparent section style (like P&L Calendar) */
@@ -169,6 +199,17 @@ button {
   border-radius: 16px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme="light"] .fnce-dynamic-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-theme="light"] .fnce-dynamic-panel::before {
+  display: none;
 }
 
 .fnce-dynamic-panel::before {
@@ -461,6 +502,7 @@ button {
     flex-direction: column;
     gap: 8px;
     border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
 }
 
 .app-metric-icon {
@@ -755,6 +797,17 @@ button {
 
 /* ── Mobile ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Prevent iOS input zoom — all inputs/selects must be ≥ 16px */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Remove hover transforms on touch */
+  .card:hover {
+    transform: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  }
+
   /* Page headers — stack vertically */
   .page-header,
   .finanzas-header {
@@ -768,16 +821,20 @@ button {
     width: 100%;
   }
 
-  /* Period filter pills — scrollable on narrow screens */
+  /* Period filter pills — compact + scrollable on mobile */
   .period-filter-wrap {
     overflow-x: auto;
     max-width: 100%;
     flex-shrink: 1;
     padding-bottom: 4px;
+    scrollbar-width: none;
   }
+  .period-filter-wrap::-webkit-scrollbar { display: none; }
 
   .period-filter-btn {
     flex-shrink: 0;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
   }
 
   /* Action buttons — don't shrink */
@@ -786,9 +843,25 @@ button {
     flex-shrink: 0;
   }
 
+  /* Touch targets — minimum 44px */
+  .btn-cta-secondary,
+  .btn-cta-tertiary,
+  .btn-primary,
+  .btn-secondary {
+    min-height: 44px;
+  }
+
   /* Metrics grid — 2 cols on mobile */
   .metrics-grid-3 {
     grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Hero amounts — scale down for small screens */
+  .app-hero-int {
+    font-size: 2.5rem !important;
+  }
+  .app-hero-dec {
+    font-size: 1.25rem !important;
   }
 
   .app-layout {
@@ -804,11 +877,12 @@ button {
 
   .main-content {
     order: 2;
-    padding-bottom: 72px !important;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    overscroll-behavior-y: contain;
   }
 
   .page-container {
-    padding: 16px !important;
+    padding: 16px 16px 0 !important;
   }
 
   .page-title {
@@ -817,7 +891,7 @@ button {
   }
 
   .card {
-    padding: 24px;
+    padding: 16px;
     border: none;
   }
 
@@ -827,7 +901,19 @@ button {
   }
 
   .data-table {
-    min-width: 600px;
+    min-width: 480px;
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 12px 10px !important;
+  }
+
+  /* Hide "Cliente" column (2nd) in transaction tables on mobile */
+  .data-table th:nth-child(2),
+  .data-table td:nth-child(2) {
+    display: none;
   }
 
   .summary-amount {
@@ -894,4 +980,70 @@ button {
     flex-shrink: 0;
     font-size: 0.85rem !important;
   }
+
+  /* App metric cards — tighter on mobile */
+  .app-metric-card {
+    padding: 12px !important;
+  }
+
+  .app-metric-value {
+    font-size: 1rem !important;
+  }
+
+  .app-metric-grid {
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+}
+
+/* ── Light theme overrides ─────────────────────────────────────── */
+[data-theme="light"] .period-filter-wrap {
+  background: var(--bg-surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06), inset 0 1px 2px rgba(0,0,0,0.02);
+  border: 1px solid var(--border);
+}
+
+[data-theme="light"] .period-filter-btn.active {
+  background: var(--text-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+[data-theme="light"] .btn-cta-secondary,
+[data-theme="light"] .btn-cta-tertiary {
+  border-color: var(--border);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="light"] .btn-cta-secondary:hover,
+[data-theme="light"] .btn-cta-tertiary:hover {
+  background: var(--bg-surface-hover);
+}
+
+[data-theme="light"] .sidebar {
+  background: var(--sidebar-bg);
+  border-right-color: var(--border);
+}
+
+[data-theme="light"] .topbar {
+  border-bottom-color: var(--border);
+}
+
+[data-theme="light"] .modal-content,
+[data-theme="light"] .modal-backdrop {
+  background-color: rgba(0,0,0,0.25);
+}
+
+[data-theme="light"] .modal-content {
+  background: var(--bg-surface);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+}
+
+[data-theme="light"] .app-hero-dec {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .skeleton {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-surface-hover) 50%, var(--bg-elevated) 75%);
 }

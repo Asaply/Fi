@@ -411,6 +411,63 @@
     stroke: #22c55e;
 }
 
+/* ── Password strength ─────────────────────────────────────── */
+.auth-strength {
+    padding: 0 4px;
+}
+
+.auth-strength-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.auth-strength-seg {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    transition: background 0.2s;
+}
+
+.auth-strength-label {
+    font-size: 12px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+    transition: color 0.2s;
+}
+
+.auth-reqs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.auth-req {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #444;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 20px;
+    padding: 3px 8px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.auth-req svg { flex-shrink: 0; }
+
+.auth-req-met {
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Error state for confirm password field */
+.auth-input-error {
+    border-color: #ef4444 !important;
+}
+
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 480px) {
     .login-panel {
