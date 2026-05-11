@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { categorize } from '@/lib/parsers/categories.js';
 import { getAuthUser, unauthorized, serverError, validateUpload } from '@/lib/apiAuth';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { checkAnonRateLimit } from '@/lib/rateLimitAnon';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -191,15 +192,15 @@ export async function POST(request) {
             );
         }
     } else {
-        // Anonymous free-tier — rate limit per IP: 3 req/day
+        // Anonymous free-tier — 1 analysis per IP per day (distributed via Supabase)
         const ip =
             request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
             request.headers.get('x-real-ip') ||
             'unknown';
-        const rl = checkRateLimit(`anon:${ip}`, { maxRequests: 3, windowMs: 24 * 60 * 60_000 });
+        const rl = await checkAnonRateLimit(`anon:${ip}`, 1, 24 * 60 * 60_000);
         if (!rl.allowed) {
             return NextResponse.json(
-                { error: 'Límite de análisis gratuitos alcanzado. Crea una cuenta para análisis ilimitados.', limitReached: true },
+                { error: 'Ya usaste tu análisis gratuito. Crea una cuenta para acceso completo.', limitReached: true },
                 { status: 429 }
             );
         }
