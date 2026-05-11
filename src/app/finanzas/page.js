@@ -1892,7 +1892,15 @@ export default function FinanzasPage() {
                         </div>
 
 
-                        {!showPdfPassword ? (
+                        {isParsing ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '28px 16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                <div style={{ width: 36, height: 36, border: '3px solid rgba(255,122,26,0.2)', borderTopColor: '#FF7A1A', borderRadius: '50%', animation: 'spin 0.9s linear infinite' }} />
+                                <div style={{ textAlign: 'center' }}>
+                                    <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>Analizando con IA...</p>
+                                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Esto puede tomar hasta 30 segundos</p>
+                                </div>
+                            </div>
+                        ) : !showPdfPassword ? (
                             <button
                                 className="btn-secondary"
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', padding: '12px', border: '2px dashed var(--border-color)', borderRadius: '8px', width: '100%' }}
@@ -1900,7 +1908,7 @@ export default function FinanzasPage() {
                                 disabled={isParsing}
                             >
                                 <Upload size={18} />
-                                {isParsing ? 'Procesando PDF...' : csvHeaders.length > 0 ? `Archivo cargado (${csvRawRows.length} filas)` : 'Seleccionar archivo .pdf o .csv'}
+                                {csvHeaders.length > 0 ? `Archivo cargado (${csvRawRows.length} filas)` : 'Seleccionar archivo .pdf o .csv'}
                             </button>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>

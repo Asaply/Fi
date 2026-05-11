@@ -89,11 +89,11 @@ export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) 
     useEffect(() => {
         if (!isActive) { setCurrent(0); setVisible(false); return; }
         setVisible(false);
-        // Initial delay so page fully renders before we try to find elements
+        // Longer delay so page fully renders and data loads before positioning
         const t = setTimeout(() => {
             positionTooltip(current);
-            setTimeout(() => setVisible(true), 100);
-        }, 300);
+            setTimeout(() => setVisible(true), 150);
+        }, 800);
         return () => clearTimeout(t);
     }, [isActive, current, positionTooltip]);
 
@@ -153,7 +153,7 @@ export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) 
                     </span>
                     <button
                         onClick={onSkip}
-                        style={{ fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer', background: 'none', border: 'none', padding: '2px 4px', borderRadius: 4, lineHeight: 1 }}
+                        style={{ fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer', background: 'none', border: 'none', padding: '8px', borderRadius: 4, lineHeight: 1, touchAction: 'manipulation' }}
                     >
                         Saltar
                     </button>
@@ -185,15 +185,17 @@ export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) 
                     onClick={handleNext}
                     style={{
                         width: '100%',
-                        padding: '10px',
+                        padding: '12px',
                         background: '#FF7A1A',
                         color: 'white',
                         borderRadius: 9,
                         fontWeight: 600,
-                        fontSize: '14px',
+                        fontSize: '15px',
                         border: 'none',
                         cursor: 'pointer',
                         transition: 'opacity 0.15s',
+                        touchAction: 'manipulation',
+                        WebkitTapHighlightColor: 'transparent',
                     }}
                     onMouseEnter={e => e.target.style.opacity = '0.88'}
                     onMouseLeave={e => e.target.style.opacity = '1'}

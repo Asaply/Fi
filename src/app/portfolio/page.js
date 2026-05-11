@@ -297,7 +297,22 @@ export default function PortfolioHealth() {
                 onComplete={tourComplete}
                 onSkip={tourSkip}
             />
-            {/* Controles de Action Button */}
+            {/* HERO — Valor total (siempre visible arriba) */}
+            <div className="app-hero" style={{ marginBottom: '16px' }}>
+                <p className="app-hero-label">Valor total del portafolio</p>
+                <div className="app-hero-amount">
+                    <span className="app-hero-int">{valInt}</span>
+                    <span className="app-hero-dec">.{valDec}</span>
+                </div>
+                {assets.length > 0 && (
+                    <div className={`app-hero-badge ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
+                        {totalPnl >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                        {Math.abs(totalPnlPerc).toFixed(2)}% ROI Global
+                    </div>
+                )}
+            </div>
+
+            {/* Controles */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                 <div className="page-actions" style={{ justifyContent: 'center' }}>
                     <div className="period-filter-wrap">
@@ -347,22 +362,7 @@ export default function PortfolioHealth() {
 
             ) : (
                 <>
-                    {/* 1. HERO — Valor total */}
-                    <div className="app-hero">
-                        <p className="app-hero-label">Valor total del portafolio</p>
-                        <div className="app-hero-amount">
-                            <span className="app-hero-int">
-                                {valInt}
-                            </span>
-                            <span className="app-hero-dec">.{valDec}</span>
-                        </div>
-                        <div className={`app-hero-badge ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
-                            {totalPnl >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                            {Math.abs(totalPnlPerc).toFixed(2)}% ROI Global
-                        </div>
-                    </div>
-
-                    {/* 2. METRIC GRID 2x2 */}
+                    {/* METRIC GRID 2x2 */}
                     <div className="app-metric-grid">
                         <div className="app-metric-card" data-tour="card-pnl">
                             <div className="app-metric-icon" style={{ background: totalPnl >= 0 ? 'rgba(52, 211, 153, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: totalPnl >= 0 ? '#34d399' : '#ef4444' }}>
