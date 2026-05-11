@@ -152,9 +152,14 @@ async function callClaudeVision(fileBuffer, mediaType) {
         }],
     });
 
-    const raw = response.content[0].text.trim();
-    const jsonStr = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
-    return JSON.parse(jsonStr);
+    const raw = response.content[0]?.text?.trim() ?? '';
+    const jsonStr = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+    try {
+        return JSON.parse(jsonStr);
+    } catch {
+        console.error('[callClaudeVision] JSON parse failed. Raw:', raw.slice(0, 500));
+        throw new Error('El archivo no pudo ser analizado. Intenta con otro formato o banco.');
+    }
 }
 
 async function callClaudeText(csvText) {
@@ -173,9 +178,14 @@ async function callClaudeText(csvText) {
         }],
     });
 
-    const raw = response.content[0].text.trim();
-    const jsonStr = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
-    return JSON.parse(jsonStr);
+    const raw = response.content[0]?.text?.trim() ?? '';
+    const jsonStr = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+    try {
+        return JSON.parse(jsonStr);
+    } catch {
+        console.error('[callClaudeText] JSON parse failed. Raw:', raw.slice(0, 500));
+        throw new Error('El archivo no pudo ser analizado. Intenta con otro formato.');
+    }
 }
 
 export async function POST(request) {
@@ -286,10 +296,12 @@ export async function POST(request) {
         });
 
     } catch (err) {
-        return serverError('api/analyze', err);
+        const msg = err?.message || 'Error interno del servidor.';
+        console.error('[api/analyze inner]', msg);
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
     } catch (err) {
-        console.error('[api/analyze] Outer error:', err);
+        console.error('[api/analyze outer]', err?.message ?? err);
         return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }
