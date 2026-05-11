@@ -148,7 +148,7 @@ export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) 
             }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--purple-light)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '11px', color: '#FF7A1A', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         {current + 1} / {steps.length}
                     </span>
                     <button
@@ -174,7 +174,7 @@ export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) 
                             width: i === current ? 18 : 6,
                             height: 6,
                             borderRadius: 3,
-                            background: i === current ? 'var(--purple-light)' : '#2a2a2e',
+                            background: i === current ? '#FF7A1A' : '#2a2a2e',
                             transition: 'all 0.2s',
                         }} />
                     ))}
@@ -186,17 +186,17 @@ export default function OnboardingTour({ steps, isActive, onComplete, onSkip }) 
                     style={{
                         width: '100%',
                         padding: '10px',
-                        background: 'var(--purple)',
+                        background: '#FF7A1A',
                         color: 'white',
                         borderRadius: 9,
                         fontWeight: 600,
                         fontSize: '14px',
                         border: 'none',
                         cursor: 'pointer',
-                        transition: 'background 0.15s',
+                        transition: 'opacity 0.15s',
                     }}
-                    onMouseEnter={e => e.target.style.background = 'var(--purple-light)'}
-                    onMouseLeave={e => e.target.style.background = 'var(--purple)'}
+                    onMouseEnter={e => e.target.style.opacity = '0.88'}
+                    onMouseLeave={e => e.target.style.opacity = '1'}
                 >
                     {isLast ? '¡Entendido!' : 'Siguiente →'}
                 </button>
