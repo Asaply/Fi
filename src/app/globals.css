@@ -1047,3 +1047,7 @@ button {
 [data-theme="light"] .skeleton {
   background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-surface-hover) 50%, var(--bg-elevated) 75%);
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
