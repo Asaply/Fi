@@ -1,7 +1,7 @@
 {
-  "name": "FNCE Dashboard",
-  "short_name": "FNCE",
-  "description": "Financial & Agency Management Dashboard",
+  "name": "NVA Finance",
+  "short_name": "NVA",
+  "description": "Analiza y gestiona tus finanzas personales",
   "start_url": "/finanzas",
   "display": "standalone",
   "background_color": "#000000",
