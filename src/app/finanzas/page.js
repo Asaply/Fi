@@ -11,6 +11,7 @@ import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/cate
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import IngresosPorCategoria from "@/components/IngresosPorCategoria";
+import MicroFugas from "@/components/MicroFugas";
 import NvaIntelligencePanel from "@/components/NvaIntelligencePanel";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -1558,7 +1559,10 @@ export default function FinanzasPage() {
                     {activeFilter === 'Ingreso' ? (
                         <IngresosPorCategoria startDate={fechaInicio} accountType={accountType} bank={selectedCard} />
                     ) : (activeFilter === 'Egreso' || activeFilter === 'Todos') ? (
-                        <GastosPorCategoria startDate={fechaInicio} mode={accountType} accountType={accountType} bank={selectedCard} />
+                        <>
+                            <GastosPorCategoria startDate={fechaInicio} mode={accountType} accountType={accountType} bank={selectedCard} />
+                            <MicroFugas transactions={filteredTx} />
+                        </>
                     ) : null}
 
                     <PLCalendar transactions={transactions} accountType={accountType} />
