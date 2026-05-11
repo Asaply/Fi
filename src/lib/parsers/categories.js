@@ -5,10 +5,11 @@ const CATEGORY_RULES = [
     // =====================
     // INGRESOS
     // =====================
+    { keywords: /CASHBACK|CASH\s*BACK|RECOMPENSA|BONIFICACION|BONIFICACIÓN/i, category: 'Cashback', type: 'ingreso' },
     { keywords: /TRANSFERENCIA BPI|ABONO.*NOMINA|NOMINA|NÓMINA|SUELDO|SALARIO|PAYROLL/i, category: 'Salario', type: 'ingreso' },
     { keywords: /INTERESES GANADOS|RENDIMIENTO|INTERES ABONADO/i, category: 'Intereses', type: 'ingreso' },
     { keywords: /TRASPASO.*RECIB|PAGO RECIBIDO|DEPOSITO CANALES|SPIN BY OXXO|SPEI RECIBIDO/i, category: 'Transferencias', type: 'ingreso' },
-    { keywords: /DEVOLUC|REFUND|CASHBACK/i, category: 'Devoluciones', type: 'ingreso' },
+    { keywords: /DEVOLUC|REFUND/i, category: 'Devoluciones', type: 'ingreso' },
 
     // =====================
     // SUPERMERCADOS / CONVENIENCIA
