@@ -18,6 +18,9 @@ export const CATEGORIAS_INGRESO = [
     'Transferencia recibida',
     'Inversión',
     'Venta',
+    'Cashback',
+    'Devoluciones',
+    'Intereses',
     'Otros',
 ];
 
