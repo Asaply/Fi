@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import PinLock from './PinLock';
+import AppTutorial from './AppTutorial';
 import { TopbarProvider, TopbarLayout } from './TopbarContext';
 import { isPinEnabled, isUnlocked, lockSession } from '@/lib/pinAuth';
 
@@ -69,6 +70,7 @@ export default function ConditionalShell({ children }) {
                 <Sidebar />
                 <TopbarLayout>{children}</TopbarLayout>
                 <BottomNav />
+                <AppTutorial />
             </TopbarProvider>
         </div>
     );

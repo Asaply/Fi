@@ -8,9 +8,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tool
 import "./Portfolio.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
 import { API_BASE } from '@/lib/apiBase';
-import OnboardingTour from '@/components/onboarding/OnboardingTour';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import { PORTFOLIO_STEPS } from '@/components/onboarding/tourSteps';
+import { openTutorial } from '@/components/AppTutorial';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -108,7 +106,6 @@ function Tooltip({ text }) {
 }
 
 export default function PortfolioHealth() {
-    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('portfolio');
     const { data, isLoading, mutate } = useSWR('portfolio_data', fetchPortfolioData, { refreshInterval: 60000 });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -291,12 +288,6 @@ export default function PortfolioHealth() {
 
     return (
         <div className="page-container portfolio-page">
-            <OnboardingTour
-                steps={PORTFOLIO_STEPS}
-                isActive={tourActive}
-                onComplete={tourComplete}
-                onSkip={tourSkip}
-            />
             {/* HERO — Valor total (siempre visible arriba) */}
             <div className="app-hero" style={{ marginBottom: '16px' }}>
                 <p className="app-hero-label">Valor total del portafolio</p>
@@ -332,7 +323,7 @@ export default function PortfolioHealth() {
                     <button className="btn-cta-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
                         <Plus size={16} /> Agregar Activo
                     </button>
-                    <button onClick={resetTour} className="btn-action-secondary" title="¿Cómo usar esta sección?">?</button>
+                    <button onClick={openTutorial} className="btn-action-secondary" title="Tutorial de la app">?</button>
                 </div>
             </div>
 

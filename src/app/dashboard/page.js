@@ -1,9 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { getFilter, setFilter } from '@/lib/filterMemory';
-import OnboardingTour from '@/components/onboarding/OnboardingTour';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import { DASHBOARD_STEPS } from '@/components/onboarding/tourSteps';
 import GastosPorCategoria from '@/components/GastosPorCategoria';
 import IngresosPorCategoria from '@/components/IngresosPorCategoria';
 import ReporteMensual from '@/components/ReporteMensual';
@@ -35,7 +32,6 @@ function getFechaInicio(periodo) {
 }
 
 export default function DashboardPage() {
-    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('dashboard');
     const [periodo, setPeriodo] = useState('3m');
     const [categoryType, setCategoryType] = useState('gastos'); // 'gastos' | 'ingresos'
     const [categoryView, setCategoryView] = useState('debit'); // 'debit' | 'credit'
@@ -176,12 +172,6 @@ export default function DashboardPage() {
 
     return (
         <div className="page-container dashboard-page">
-            <OnboardingTour
-                steps={DASHBOARD_STEPS}
-                isActive={tourActive}
-                onComplete={tourComplete}
-                onSkip={tourSkip}
-            />
             {stats.loading ? (
                 <div className="app-hero">
                     <div className="skeleton" style={{ height: '14px', width: '90px', margin: '0 auto 12px', borderRadius: '4px' }} />
