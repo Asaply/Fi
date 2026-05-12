@@ -1581,7 +1581,10 @@ export default function FinanzasPage() {
                         </>
                     ) : null}
 
-                    <PLCalendar transactions={transactions} accountType={accountType} />
+                    <PLCalendar
+                        transactions={selectedCard === 'global' ? transactions : transactions.filter(t => t.bank === selectedCard)}
+                        accountType={accountType}
+                    />
 
                     {/* Transactions toggle — glass pill */}
                     <button
