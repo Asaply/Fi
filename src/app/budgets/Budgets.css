@@ -1,0 +1,24 @@
+.budgets-page {}
+
+.budgets-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.budgets-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 24px;
+    border: 1px dashed var(--bg-border);
+    border-radius: 20px;
+}
+
+.budget-card {
+    display: flex;
+    flex-direction: column;
+}
