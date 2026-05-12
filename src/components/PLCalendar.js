@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import './PLCalendar.css';
 
 const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 'debit' }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarDays, setCalendarDays] = useState([]);
+    const [selectedDay, setSelectedDay] = useState(null); // dateStr | null
+    const autoNavigated = useRef(false);
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -92,20 +94,39 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 
         generateCalendar();
     }, [currentDate, transactions, accountType]);
 
+    // Auto-navigate to the month of the most recent transaction (runs once when transactions load)
+    useEffect(() => {
+        if (autoNavigated.current || !transactions || transactions.length === 0) return;
+        const filtered = mode === 'finanzas'
+            ? transactions.filter(t => (t.account_type || 'debito') === (accountType === 'credit' ? 'credito' : 'debito'))
+            : transactions;
+        if (filtered.length === 0) return;
+        const latest = filtered.reduce((max, t) => (t.date > max ? t.date : max), filtered[0].date);
+        if (latest) {
+            const [y, m] = latest.split('-').map(Number);
+            setCurrentDate(new Date(y, m - 1, 1));
+            autoNavigated.current = true;
+        }
+    }, [transactions]);
+
     const nextMonth = () => {
+        setSelectedDay(null);
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
     const prevMonth = () => {
+        setSelectedDay(null);
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     };
 
     const handleYearChange = (e) => {
+        setSelectedDay(null);
         const newYear = parseInt(e.target.value, 10);
         setCurrentDate(new Date(newYear, currentDate.getMonth(), 1));
     };
 
     const handleMonthChange = (e) => {
+        setSelectedDay(null);
         const newMonth = parseInt(e.target.value, 10);
         setCurrentDate(new Date(currentDate.getFullYear(), newMonth, 1));
     };
@@ -184,8 +205,13 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 
                             }
                         }
 
+                        const isSelected = d.dateStr === selectedDay;
                         return (
-                            <div key={d.dateStr} className={`pl-calendar-cell ${pnlClass}${d.dateStr === todayStr ? ' today' : ''}`}>
+                            <div
+                                key={d.dateStr}
+                                className={`pl-calendar-cell ${pnlClass}${d.dateStr === todayStr ? ' today' : ''}${isSelected ? ' selected-day' : ''}`}
+                                onClick={() => setSelectedDay(isSelected ? null : d.dateStr)}
+                            >
                                 <div className="pl-calendar-date">{d.day}</div>
                                 <div className="pl-calendar-amount">{displayPnl}</div>
                                 {d.hasData && (d.gastos > 0 || d.inversiones > 0) && (
@@ -199,6 +225,41 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 
                     })}
                 </div>
             </div>
+
+            {/* Day detail panel */}
+            {selectedDay && (() => {
+                const filteredTx = mode === 'finanzas'
+                    ? transactions.filter(t => (t.account_type || 'debito') === (accountType === 'credit' ? 'credito' : 'debito'))
+                    : transactions;
+                const dayTxs = filteredTx.filter(t => t.date === selectedDay);
+                const [y, m, d] = selectedDay.split('-').map(Number);
+                const label = `${d} de ${months[m - 1]} ${y}`;
+                return (
+                    <div className="pl-day-panel">
+                        <div className="pl-day-panel-header">
+                            <span className="pl-day-panel-title">{label}</span>
+                            <button className="pl-day-panel-close" onClick={() => setSelectedDay(null)}><X size={14} /></button>
+                        </div>
+                        {dayTxs.length === 0 ? (
+                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Sin movimientos este día.</p>
+                        ) : (
+                            <ul className="pl-day-tx-list">
+                                {dayTxs.map((t, i) => (
+                                    <li key={t.id || i} className="pl-day-tx-item">
+                                        <div className="pl-day-tx-left">
+                                            <span className="pl-day-tx-concept">{t.concept || t.description || '—'}</span>
+                                            {t.categoria && <span className="pl-day-tx-cat">{t.categoria}</span>}
+                                        </div>
+                                        <span className={`pl-day-tx-amount ${t.type === 'Ingreso' ? 'pos' : 'neg'}`}>
+                                            {t.type === 'Ingreso' ? '+' : '-'}{formatCurrency(Math.abs(t.amount || 0))}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                );
+            })()}
         </div>
     );
 };
