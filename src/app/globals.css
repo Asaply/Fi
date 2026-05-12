@@ -54,7 +54,7 @@
 
   --font-mono:         var(--font-geist-mono), 'JetBrains Mono', 'Fira Code', monospace;
 
-  --card-padding:      1.5rem;
+  --card-padding:      1.75rem;
   --card-radius:       var(--radius-lg);
   --card-border:       1px solid var(--border);
 }
@@ -171,7 +171,7 @@ button {
 .card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 28px;
   border: var(--card-border);
   transition: all 0.2s ease;
   box-shadow: var(--shadow-md);
@@ -186,7 +186,7 @@ button {
   background: var(--bg-card);
   border: var(--card-border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 28px;
   box-shadow: var(--shadow-md);
 }
 
@@ -274,9 +274,12 @@ button {
 }
 
 .page-container {
-  padding: 28px 32px;
+  padding: 32px 40px;
   max-width: 1200px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .page-title {
@@ -882,7 +885,8 @@ button {
   }
 
   .page-container {
-    padding: 16px 16px 0 !important;
+    padding: 20px 16px 0 !important;
+    gap: 14px !important;
   }
 
   .page-title {
@@ -891,8 +895,8 @@ button {
   }
 
   .card {
-    padding: 16px;
-    border: none;
+    padding: 20px !important;
+    border-radius: 20px !important;
   }
 
   .table-responsive {
@@ -1050,4 +1054,9 @@ button {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
