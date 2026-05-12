@@ -8,9 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import "./Trading.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
-import OnboardingTour from '@/components/onboarding/OnboardingTour';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import { TRADING_STEPS } from '@/components/onboarding/tourSteps';
+import { openTutorial } from '@/components/AppTutorial';
 import { toast } from 'sonner';
 
 const PERIODOS_TRAD = [
@@ -34,7 +32,6 @@ function getFechaInicioTrad(periodo) {
 }
 
 export default function TradingPage() {
-    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('trading');
     const [operations, setOperations] = useState([]);
     const [periodo, setPeriodo] = useState('1m');
     const [isLoading, setIsLoading] = useState(true);
@@ -214,12 +211,6 @@ export default function TradingPage() {
 
     return (
         <div className="page-container">
-            <OnboardingTour
-                steps={TRADING_STEPS}
-                isActive={tourActive}
-                onComplete={tourComplete}
-                onSkip={tourSkip}
-            />
             
             {isLoading ? (
                 <div className="app-hero">
@@ -255,7 +246,7 @@ export default function TradingPage() {
                         <Plus size={15} />
                         <span>Nuevo Trade</span>
                     </button>
-                    <button onClick={resetTour} className="btn-action-secondary" title="¿Cómo usar esta sección?">?</button>
+                    <button onClick={openTutorial} className="btn-action-secondary" title="Tutorial de la app">?</button>
                 </div>
             </div>
 

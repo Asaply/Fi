@@ -13,9 +13,7 @@ import GastosPorCategoria from "@/components/GastosPorCategoria";
 import IngresosPorCategoria from "@/components/IngresosPorCategoria";
 import GastosHormiga from "@/components/GastosHormiga";
 import NvaIntelligencePanel from "@/components/NvaIntelligencePanel";
-import OnboardingTour from "@/components/onboarding/OnboardingTour";
-import { useOnboarding } from "@/hooks/useOnboarding";
-import { FINANZAS_STEPS } from "@/components/onboarding/tourSteps";
+import { openTutorial } from "@/components/AppTutorial";
 import { toast } from "sonner";
 import BankConnectWidget from "@/components/BankConnectWidget";
 import "./Finanzas.css";
@@ -174,7 +172,6 @@ function getFechaInicioFin(periodo) {
 }
 
 export default function FinanzasPage() {
-    const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('finanzas');
     const [transactions, setTransactions] = useState([]);
     const [tradingOps, setTradingOps] = useState([]);
     const [portfolioAssets, setPortfolioAssets] = useState([]);
@@ -1034,12 +1031,6 @@ export default function FinanzasPage() {
 
     return (
         <div className="page-container">
-            <OnboardingTour
-                steps={FINANZAS_STEPS}
-                isActive={tourActive}
-                onComplete={tourComplete}
-                onSkip={tourSkip}
-            />
 
             {/* Account type selector */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
@@ -1536,7 +1527,7 @@ export default function FinanzasPage() {
                 <button className="btn-fin-ghost" onClick={() => setShowClearMemory(true)} title="Limpiar memoria local de la app">
                     <RefreshCw size={13} />
                 </button>
-                <button className="btn-fin-ghost" onClick={resetTour} title="¿Cómo usar esta sección?">
+                <button className="btn-fin-ghost" onClick={openTutorial} title="Tutorial de la app">
                     <Info size={13} />
                 </button>
             </div>
