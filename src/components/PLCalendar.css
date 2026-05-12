@@ -138,6 +138,107 @@
     border: 1px solid var(--accent) !important;
 }
 
+/* Selected day */
+.pl-calendar-cell.selected-day {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    z-index: 1;
+    position: relative;
+}
+
+/* Day detail panel */
+.pl-day-panel {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeSlideIn 0.2s ease forwards;
+}
+
+.pl-day-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pl-day-panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.pl-day-panel-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+}
+
+.pl-day-panel-close:hover {
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.pl-day-tx-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pl-day-tx-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pl-day-tx-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.pl-day-tx-concept {
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+.pl-day-tx-cat {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.pl-day-tx-amount {
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.pl-day-tx-amount.pos { color: var(--positive, #34d399); }
+.pl-day-tx-amount.neg { color: var(--negative, #f87171); }
+
 /* Hover effects */
 .pl-calendar-cell:not(.empty-cell):hover {
     background-color: var(--card-bg);
