@@ -18,6 +18,7 @@ const ROUTE_LABELS = {
     '/airbnb':        'Airbnb',
     '/perfil':        'Perfil',
     '/configuracion': 'Configuración',
+    '/budgets':       'Presupuestos',
 };
 
 export default function Topbar() {

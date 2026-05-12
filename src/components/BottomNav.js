@@ -1,5 +1,5 @@
 'use client';
-import { Wallet, Home, PieChart } from "lucide-react";
+import { Wallet, Home, PieChart, PiggyBank } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import "./BottomNav.css";
 
@@ -11,6 +11,7 @@ export default function BottomNav() {
         { name: 'Resumen', path: '/dashboard', icon: Wallet },
         { name: 'Finanzas', path: '/finanzas', icon: Home },
         { name: 'Portfolio', path: '/portfolio', icon: PieChart },
+        { name: 'Metas', path: '/budgets', icon: PiggyBank },
     ];
 
     return (
