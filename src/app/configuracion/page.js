@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import {
     Bell, Shield, Database, Download, AlertTriangle,
-    ChevronRight, Fingerprint, Lock, KeyRound, Delete, AlertCircle,
+    ChevronRight, Fingerprint, Lock, KeyRound, Delete, AlertCircle, Sun, Moon,
 } from 'lucide-react';
+import { useTopbar } from '@/components/TopbarContext';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { exportDataAsPDF } from '@/lib/exportPdf';
@@ -20,6 +21,7 @@ const NOTIF_KEY = 'fnce_notif_prefs';
 const PIN_LENGTH = 4;
 
 export default function ConfiguracionPage() {
+    const { theme, toggleTheme } = useTopbar();
     const [notif, setNotif] = useState({ portfolio: true, resumen: false });
     const [pinEnabled, setPinEnabled] = useState(false);
     const [bioEnabled, setBioEnabled] = useState(false);
@@ -183,6 +185,21 @@ export default function ConfiguracionPage() {
     return (
         <div className="page-container cfg-page">
             <div className="cfg-sections">
+
+                {/* Apariencia */}
+                <div className="cfg-section">
+                    <p className="cfg-section-label">Apariencia</p>
+                    <div className="cfg-card">
+                        <CfgToggle
+                            icon={theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
+                            label={theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}
+                            sublabel="Cambia entre tema claro y oscuro"
+                            checked={theme === 'light'}
+                            onChange={toggleTheme}
+                            last
+                        />
+                    </div>
+                </div>
 
                 {/* Notificaciones */}
                 <div className="cfg-section">
