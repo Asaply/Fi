@@ -5,6 +5,7 @@ import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { DASHBOARD_STEPS } from '@/components/onboarding/tourSteps';
 import GastosPorCategoria from '@/components/GastosPorCategoria';
+import IngresosPorCategoria from '@/components/IngresosPorCategoria';
 import ReporteMensual from '@/components/ReporteMensual';
 import Recordatorios from '@/components/Recordatorios';
 import { supabase } from '@/lib/supabaseClient';
@@ -36,6 +37,7 @@ function getFechaInicio(periodo) {
 export default function DashboardPage() {
     const { isActive: tourActive, complete: tourComplete, skip: tourSkip, reset: resetTour } = useOnboarding('dashboard');
     const [periodo, setPeriodo] = useState('3m');
+    const [categoryType, setCategoryType] = useState('gastos'); // 'gastos' | 'ingresos'
     const [categoryView, setCategoryView] = useState('debit'); // 'debit' | 'credit'
     const [stats, setStats] = useState({
         ingresos: 0,
@@ -307,21 +309,44 @@ export default function DashboardPage() {
             {/* Layout inferior */}
             <div className="dashboard-grid">
                 <div className="dashboard-full-width" data-tour="gastos-categoria">
+                    {/* Gastos / Ingresos top toggle */}
                     <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
                         <button
-                            onClick={() => setCategoryView('debit')}
-                            style={{ flex: 1, padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: categoryView === 'debit' ? 700 : 400, border: `1px solid ${categoryView === 'debit' ? 'var(--accent)' : 'var(--bg-border)'}`, background: categoryView === 'debit' ? 'rgba(255,135,0,0.12)' : 'transparent', color: categoryView === 'debit' ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                            onClick={() => setCategoryType('gastos')}
+                            style={{ flex: 1, padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: categoryType === 'gastos' ? 700 : 400, border: `1px solid ${categoryType === 'gastos' ? 'var(--accent)' : 'var(--bg-border)'}`, background: categoryType === 'gastos' ? 'rgba(255,135,0,0.12)' : 'transparent', color: categoryType === 'gastos' ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                         >
-                            <Landmark size={12} style={{ flexShrink: 0 }} /> Débito
+                            <ArrowDownRight size={12} style={{ flexShrink: 0 }} /> Gastos
                         </button>
                         <button
-                            onClick={() => setCategoryView('credit')}
-                            style={{ flex: 1, padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: categoryView === 'credit' ? 700 : 400, border: `1px solid ${categoryView === 'credit' ? 'var(--accent)' : 'var(--bg-border)'}`, background: categoryView === 'credit' ? 'rgba(255,135,0,0.12)' : 'transparent', color: categoryView === 'credit' ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                            onClick={() => setCategoryType('ingresos')}
+                            style={{ flex: 1, padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: categoryType === 'ingresos' ? 700 : 400, border: `1px solid ${categoryType === 'ingresos' ? 'var(--accent)' : 'var(--bg-border)'}`, background: categoryType === 'ingresos' ? 'rgba(255,135,0,0.12)' : 'transparent', color: categoryType === 'ingresos' ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                         >
-                            <CreditCard size={12} style={{ flexShrink: 0 }} /> Crédito
+                            <ArrowUpRight size={12} style={{ flexShrink: 0 }} /> Ingresos
                         </button>
                     </div>
-                    <GastosPorCategoria startDate={fechaInicio} accountType={categoryView} mode={categoryView} />
+
+                    {categoryType === 'gastos' ? (
+                        <>
+                            {/* Débito / Crédito sub-toggle */}
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                                <button
+                                    onClick={() => setCategoryView('debit')}
+                                    style={{ flex: 1, padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: categoryView === 'debit' ? 700 : 400, border: `1px solid ${categoryView === 'debit' ? 'rgba(255,255,255,0.2)' : 'var(--bg-border)'}`, background: categoryView === 'debit' ? 'rgba(255,255,255,0.06)' : 'transparent', color: categoryView === 'debit' ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                                >
+                                    <Landmark size={12} style={{ flexShrink: 0 }} /> Débito
+                                </button>
+                                <button
+                                    onClick={() => setCategoryView('credit')}
+                                    style={{ flex: 1, padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: categoryView === 'credit' ? 700 : 400, border: `1px solid ${categoryView === 'credit' ? 'rgba(255,255,255,0.2)' : 'var(--bg-border)'}`, background: categoryView === 'credit' ? 'rgba(255,255,255,0.06)' : 'transparent', color: categoryView === 'credit' ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                                >
+                                    <CreditCard size={12} style={{ flexShrink: 0 }} /> Crédito
+                                </button>
+                            </div>
+                            <GastosPorCategoria startDate={fechaInicio} accountType={categoryView} mode={categoryView} />
+                        </>
+                    ) : (
+                        <IngresosPorCategoria startDate={fechaInicio} accountType="debit" />
+                    )}
                 </div>
                 <div className="dashboard-full-width">
                     <ReporteMensual startDate={fechaInicio} />

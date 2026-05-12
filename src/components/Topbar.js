@@ -23,12 +23,11 @@ const ROUTE_LABELS = {
 export default function Topbar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { profilePic } = useTopbar();
+    const { profilePic, theme, toggleTheme } = useTopbar();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
     const [supportMessage, setSupportMessage] = useState("");
     const [userDisplay, setUserDisplay] = useState({ name: '', email: '' });
-    const [theme, setTheme] = useState('dark');
     const profileRef = useRef(null);
 
     useEffect(() => {
@@ -38,21 +37,8 @@ export default function Topbar() {
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
-        
-        // Initialize theme
-        const savedTheme = localStorage.getItem('fnce-theme') || 'dark';
-        setTheme(savedTheme);
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
-    const toggleTheme = () => {
-        const newTheme = theme === 'dark' ? 'light' : 'dark';
-        setTheme(newTheme);
-        localStorage.setItem('fnce-theme', newTheme);
-        document.documentElement.setAttribute('data-theme', newTheme);
-    };
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
