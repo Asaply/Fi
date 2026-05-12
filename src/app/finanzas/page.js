@@ -567,11 +567,11 @@ export default function FinanzasPage() {
     // Period-filtered transactions for totals and table
     // Available cards per account type (for card switcher)
     const availableDebitCards = useMemo(() =>
-        [...new Set(transactions.filter(t => (t.account_type || 'debito') === 'debito' && t.bank && t.bank !== 'Desconocido').map(t => t.bank))].sort()
-    , [transactions]);
+        [...new Set(transactions.filter(t => (t.account_type || 'debito') === 'debito' && t.bank && t.bank !== 'Desconocido' && t.date >= fechaInicio).map(t => t.bank))].sort()
+    , [transactions, fechaInicio]);
     const availableCreditCards = useMemo(() =>
-        [...new Set(transactions.filter(t => t.account_type === 'credito' && t.bank && t.bank !== 'Desconocido').map(t => t.bank))].sort()
-    , [transactions]);
+        [...new Set(transactions.filter(t => t.account_type === 'credito' && t.bank && t.bank !== 'Desconocido' && t.date >= fechaInicio).map(t => t.bank))].sort()
+    , [transactions, fechaInicio]);
 
     // Reset selectedCard when switching account type; auto-select if only 1 card
     useEffect(() => {
