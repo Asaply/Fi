@@ -94,8 +94,7 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 
         generateCalendar();
     }, [currentDate, transactions, accountType]);
 
-    // Auto-navigate to the most recent transaction month, but only if it's within the last 3 months.
-    // Older imported statements stay on current month to avoid confusion.
+    // Auto-navigate to the most recent transaction month (runs once when transactions load)
     useEffect(() => {
         if (autoNavigated.current || !transactions || transactions.length === 0) return;
         const filtered = mode === 'finanzas'
@@ -105,11 +104,7 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 
         const latest = filtered.reduce((max, t) => (t.date > max ? t.date : max), filtered[0].date);
         if (latest) {
             const latestDate = new Date(latest + 'T12:00:00');
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-            if (latestDate >= threeMonthsAgo) {
-                setCurrentDate(new Date(latestDate.getFullYear(), latestDate.getMonth(), 1));
-            }
+            setCurrentDate(new Date(latestDate.getFullYear(), latestDate.getMonth(), 1));
             autoNavigated.current = true;
         }
     }, [transactions]);
