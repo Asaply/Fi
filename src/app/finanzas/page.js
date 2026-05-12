@@ -11,7 +11,7 @@ import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/cate
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import IngresosPorCategoria from "@/components/IngresosPorCategoria";
-import MicroFugas from "@/components/MicroFugas";
+import GastosHormiga from "@/components/GastosHormiga";
 import NvaIntelligencePanel from "@/components/NvaIntelligencePanel";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -553,6 +553,8 @@ export default function FinanzasPage() {
     const [modalType, setModalType] = useState("Ingreso"); // Ingreso or Egreso
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [activeFilter, setActiveFilter] = useState("Todos");
+    const [highlightedTxId, setHighlightedTxId] = useState(null);
+    const [showTransactions, setShowTransactions] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -663,20 +665,28 @@ export default function FinanzasPage() {
 
     const confirmClearAll = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase
-            .from('transactions')
-            .delete()
-            .eq('user_id', user?.id);
+        const isGlobal = selectedCard === 'global';
+        let query = supabase.from('transactions').delete().eq('user_id', user?.id);
+        if (!isGlobal) query = query.eq('bank', selectedCard);
+        const { error } = await query;
 
         if (error) {
             console.error("Error clearing transactions:", error);
             toast.error("Error al limpiar las transacciones.");
         } else {
-            setTransactions([]);
-            setBankBalance(null);
-            localStorage.removeItem(`nva_bank_balance_${user.id}`);
-            localStorage.removeItem(`fnce_credit_config_${user.id}`);
-            setCreditConfig({ limit: 50000, statementBalance: '', noInterestPayment: '', cutoffDate: '', paymentDate: '' });
+            if (isGlobal) {
+                setTransactions([]);
+                setBankBalance(null);
+                localStorage.removeItem(`nva_bank_balance_${user.id}`);
+                localStorage.removeItem(`fnce_credit_config_${user.id}`);
+                setCreditConfig({ limit: 50000, statementBalance: '', noInterestPayment: '', cutoffDate: '', paymentDate: '' });
+            } else {
+                setTransactions(prev => prev.filter(t => t.bank !== selectedCard));
+                setBankBalance(null);
+                const bankKey = `nva_bank_balance_${user.id}_${selectedCard.toLowerCase().replace(/\s+/g, '_')}`;
+                localStorage.removeItem(bankKey);
+                localStorage.removeItem(`fnce_credit_config_${user.id}_${selectedCard}`);
+            }
             toast.success("Transacciones eliminadas.");
         }
         setShowClearAll(false);
@@ -697,6 +707,20 @@ export default function FinanzasPage() {
             }
             setItemToDelete(null);
         }
+    };
+
+    const handleSelectTransaction = (txId) => {
+        setMesFilter('');
+        setActiveFilter('Todos');
+        setHighlightedTxId(txId);
+        setShowTransactions(true);
+        setTimeout(() => {
+            const el = document.getElementById(`tx-${txId}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => setHighlightedTxId(null), 3000);
+            }
+        }, 200);
     };
 
     const handleFormSubmit = async (e) => {
@@ -1496,24 +1520,25 @@ export default function FinanzasPage() {
             )}
 
             {/* Action buttons */}
-            <div className="fin-actions-col">
-                <div className="fin-actions-row">
-                    <button className="btn-cta-secondary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
-                        <Plus size={14} /> Nueva
+            <div className="fin-actions-bar">
+                <button className="btn-fin-primary" data-tour="btn-nueva-transaccion" onClick={() => openModal("Ingreso")}>
+                    <Plus size={13} /> Nueva
+                </button>
+                <button className="btn-fin-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
+                    <Upload size={13} /> Importar
+                </button>
+                <div style={{ flex: 1 }} />
+                {transactions.length > 0 && (
+                    <button className="btn-fin-ghost" onClick={() => setShowClearAll(true)} title="Eliminar todas las transacciones">
+                        <Trash2 size={13} />
                     </button>
-                    <button className="btn-cta-secondary" data-tour="btn-importar-csv" onClick={() => { setIsImportOpen(true); setImportStep(1); setImportResult(null); }}>
-                        <Upload size={14} /> Importar
-                    </button>
-                    {transactions.length > 0 && (
-                        <button className="btn-cta-secondary" style={{ color: 'var(--danger)' }} onClick={() => setShowClearAll(true)} title="Eliminar todas las transacciones">
-                            <Trash2 size={14} /> Limpiar
-                        </button>
-                    )}
-                    <button className="btn-cta-secondary" style={{ color: 'var(--danger)', opacity: 0.7 }} onClick={() => setShowClearMemory(true)} title="Limpiar memoria local de la app">
-                        <Trash2 size={14} /> Memoria
-                    </button>
-                    <button className="btn-cta-tertiary" onClick={resetTour} title="¿Cómo usar esta sección?">?</button>
-                </div>
+                )}
+                <button className="btn-fin-ghost" onClick={() => setShowClearMemory(true)} title="Limpiar memoria local de la app">
+                    <RefreshCw size={13} />
+                </button>
+                <button className="btn-fin-ghost" onClick={resetTour} title="¿Cómo usar esta sección?">
+                    <Info size={13} />
+                </button>
             </div>
 
             {/* Period filter */}
@@ -1561,12 +1586,44 @@ export default function FinanzasPage() {
                     ) : (activeFilter === 'Egreso' || activeFilter === 'Todos') ? (
                         <>
                             <GastosPorCategoria startDate={fechaInicio} mode={accountType} accountType={accountType} bank={selectedCard} />
-                            <MicroFugas transactions={filteredTx} />
+                            <GastosHormiga transactions={filteredTx} startDate={fechaInicio} onSelectTransaction={handleSelectTransaction} />
                         </>
                     ) : null}
 
                     <PLCalendar transactions={transactions} accountType={accountType} />
 
+                    {/* Transactions toggle — glass pill */}
+                    <button
+                        onClick={() => setShowTransactions(v => !v)}
+                        style={{
+                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '14px 18px',
+                            background: 'rgba(255,255,255,0.04)',
+                            backdropFilter: 'blur(16px)',
+                            WebkitBackdropFilter: 'blur(16px)',
+                            border: '1px solid rgba(255,255,255,0.07)',
+                            borderRadius: '28px',
+                            boxShadow: '0 2px 16px rgba(0,0,0,0.12)',
+                            cursor: 'pointer', touchAction: 'manipulation',
+                            transition: 'background 0.2s',
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Receipt size={15} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.1px' }}>Actividad reciente</span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                    {filteredTx.length} movimientos registrados
+                                </span>
+                            </div>
+                        </div>
+                        <span style={{ fontSize: '16px', color: 'var(--text-secondary)', display: 'inline-block', transform: showTransactions ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease', lineHeight: 1 }}>⌄</span>
+                    </button>
+
+                    {showTransactions && (
+                    <div style={{ animation: 'fadeSlideIn 0.25s ease forwards' }}>
                     <div className="card table-section fnce-dynamic-panel">
                         <div className="table-header">
                             <h2 className="summary-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Transacciones Recientes</h2>
@@ -1603,7 +1660,7 @@ export default function FinanzasPage() {
                                     {(mesFilter ? filteredTx.filter(t => t.date?.startsWith(mesFilter)) : filteredTx)
                                         .filter(t => activeFilter === 'Todos' || t.type === activeFilter)
                                         .map(t => (
-                                        <tr key={t.id} className="table-row">
+                                        <tr key={t.id} id={`tx-${t.id}`} className="table-row" style={highlightedTxId === t.id ? { background: 'rgba(255,122,26,0.12)', outline: '1px solid rgba(255,122,26,0.4)', borderRadius: '6px', transition: 'background 0.3s' } : undefined}>
                                             <td>{t.date}</td>
                                             <td>{t.client}</td>
                                             <td>{t.concept}</td>
@@ -1639,6 +1696,8 @@ export default function FinanzasPage() {
                         </div>
                         )}
                     </div>
+                    </div>
+                    )}
                 </>
             )}
 
@@ -1728,17 +1787,17 @@ export default function FinanzasPage() {
                 </div>
             </Modal>
 
-            <Modal isOpen={showClearAll} onClose={() => setShowClearAll(false)} title="Limpiar todas las transacciones">
+            <Modal isOpen={showClearAll} onClose={() => setShowClearAll(false)} title={selectedCard === 'global' ? 'Limpiar todas las transacciones' : `Limpiar transacciones de ${selectedCard}`}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: 'var(--text-secondary)' }}>
-                        Se eliminarán <strong>{transactions.length}</strong> transacciones. Esta acción no se puede deshacer.
+                        Se eliminarán <strong>{selectedCard === 'global' ? transactions.length : transactions.filter(t => t.bank === selectedCard).length}</strong> transacciones. Esta acción no se puede deshacer.
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                         <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setShowClearAll(false)}>
                             Cancelar
                         </button>
                         <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmClearAll}>
-                            Eliminar todo
+                            Eliminar
                         </button>
                     </div>
                 </div>
@@ -1906,7 +1965,7 @@ export default function FinanzasPage() {
                                 <div style={{ width: 36, height: 36, border: '3px solid rgba(255,122,26,0.2)', borderTopColor: '#FF7A1A', borderRadius: '50%', animation: 'spin 0.9s linear infinite' }} />
                                 <div style={{ textAlign: 'center' }}>
                                     <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>Analizando con IA...</p>
-                                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Esto puede tomar hasta 30 segundos</p>
+                                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Esto puede tomar hasta 2 minutos</p>
                                 </div>
                             </div>
                         ) : !showPdfPassword ? (

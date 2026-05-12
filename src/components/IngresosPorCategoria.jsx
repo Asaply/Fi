@@ -26,6 +26,14 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
     const [activeIndex, setActiveIndex] = useState(null);
     const [allTransactions, setAllTransactions] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [showAll, setShowAll] = useState(false);
+
+    const VISIBLE = 3;
+
+    const handlePieClick = (categoryName) => {
+        setShowAll(true);
+        setSelectedCategory(categoryName);
+    };
 
     useEffect(() => {
         const load = async () => {
@@ -120,7 +128,7 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
                                             key={entry.name}
                                             fill={getColor(entry.name, idx)}
                                             opacity={activeIndex === null || activeIndex === idx ? 1 : 0.4}
-                                            onClick={() => setSelectedCategory(entry.name)}
+                                            onClick={() => handlePieClick(entry.name)}
                                             style={{ cursor: 'pointer' }}
                                         />
                                     ))}
@@ -149,21 +157,34 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
                         )}
                     </div>
 
-                    <div className="donut-legend" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {data.map((entry, idx) => (
-                            <div key={entry.name} onClick={() => setSelectedCategory(entry.name)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px', borderRadius: '6px', transition: 'background 0.2s' }}
-                                className="legend-item"
-                            >
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: getColor(entry.name, idx), flexShrink: 0 }} />
-                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatMXN(entry.value)}</span>
-                            </div>
-                        ))}
+                    <div className="donut-legend" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {(showAll ? data : data.slice(0, VISIBLE)).map((entry, idx) => {
+                            const p = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
+                            return (
+                                <div key={entry.name} onClick={() => setSelectedCategory(entry.name)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', transition: 'background 0.15s' }}
+                                    className="legend-item"
+                                >
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: getColor(entry.name, idx), flexShrink: 0 }} />
+                                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', minWidth: '34px', textAlign: 'right' }}>{p}%</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', minWidth: '72px', textAlign: 'right' }}>{formatMXN(entry.value)}</span>
+                                </div>
+                            );
+                        })}
+
+                        {data.length > VISIBLE && (
+                            <button onClick={() => setShowAll(v => !v)}
+                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 500, padding: '7px 12px', touchAction: 'manipulation', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', marginTop: '2px' }}>
+                                {showAll ? '↑ Ver menos' : `↓ Ver ${data.length - VISIBLE} categorías más`}
+                            </button>
+                        )}
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid var(--bg-border)', paddingTop: '8px', marginTop: '2px' }}>
                             <div style={{ width: '8px', height: '8px', flexShrink: 0 }} />
                             <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Total</span>
-                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e', fontVariantNumeric: 'tabular-nums' }}>{formatMXN(total)}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', minWidth: '34px', textAlign: 'right' }}>100%</span>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e', fontVariantNumeric: 'tabular-nums', minWidth: '72px', textAlign: 'right' }}>{formatMXN(total)}</span>
                         </div>
                     </div>
                 </div>

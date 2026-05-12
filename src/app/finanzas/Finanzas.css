@@ -435,29 +435,98 @@
 
 .fin-metric-edit:hover { color: var(--text-secondary); }
 
-/* ── Action column + row ─────────────────────────────────────────── */
-.fin-actions-col {
+/* ── Action buttons — 3-level hierarchy ──────────────────────────── */
+.fin-actions-bar {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 8px;
-    margin-bottom: 14px;
 }
 
-.fin-actions-row {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
+/* Nivel 1 — primary CTA */
+.btn-fin-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    touch-action: manipulation;
+    white-space: nowrap;
 }
+.btn-fin-primary:hover { opacity: 0.88; }
+
+/* Nivel 2 — ghost secondary */
+.btn-fin-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    touch-action: manipulation;
+    white-space: nowrap;
+}
+.btn-fin-secondary:hover { background: rgba(255,255,255,0.09); }
+
+/* Nivel 3 — icon-only utility ghost */
+.btn-fin-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: none;
+    color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    touch-action: manipulation;
+    flex-shrink: 0;
+}
+.btn-fin-ghost:hover { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
 
 /* ── Period + type filters ───────────────────────────────────────── */
-.fin-period-filter { margin-bottom: 12px; }
+.fin-period-filter { overflow-x: auto; scrollbar-width: none; }
+.fin-period-filter::-webkit-scrollbar { display: none; }
+
+/* Nivel 2 — period pills: compact */
+.fin-period-filter .period-filter-btn {
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 500;
+}
 
 .fin-type-tabs {
     display: flex;
     gap: 4px;
-    margin-bottom: 20px;
     overflow-x: auto;
     padding-bottom: 2px;
+    scrollbar-width: none;
+}
+.fin-type-tabs::-webkit-scrollbar { display: none; }
+
+/* Nivel 3 — type tabs: smallest, most ghost */
+.fin-type-tabs .period-filter-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.7;
+}
+.fin-type-tabs .period-filter-btn.active {
+    opacity: 1;
 }
 
 .fin-tab-count {
@@ -479,30 +548,20 @@
     .fin-metric-card { padding: 12px; }
     .fin-metric-value { font-size: 14px; }
 
-    /* Action buttons — equal width, good tap size */
-    .fin-actions-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-        gap: 8px;
+    /* Action bar — full width, primary buttons grow */
+    .fin-actions-bar {
+        gap: 6px;
     }
-    .fin-actions-row .btn-cta-secondary,
-    .fin-actions-row .btn-cta-tertiary {
-        flex: unset;
-        min-height: 44px;
-        font-size: 12px;
-        padding: 10px 8px;
+    .btn-fin-primary,
+    .btn-fin-secondary {
+        flex: 1;
+        min-height: 40px;
+        font-size: 13px;
+        justify-content: center;
     }
-
-    /* Period filter pills compact */
-    .fin-period-filter .period-filter-btn {
-        padding: 7px 12px !important;
-        font-size: 12px !important;
-    }
-
-    /* Type tabs compact */
-    .fin-type-tabs .period-filter-btn {
-        padding: 7px 12px !important;
-        font-size: 12px !important;
+    .btn-fin-ghost {
+        width: 40px;
+        height: 40px;
     }
 
     /* Table — tighter padding, hide Cliente */

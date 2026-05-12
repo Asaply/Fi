@@ -2,13 +2,16 @@ export const CATEGORIAS_EGRESO = [
     'Restaurantes',
     'Comida y Abarrotes',
     'Transporte',
+    'Automóvil',
     'Suscripciones',
     'Transferencias',
     'Salud',
     'Entretenimiento',
     'Ropa y Accesorios',
+    'Papelería',
     'Servicios (luz, agua, internet)',
     'Educación',
+    'Inversión',
     'Otros',
 ];
 
