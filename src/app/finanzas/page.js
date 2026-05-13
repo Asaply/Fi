@@ -376,7 +376,8 @@ export default function FinanzasPage() {
                 return;
             }
 
-            const tipoCuenta = data.tipo_cuenta === 'credito' ? 'credito' : 'debito';
+            const rawTipo = String(data.tipo_cuenta || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const tipoCuenta = rawTipo.startsWith('cred') ? 'credito' : 'debito';
             const rows = (data.transactions ?? []).map((t, idx) => ({
                 _idx: idx,
                 date: t.fecha,
