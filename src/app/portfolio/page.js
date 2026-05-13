@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { Activity, TrendingUp, TrendingDown, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, Info, ArrowUpRight, ArrowDownRight, Wallet, LayoutGrid } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Modal from "@/components/Modal";
+import CurrencyInput from "@/components/CurrencyInput";
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";
 import "./Portfolio.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
@@ -709,7 +710,7 @@ export default function PortfolioHealth() {
                         </div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Precio promedio de compra (USD) *</label>
-                            <input type="number" step="any" className="form-input" required value={formData.avg_buy_price} onChange={e => setFormData({ ...formData, avg_buy_price: e.target.value })} placeholder="0.00" />
+                            <CurrencyInput className="form-input" required value={formData.avg_buy_price} onChange={e => setFormData({ ...formData, avg_buy_price: e.target.value })} placeholder="0.00" />
                         </div>
                     </div>
                     {formError && (

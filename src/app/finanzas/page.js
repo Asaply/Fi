@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, Lightbulb, AlertTriangle, Lock, ShoppingBag, RefreshCw, TrendingDown, Calendar as CalendarIcon, Target, Zap, BarChart2, Info } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Modal from "@/components/Modal";
+import CurrencyInput from "@/components/CurrencyInput";
 import PLCalendar from "@/components/PLCalendar";
 import { supabase } from "@/lib/supabaseClient";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -1754,7 +1755,7 @@ export default function FinanzasPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Monto *</label>
-                        <input type="number" className="select-filter" placeholder="0.00" step="0.01" style={{ width: '100%' }} required value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+                        <CurrencyInput className="select-filter" placeholder="0.00" style={{ width: '100%' }} required value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                         <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsModalOpen(false)}>
@@ -1839,7 +1840,7 @@ export default function FinanzasPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Monto</label>
-                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={customCardForm.monto} onChange={e => setCustomCardForm(p => ({ ...p, monto: e.target.value }))} />
+                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={customCardForm.monto} onChange={e => setCustomCardForm(p => ({ ...p, monto: e.target.value }))} />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                         <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsEditingCustomCard(false)}>Cancelar</button>
@@ -1856,7 +1857,7 @@ export default function FinanzasPage() {
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Límite de Crédito</label>
-                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="Ej: 50000" step="0.01" value={creditConfig.limit} onChange={e => setCreditConfig(p => ({ ...p, limit: e.target.value }))} required />
+                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="Ej: 50,000" value={creditConfig.limit} onChange={e => setCreditConfig(p => ({ ...p, limit: e.target.value }))} required />
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
@@ -1870,15 +1871,15 @@ export default function FinanzasPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Saldo al corte</label>
-                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.statementBalance} onChange={e => setCreditConfig(p => ({ ...p, statementBalance: e.target.value }))} />
+                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.statementBalance} onChange={e => setCreditConfig(p => ({ ...p, statementBalance: e.target.value }))} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago mínimo</label>
-                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.pagoMinimo || ''} onChange={e => setCreditConfig(p => ({ ...p, pagoMinimo: e.target.value }))} />
+                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.pagoMinimo || ''} onChange={e => setCreditConfig(p => ({ ...p, pagoMinimo: e.target.value }))} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago para no generar intereses</label>
-                        <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="0.00" step="0.01" value={creditConfig.noInterestPayment} onChange={e => setCreditConfig(p => ({ ...p, noInterestPayment: e.target.value }))} />
+                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.noInterestPayment} onChange={e => setCreditConfig(p => ({ ...p, noInterestPayment: e.target.value }))} />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                         <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsEditingCreditConfig(false)}>Cancelar</button>

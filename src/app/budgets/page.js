@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronUp, Check, Target } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Modal from '@/components/Modal';
+import CurrencyInput from '@/components/CurrencyInput';
 import { toast } from 'sonner';
 import './Budgets.css';
 
@@ -220,10 +221,9 @@ export default function BudgetsPage() {
                     </div>
                     <div>
                         <label className="form-label">Meta total *</label>
-                        <input
+                        <CurrencyInput
                             className="form-input"
-                            type="number"
-                            placeholder="Ej: 120000"
+                            placeholder="Ej: 120,000"
                             value={budgetForm.target}
                             onChange={e => setBudgetForm(f => ({ ...f, target: e.target.value }))}
                         />
@@ -274,10 +274,9 @@ export default function BudgetsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
                         <label className="form-label">Monto *</label>
-                        <input
+                        <CurrencyInput
                             className="form-input"
-                            type="number"
-                            placeholder="Ej: 2500"
+                            placeholder="Ej: 2,500"
                             value={paymentForm.amount}
                             onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
                             autoFocus

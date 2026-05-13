@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, LineChart, Target, DollarSign, TrendingUp } from "lucide-react";
 import Modal from "@/components/Modal";
+import CurrencyInput from "@/components/CurrencyInput";
 import PLCalendar from "@/components/PLCalendar";
 import { supabase } from "@/lib/supabaseClient";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -396,7 +397,7 @@ export default function TradingPage() {
                         </div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Dinero Invertido ($) *</label>
-                            <input type="number" step="0.01" className="select-filter" placeholder="100.00" style={{ width: '100%' }} required value={formData.invested_amount} onChange={e => setFormData({ ...formData, invested_amount: e.target.value })} />
+                            <CurrencyInput className="select-filter" placeholder="100.00" style={{ width: '100%' }} required value={formData.invested_amount} onChange={e => setFormData({ ...formData, invested_amount: e.target.value })} />
                         </div>
                     </div>
 
@@ -413,7 +414,7 @@ export default function TradingPage() {
                     {formData.status === 'Cerrado' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>P&L (Monto Ganado ó -Perdido) *</label>
-                            <input type="number" step="any" className="select-filter" placeholder="Ej. 50.00 ó -20.00" style={{ width: '100%' }} required={formData.status === 'Cerrado'} value={formData.pnl} onChange={e => {
+                            <CurrencyInput allowNegative className="select-filter" placeholder="Ej. 50.00 ó -20.00" style={{ width: '100%' }} required={formData.status === 'Cerrado'} value={formData.pnl} onChange={e => {
                                 const val = e.target.value;
                                 const num = parseFloat(val);
                                 let newOutcome = formData.outcome;
