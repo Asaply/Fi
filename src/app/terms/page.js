@@ -41,7 +41,7 @@ export default function TermsPage() {
 
                     <section className={styles.section}>
                         <h2 className={styles.h2}>4. Cuenta de usuario</h2>
-                        <p className={styles.p}>Eres responsable de mantener la confidencialidad de tus credenciales de acceso (email, contraseña, PIN). Cualquier actividad realizada desde tu cuenta es tu responsabilidad. Notifícanos de inmediato si sospechas acceso no autorizado a <a className={styles.a} href="mailto:soporte@nva.app">soporte@nva.app</a>.</p>
+                        <p className={styles.p}>Eres responsable de mantener la confidencialidad de tus credenciales de acceso (email, contraseña, PIN). Cualquier actividad realizada desde tu cuenta es tu responsabilidad. Notifícanos de inmediato si sospechas acceso no autorizado a <a className={styles.a} href="mailto:soporte@nva.lat">soporte@nva.lat</a>.</p>
                     </section>
 
                     <section className={styles.section}>
@@ -99,7 +99,7 @@ export default function TermsPage() {
 
                     <section className={styles.section}>
                         <h2 className={styles.h2}>12. Contacto</h2>
-                        <p className={styles.p}>Preguntas sobre estos Términos: <a className={styles.a} href="mailto:soporte@nva.app">soporte@nva.app</a></p>
+                        <p className={styles.p}>Preguntas sobre estos Términos: <a className={styles.a} href="mailto:soporte@nva.lat">soporte@nva.lat</a></p>
                     </section>
                 </div>
 

@@ -267,6 +267,8 @@
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .auth-input::placeholder {
@@ -275,6 +277,16 @@
 
 .auth-input:focus {
     border-color: rgba(255,255,255,0.25);
+}
+
+/* iOS Safari autofill override */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #1a1a1a inset;
+    -webkit-text-fill-color: #fff;
+    border-color: rgba(255,255,255,0.25);
+    caret-color: #fff;
 }
 
 .auth-input-wrap {
@@ -323,6 +335,8 @@
     letter-spacing: -0.2px;
     margin-top: 4px;
     transition: opacity 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .auth-btn-primary:hover:not(:disabled) { opacity: 0.88; }
