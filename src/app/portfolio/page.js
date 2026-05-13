@@ -633,25 +633,6 @@ export default function PortfolioHealth() {
                         )}
                     </div>
 
-                    {/* 6. DIVIDENDOS ESTIMADOS */}
-                    <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                        <div>
-                            <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 600 }}>Dividendos Estimados</h3>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
-                                Rendimiento anual estimado sobre acciones y ETFs con dividendo
-                            </p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '32px' }}>
-                            <div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Rendimiento est.</div>
-                                <div style={{ fontSize: '22px', fontWeight: 700 }}>{enrichedAssets.length > 0 ? '1.8%' : '0%'}</div>
-                            </div>
-                            <div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Retorno anual</div>
-                                <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--success)' }}>{formatCurrency(totalValue * 0.018)}</div>
-                            </div>
-                        </div>
-                    </div>
                 </>
             )}
 
