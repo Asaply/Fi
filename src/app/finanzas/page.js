@@ -204,6 +204,7 @@ export default function FinanzasPage() {
     const [showPdfPassword, setShowPdfPassword] = useState(false);
     const [pdfPassword, setPdfPassword] = useState('');
     const [pdfPasswordError, setPdfPasswordError] = useState(false);
+    const [accountTypeMismatch, setAccountTypeMismatch] = useState(null); // { detectedType, pendingData }
     const fileInputRef = useRef(null);
 
     // Credit Mode Config State
@@ -434,6 +435,12 @@ export default function FinanzasPage() {
                     setBankBalance(balanceData);
                 }
             } catch (_) {}
+            // Warn if statement type doesn't match the active tab
+            const expectedType = accountType === 'credit' ? 'credito' : 'debito';
+            if (tipoCuenta !== expectedType) {
+                setAccountTypeMismatch({ detectedType: tipoCuenta, rows, bankInfo: { banco: data.bank || 'Banco', tipo_cuenta: tipoCuenta, saldo_anterior: data.saldo_anterior || 0, saldo_final: data.saldo_final || 0, periodo: data.periodo || '' } });
+                return;
+            }
             setImportStep(2);
             toast.success(`${rows.length} transacciones detectadas de ${data.bank || 'tu banco'}.`);
         } catch (err) {
@@ -1778,6 +1785,51 @@ export default function FinanzasPage() {
                         </button>
                         <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmDelete}>
                             Eliminar
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* ── Account type mismatch warning ── */}
+            <Modal isOpen={!!accountTypeMismatch} onClose={() => setAccountTypeMismatch(null)} title="⚠️ Sección incorrecta">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ padding: '14px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px' }}>
+                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#ef4444' }}>
+                            Estado de cuenta incorrecto
+                        </p>
+                        <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                            Detectamos que este archivo es de una cuenta de{' '}
+                            <strong style={{ color: 'var(--text-primary)' }}>
+                                {accountTypeMismatch?.detectedType === 'credito' ? 'Crédito' : 'Débito'}
+                            </strong>
+                            {' '}pero estás en la sección de{' '}
+                            <strong style={{ color: 'var(--text-primary)' }}>
+                                {accountType === 'credit' ? 'Crédito' : 'Débito'}
+                            </strong>.
+                        </p>
+                        <p style={{ margin: '8px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            Banco detectado: <strong style={{ color: 'var(--text-primary)' }}>{accountTypeMismatch?.bankInfo?.banco}</strong>
+                        </p>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        Cambia a la pestaña correcta antes de importar, o continúa si estás seguro.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                        <button className="btn-secondary" onClick={() => setAccountTypeMismatch(null)}>
+                            Cancelar
+                        </button>
+                        <button
+                            className="btn-primary"
+                            style={{ background: 'var(--danger)' }}
+                            onClick={() => {
+                                setPendingRows(accountTypeMismatch.rows);
+                                setPdfBankInfo(accountTypeMismatch.bankInfo);
+                                setAccountTypeMismatch(null);
+                                setImportStep(2);
+                                toast.warning('Importando en sección incorrecta — verifica tus datos.');
+                            }}
+                        >
+                            Continuar de todas formas
                         </button>
                     </div>
                 </div>
