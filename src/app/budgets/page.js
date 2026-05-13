@@ -140,7 +140,7 @@ export default function BudgetsPage() {
                         Rastrea pagos hacia una meta financiera
                     </p>
                 </div>
-                <button className="btn-fin-primary" onClick={() => setShowNewBudget(true)}>
+                <button className="btn-primary" onClick={() => setShowNewBudget(true)}>
                     <Plus size={14} /> Nuevo
                 </button>
             </div>
@@ -156,7 +156,7 @@ export default function BudgetsPage() {
                     <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--text-muted)' }}>
                         Crea uno para rastrear pagos hacia una meta: deuda, ahorro, viaje…
                     </p>
-                    <button className="btn-fin-primary" onClick={() => setShowNewBudget(true)}>
+                    <button className="btn-primary" onClick={() => setShowNewBudget(true)}>
                         <Plus size={14} /> Crear presupuesto
                     </button>
                 </div>
@@ -257,9 +257,9 @@ export default function BudgetsPage() {
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                        <button className="btn-fin-secondary" onClick={() => setShowNewBudget(false)}>Cancelar</button>
+                        <button className="btn-secondary" onClick={() => setShowNewBudget(false)}>Cancelar</button>
                         <button
-                            className="btn-fin-primary"
+                            className="btn-primary"
                             onClick={handleCreateBudget}
                             disabled={saving || !budgetForm.name.trim() || !budgetForm.target}
                         >
@@ -301,9 +301,9 @@ export default function BudgetsPage() {
                         />
                     </div>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button className="btn-fin-secondary" onClick={() => setShowPayment(null)}>Cancelar</button>
+                        <button className="btn-secondary" onClick={() => setShowPayment(null)}>Cancelar</button>
                         <button
-                            className="btn-fin-primary"
+                            className="btn-primary"
                             onClick={handleAddPayment}
                             disabled={saving || !paymentForm.amount}
                         >
@@ -320,8 +320,8 @@ export default function BudgetsPage() {
                         Se eliminará <strong>"{showDeleteBudget?.name}"</strong> y todos sus pagos. Esta acción no se puede deshacer.
                     </p>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button className="btn-fin-secondary" onClick={() => setShowDeleteBudget(null)}>Cancelar</button>
-                        <button className="btn-fin-primary" style={{ background: 'var(--danger)' }} onClick={handleDeleteBudget}>Eliminar</button>
+                        <button className="btn-secondary" onClick={() => setShowDeleteBudget(null)}>Cancelar</button>
+                        <button className="btn-primary" style={{ background: 'var(--danger)' }} onClick={handleDeleteBudget}>Eliminar</button>
                     </div>
                 </div>
             </Modal>
@@ -333,8 +333,8 @@ export default function BudgetsPage() {
                         Se eliminará el pago de <strong>{formatMXN(showDeletePayment?.payment?.amount)}</strong>. Esta acción no se puede deshacer.
                     </p>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button className="btn-fin-secondary" onClick={() => setShowDeletePayment(null)}>Cancelar</button>
-                        <button className="btn-fin-primary" style={{ background: 'var(--danger)' }} onClick={handleDeletePayment}>Eliminar</button>
+                        <button className="btn-secondary" onClick={() => setShowDeletePayment(null)}>Cancelar</button>
+                        <button className="btn-primary" style={{ background: 'var(--danger)' }} onClick={handleDeletePayment}>Eliminar</button>
                     </div>
                 </div>
             </Modal>
@@ -418,7 +418,7 @@ function BudgetCard({ budget, payments, paid, pct, complete, expanded, onToggle,
                         </button>
                     )}
                 </div>
-                <button className="btn-fin-secondary" onClick={onPay} style={{ fontSize: '12px', padding: '6px 12px' }}>
+                <button className="btn-secondary" onClick={onPay} style={{ fontSize: '12px', padding: '6px 12px' }}>
                     <Plus size={12} /> Pago
                 </button>
             </div>
