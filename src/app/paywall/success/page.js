@@ -1,42 +1,64 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import styles from '../paywall.module.css';
 
-export default function PaywallSuccessPage() {
+function SuccessContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [status, setStatus] = useState('verifying'); // verifying | active | waiting
 
     useEffect(() => {
-        let attempts = 0;
+        const paymentId = searchParams.get('payment_id');
 
-        async function check() {
+        async function activate() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) { router.replace('/login'); return; }
 
-            // Refresh session to get updated metadata from webhook
-            await supabase.auth.refreshSession();
-            const { data: { user: refreshed } } = await supabase.auth.getUser();
-
-            if (refreshed?.user_metadata?.subscription_status === 'active') {
-                setStatus('active');
-                setTimeout(() => router.replace('/finanzas'), 2000);
-                return;
+            // 1. If MP gave us a payment_id, verify directly (immediate activation)
+            if (paymentId) {
+                try {
+                    const res = await fetch(`/api/mp/verify-payment?payment_id=${paymentId}`);
+                    const json = await res.json();
+                    if (json.activated) {
+                        // Refresh local session so middleware picks up new metadata
+                        await supabase.auth.refreshSession();
+                        setStatus('active');
+                        setTimeout(() => router.replace('/finanzas'), 2000);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('[success] verify-payment error:', e);
+                }
             }
 
-            // Webhook might take a few seconds — retry up to 10 times
-            attempts++;
-            if (attempts < 10) {
-                setTimeout(check, 1500);
-            } else {
-                setStatus('waiting');
+            // 2. Fallback: poll refreshSession (webhook may have already fired)
+            let attempts = 0;
+            async function poll() {
+                await supabase.auth.refreshSession();
+                const { data: { user: refreshed } } = await supabase.auth.getUser();
+
+                if (refreshed?.user_metadata?.subscription_status === 'active') {
+                    setStatus('active');
+                    setTimeout(() => router.replace('/finanzas'), 2000);
+                    return;
+                }
+
+                attempts++;
+                if (attempts < 5) {
+                    setTimeout(poll, 2000);
+                } else {
+                    setStatus('waiting');
+                }
             }
+
+            poll();
         }
 
-        check();
-    }, [router]);
+        activate();
+    }, [router, searchParams]);
 
     return (
         <div className={styles.root}>
@@ -79,5 +101,13 @@ export default function PaywallSuccessPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function PaywallSuccessPage() {
+    return (
+        <Suspense>
+            <SuccessContent />
+        </Suspense>
     );
 }
