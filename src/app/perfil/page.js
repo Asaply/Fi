@@ -92,7 +92,8 @@ export default function PerfilPage() {
     const handlePasswordReset = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user?.email) return;
-        await supabase.auth.resetPasswordForEmail(user.email);
+        const redirectTo = `${window.location.origin}/auth/callback?next=/auth/reset-password`;
+        await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
         toast.success('Enlace de cambio de contraseña enviado a tu correo.');
     };
 

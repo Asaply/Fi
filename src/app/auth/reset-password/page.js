@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import '@/app/login/Login.css';
 
 function getPasswordStrength(password) {
     let score = 0;
@@ -26,6 +27,22 @@ export default function ResetPasswordPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [done, setDone] = useState(false);
+    const [ready, setReady] = useState(false);
+
+    // Handle both PKCE (code already exchanged by /auth/callback) and implicit flow
+    // (access_token in URL hash). In both cases, onAuthStateChange fires PASSWORD_RECOVERY.
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+            if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+                setReady(true);
+            }
+        });
+        // Also check for existing session (callback already exchanged the code)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) setReady(true);
+        });
+        return () => subscription.unsubscribe();
+    }, []);
 
     const strength = getPasswordStrength(password);
 
@@ -43,6 +60,20 @@ export default function ResetPasswordPage() {
             setTimeout(() => router.push('/finanzas'), 2500);
         }
         setIsLoading(false);
+    }
+
+    if (!ready) {
+        return (
+            <div className="login-root">
+                <div className="login-panel lp-visible">
+                    <div className="lp-form">
+                        <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '40px 0' }}>
+                            Verificando enlace...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (

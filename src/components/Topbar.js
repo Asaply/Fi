@@ -116,7 +116,7 @@ export default function Topbar() {
                         <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Escríbenos directamente y nuestro equipo de soporte te responderá en breve.</p>
                         <div style={{ marginTop: '12px', fontSize: '14px' }}>
                             <span style={{ color: 'var(--text-secondary)' }}>Email: </span>
-                            <a href="mailto:soporte@nva.app" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>soporte@nva.app</a>
+                            <a href="mailto:soporte@nva.lat" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>soporte@nva.lat</a>
                         </div>
                     </div>
 
@@ -136,7 +136,7 @@ export default function Topbar() {
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button className="btn-secondary" onClick={() => setIsSupportModalOpen(false)}>Cerrar</button>
                             <a
-                                href={`mailto:soporte@nva.app?subject=Soporte NVA v1.0.0&body=${encodeURIComponent(supportMessage)}`}
+                                href={`mailto:soporte@nva.lat?subject=Soporte NVA v1.0.0&body=${encodeURIComponent(supportMessage)}`}
                                 className="btn-primary"
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
                                 onClick={() => setIsSupportModalOpen(false)}

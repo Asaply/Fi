@@ -20,7 +20,7 @@ export default function PrivacyPage() {
                     <section className={styles.section}>
                         <h2 className={styles.h2}>1. Responsable del tratamiento</h2>
                         <p className={styles.p}>NVA Finance ("NVA", "nosotros") es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) de México.</p>
-                        <p className={styles.p}>Contacto: <a className={styles.a} href="mailto:soporte@nva.app">soporte@nva.app</a></p>
+                        <p className={styles.p}>Contacto: <a className={styles.a} href="mailto:soporte@nva.lat">soporte@nva.lat</a></p>
                     </section>
 
                     <section className={styles.section}>
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
                             <li className={styles.li}><strong className={styles.strong}>Cancelación:</strong> Eliminar tus datos (puedes hacerlo directamente desde Perfil → Eliminar cuenta).</li>
                             <li className={styles.li}><strong className={styles.strong}>Oposición:</strong> Oponerte a tratamientos específicos.</li>
                         </ul>
-                        <p className={styles.p}>Para ejercer tus derechos ARCO: <a className={styles.a} href="mailto:soporte@nva.app">soporte@nva.app</a>. Respondemos en un plazo máximo de 20 días hábiles.</p>
+                        <p className={styles.p}>Para ejercer tus derechos ARCO: <a className={styles.a} href="mailto:soporte@nva.lat">soporte@nva.lat</a>. Respondemos en un plazo máximo de 20 días hábiles.</p>
                     </section>
 
                     <section className={styles.section}>
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
 
                     <section className={styles.section}>
                         <h2 className={styles.h2}>13. Contacto</h2>
-                        <p className={styles.p}>Dudas o solicitudes sobre privacidad: <a className={styles.a} href="mailto:soporte@nva.app">soporte@nva.app</a></p>
+                        <p className={styles.p}>Dudas o solicitudes sobre privacidad: <a className={styles.a} href="mailto:soporte@nva.lat">soporte@nva.lat</a></p>
                     </section>
                 </div>
 
