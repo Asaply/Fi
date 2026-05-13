@@ -107,18 +107,23 @@ export default function DashboardPage() {
                     }
                 }
 
-                // Debit cards — load saldo from localStorage per-card bank balance keys
-                // Only include entries explicitly tagged as 'debito' (credit imports now tag account_type)
+                // Debit cards — derive bank list from Supabase (all-time), then fetch balance from localStorage
+                const { data: debitBankRows } = await supabase
+                    .from('transactions')
+                    .select('bank')
+                    .eq('user_id', uid)
+                    .eq('account_type', 'debito')
+                    .not('bank', 'is', null)
+                    .neq('bank', 'Desconocido');
+                const debitBankSet = new Set((debitBankRows || []).map(r => r.bank).filter(Boolean));
                 const debitCards = [];
-                const allKeys = Object.keys(localStorage);
-                for (const key of allKeys) {
-                    if (key.startsWith(`nva_bank_balance_${uid}_`)) {
-                        try {
-                            const bb = JSON.parse(localStorage.getItem(key));
-                            if (bb?.banco && bb.banco !== 'Banco' && bb.account_type !== 'credito') {
-                                debitCards.push(bb);
-                            }
-                        } catch (_) {}
+                for (const bank of debitBankSet) {
+                    const key = `nva_bank_balance_${uid}_${bank.toLowerCase().replace(/\s+/g, '_')}`;
+                    try {
+                        const bb = JSON.parse(localStorage.getItem(key) || 'null');
+                        debitCards.push(bb || { banco: bank, saldo_anterior: 0, saldo_final: 0, periodo: '' });
+                    } catch (_) {
+                        debitCards.push({ banco: bank, saldo_anterior: 0, saldo_final: 0, periodo: '' });
                     }
                 }
 
