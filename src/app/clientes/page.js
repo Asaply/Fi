@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Calendar, Mail, Phone, Link as LinkIcon, Edit2, Trash2, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/Modal";
+import CurrencyInput from "@/components/CurrencyInput";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import "./Clientes.css";
@@ -296,7 +297,7 @@ export default function ClientesPage() {
                         </div>
                         <div className="detail-item">
                             <span className="detail-label">Precio Total del Proyecto (MXN)</span>
-                            <input type="number" className="select-filter" placeholder="0.00" step="0.01" min="0" value={formData.total_price} onChange={e => setFormData({ ...formData, total_price: e.target.value })} />
+                            <CurrencyInput className="select-filter" placeholder="0.00" value={formData.total_price} onChange={e => setFormData({ ...formData, total_price: e.target.value })} />
                         </div>
                         <div className="detail-item">
                             <span className="detail-label">Fecha de Inicio</span>
