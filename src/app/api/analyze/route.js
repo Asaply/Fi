@@ -269,7 +269,10 @@ export async function POST(request) {
 
         const insights = buildInsights(transactions);
 
-        const tipoCuenta = parsed.tipo_cuenta === 'credito' ? 'credito' : 'debito';
+        // Normalize tipo_cuenta — AI may return "crédito" (accent) or "credit" etc.
+        const rawTipo = String(parsed.tipo_cuenta || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents
+        const tipoCuenta = rawTipo.startsWith('cred') ? 'credito' : 'debito';
         const ci = parsed.credito_info || {};
 
         return NextResponse.json({
