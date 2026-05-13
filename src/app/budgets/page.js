@@ -7,6 +7,13 @@ import CurrencyInput from '@/components/CurrencyInput';
 import { toast } from 'sonner';
 import './Budgets.css';
 
+const EMOJIS = [
+    '🏠','🚗','✈️','💰','🎓','🏥','💳','📱',
+    '🏋️','🍔','🎮','🛍️','💎','🌴','📊','🎯',
+    '🔧','🐶','👶','💊','🏦','🎁','🚀','⭐',
+    '🔑','🎨','📚','🌱','💻','🏊','🍕','🎵',
+];
+
 const COLORS = [
     { value: '#FF7A1A', label: 'Naranja' },
     { value: '#3b82f6', label: 'Azul' },
@@ -38,8 +45,8 @@ export default function BudgetsPage() {
     const [showEditBudget, setShowEditBudget] = useState(null); // budget object
 
     // Forms
-    const [budgetForm, setBudgetForm] = useState({ name: '', target: '', color: '#FF7A1A', description: '' });
-    const [editForm, setEditForm] = useState({ name: '', target: '', color: '#FF7A1A', description: '' });
+    const [budgetForm, setBudgetForm] = useState({ name: '', target: '', color: '#FF7A1A', icon: '', description: '' });
+    const [editForm, setEditForm] = useState({ name: '', target: '', color: '#FF7A1A', icon: '', description: '' });
     const [paymentForm, setPaymentForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], note: '' });
     const [saving, setSaving] = useState(false);
 
@@ -75,13 +82,14 @@ export default function BudgetsPage() {
             name: budgetForm.name.trim(),
             target_amount: parseFloat(budgetForm.target),
             color: budgetForm.color,
+            icon: budgetForm.icon || null,
             description: budgetForm.description.trim() || null,
         });
         setSaving(false);
         if (error) { toast.error('Error al crear el presupuesto.'); return; }
         toast.success('Presupuesto creado.');
         setShowNewBudget(false);
-        setBudgetForm({ name: '', target: '', color: '#FF7A1A', description: '' });
+        setBudgetForm({ name: '', target: '', color: '#FF7A1A', icon: '', description: '' });
         load();
     };
 
@@ -133,6 +141,7 @@ export default function BudgetsPage() {
             name: editForm.name.trim(),
             target_amount: parseFloat(editForm.target),
             color: editForm.color,
+            icon: editForm.icon || null,
             description: editForm.description.trim() || null,
         }).eq('id', showEditBudget.id);
         setSaving(false);
@@ -194,7 +203,7 @@ export default function BudgetsPage() {
                                     onToggle={() => setExpanded(e => ({ ...e, [b.id]: !e[b.id] }))}
                                     onPay={() => { setShowPayment(b); setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], note: '' }); }}
                                     onDelete={() => setShowDeleteBudget(b)}
-                                    onEdit={() => { setShowEditBudget(b); setEditForm({ name: b.name, target: String(b.target_amount), color: b.color, description: b.description || '' }); }}
+                                    onEdit={() => { setShowEditBudget(b); setEditForm({ name: b.name, target: String(b.target_amount), color: b.color, icon: b.icon || '', description: b.description || '' }); }}
                                     onDeletePayment={(p) => setShowDeletePayment({ payment: p, budgetId: b.id })}
                                 />
                             ))}
@@ -218,7 +227,7 @@ export default function BudgetsPage() {
                                     onToggle={() => setExpanded(e => ({ ...e, [b.id]: !e[b.id] }))}
                                     onPay={() => { setShowPayment(b); setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], note: '' }); }}
                                     onDelete={() => setShowDeleteBudget(b)}
-                                    onEdit={() => { setShowEditBudget(b); setEditForm({ name: b.name, target: String(b.target_amount), color: b.color, description: b.description || '' }); }}
+                                    onEdit={() => { setShowEditBudget(b); setEditForm({ name: b.name, target: String(b.target_amount), color: b.color, icon: b.icon || '', description: b.description || '' }); }}
                                     onDeletePayment={(p) => setShowDeletePayment({ payment: p, budgetId: b.id })}
                                 />
                             ))}
@@ -259,8 +268,26 @@ export default function BudgetsPage() {
                         />
                     </div>
                     <div>
+                        <label className="form-label">Ícono (opcional)</label>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {EMOJIS.map(e => (
+                                <button
+                                    key={e}
+                                    onClick={() => setBudgetForm(f => ({ ...f, icon: f.icon === e ? '' : e }))}
+                                    style={{
+                                        width: '36px', height: '36px', borderRadius: '8px', fontSize: '18px',
+                                        background: budgetForm.icon === e ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                                        border: budgetForm.icon === e ? '1.5px solid rgba(255,255,255,0.4)' : '1.5px solid transparent',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        transition: 'all 0.12s',
+                                    }}
+                                >{e}</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
                         <label className="form-label">Color</label>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '6px' }}>
                             {COLORS.map(c => (
                                 <button
                                     key={c.value}
@@ -380,8 +407,26 @@ export default function BudgetsPage() {
                         />
                     </div>
                     <div>
+                        <label className="form-label">Ícono (opcional)</label>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {EMOJIS.map(e => (
+                                <button
+                                    key={e}
+                                    onClick={() => setEditForm(f => ({ ...f, icon: f.icon === e ? '' : e }))}
+                                    style={{
+                                        width: '36px', height: '36px', borderRadius: '8px', fontSize: '18px',
+                                        background: editForm.icon === e ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                                        border: editForm.icon === e ? '1.5px solid rgba(255,255,255,0.4)' : '1.5px solid transparent',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        transition: 'all 0.12s',
+                                    }}
+                                >{e}</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
                         <label className="form-label">Color</label>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '6px' }}>
                             {COLORS.map(c => (
                                 <button
                                     key={c.value}
@@ -439,7 +484,9 @@ function BudgetCard({ budget, payments, paid, pct, complete, expanded, onToggle,
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {complete
                             ? <Check size={18} color={color} strokeWidth={2.5} />
-                            : <Target size={18} color={color} strokeWidth={1.8} />
+                            : budget.icon
+                                ? <span style={{ fontSize: '18px', lineHeight: 1 }}>{budget.icon}</span>
+                                : <Target size={18} color={color} strokeWidth={1.8} />
                         }
                     </div>
                     <div>

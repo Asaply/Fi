@@ -99,7 +99,8 @@ export default function Recordatorios() {
             amount: form.amount ? parseFloat(form.amount) : null,
         };
         const { data, error } = await supabase.from('reminders').insert([payload]).select();
-        if (!error && data?.[0]) {
+        if (error) { toast.error('Error: ' + error.message); return; }
+        if (data?.[0]) {
             setReminders(prev => [...prev, data[0]].sort((a, b) => a.date.localeCompare(b.date)));
             setIsModalOpen(false);
             setForm({ title: '', description: '', date: selectedDate, time: '', color: '#3B82F6', repeat_monthly: false, budget_id: '', amount: '' });
