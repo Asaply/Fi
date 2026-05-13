@@ -108,13 +108,16 @@ export default function DashboardPage() {
                 }
 
                 // Debit cards — load saldo from localStorage per-card bank balance keys
+                // Only include entries explicitly tagged as 'debito' (credit imports now tag account_type)
                 const debitCards = [];
                 const allKeys = Object.keys(localStorage);
                 for (const key of allKeys) {
                     if (key.startsWith(`nva_bank_balance_${uid}_`)) {
                         try {
                             const bb = JSON.parse(localStorage.getItem(key));
-                            if (bb?.banco && bb.banco !== 'Banco') debitCards.push(bb);
+                            if (bb?.banco && bb.banco !== 'Banco' && bb.account_type !== 'credito') {
+                                debitCards.push(bb);
+                            }
                         } catch (_) {}
                     }
                 }
