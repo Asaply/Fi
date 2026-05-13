@@ -428,6 +428,7 @@ export default function FinanzasPage() {
                         saldo_anterior: data.saldo_anterior || 0,
                         saldo_final: data.saldo_final || 0,
                         periodo: data.periodo || '',
+                        account_type: tipoCuenta,
                         updated_at: new Date().toISOString(),
                     };
                     const bankKey = `nva_bank_balance_${user.id}_${(data.bank || 'global').toLowerCase().replace(/\s+/g, '_')}`;
