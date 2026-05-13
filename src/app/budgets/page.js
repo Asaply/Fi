@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronUp, Check, Target } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Check, Target, Edit2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Modal from '@/components/Modal';
 import CurrencyInput from '@/components/CurrencyInput';
@@ -35,9 +35,11 @@ export default function BudgetsPage() {
     const [showPayment, setShowPayment] = useState(null); // budget object
     const [showDeleteBudget, setShowDeleteBudget] = useState(null);
     const [showDeletePayment, setShowDeletePayment] = useState(null); // { payment, budgetId }
+    const [showEditBudget, setShowEditBudget] = useState(null); // budget object
 
     // Forms
     const [budgetForm, setBudgetForm] = useState({ name: '', target: '', color: '#FF7A1A', description: '' });
+    const [editForm, setEditForm] = useState({ name: '', target: '', color: '#FF7A1A', description: '' });
     const [paymentForm, setPaymentForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], note: '' });
     const [saving, setSaving] = useState(false);
 
@@ -123,6 +125,23 @@ export default function BudgetsPage() {
         load();
     };
 
+    /* ── Update budget ── */
+    const handleUpdateBudget = async () => {
+        if (!editForm.name.trim() || !editForm.target || !showEditBudget) return;
+        setSaving(true);
+        const { error } = await supabase.from('budgets').update({
+            name: editForm.name.trim(),
+            target_amount: parseFloat(editForm.target),
+            color: editForm.color,
+            description: editForm.description.trim() || null,
+        }).eq('id', showEditBudget.id);
+        setSaving(false);
+        if (error) { toast.error('Error al actualizar.'); return; }
+        toast.success('Presupuesto actualizado.');
+        setShowEditBudget(null);
+        load();
+    };
+
     const getPaid = (id) => (payments[id] || []).reduce((s, p) => s + Number(p.amount), 0);
     const getPct = (b) => Math.min(100, (getPaid(b.id) / b.target_amount) * 100);
     const isComplete = (b) => getPaid(b.id) >= b.target_amount;
@@ -175,6 +194,7 @@ export default function BudgetsPage() {
                                     onToggle={() => setExpanded(e => ({ ...e, [b.id]: !e[b.id] }))}
                                     onPay={() => { setShowPayment(b); setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], note: '' }); }}
                                     onDelete={() => setShowDeleteBudget(b)}
+                                    onEdit={() => { setShowEditBudget(b); setEditForm({ name: b.name, target: String(b.target_amount), color: b.color, description: b.description || '' }); }}
                                     onDeletePayment={(p) => setShowDeletePayment({ payment: p, budgetId: b.id })}
                                 />
                             ))}
@@ -198,6 +218,7 @@ export default function BudgetsPage() {
                                     onToggle={() => setExpanded(e => ({ ...e, [b.id]: !e[b.id] }))}
                                     onPay={() => { setShowPayment(b); setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], note: '' }); }}
                                     onDelete={() => setShowDeleteBudget(b)}
+                                    onEdit={() => { setShowEditBudget(b); setEditForm({ name: b.name, target: String(b.target_amount), color: b.color, description: b.description || '' }); }}
                                     onDeletePayment={(p) => setShowDeletePayment({ payment: p, budgetId: b.id })}
                                 />
                             ))}
@@ -327,6 +348,69 @@ export default function BudgetsPage() {
             </Modal>
 
             {/* ── Modal: Confirmar eliminar pago ── */}
+            {/* ── Modal: Editar presupuesto ── */}
+            <Modal isOpen={!!showEditBudget} onClose={() => setShowEditBudget(null)} title="Editar presupuesto">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                        <label className="form-label">Nombre *</label>
+                        <input
+                            className="form-input"
+                            placeholder="Ej: Deuda de auto"
+                            value={editForm.name}
+                            onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                            autoFocus
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Meta total *</label>
+                        <CurrencyInput
+                            className="form-input"
+                            placeholder="Ej: 120,000"
+                            value={editForm.target}
+                            onChange={e => setEditForm(f => ({ ...f, target: e.target.value }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Descripción (opcional)</label>
+                        <input
+                            className="form-input"
+                            placeholder="Notas adicionales"
+                            value={editForm.description}
+                            onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Color</label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {COLORS.map(c => (
+                                <button
+                                    key={c.value}
+                                    onClick={() => setEditForm(f => ({ ...f, color: c.value }))}
+                                    style={{
+                                        width: '28px', height: '28px', borderRadius: '50%',
+                                        background: c.value, border: 'none', cursor: 'pointer',
+                                        outline: editForm.color === c.value ? `3px solid ${c.value}` : 'none',
+                                        outlineOffset: '2px',
+                                        transform: editForm.color === c.value ? 'scale(1.15)' : 'scale(1)',
+                                        transition: 'all 0.15s',
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                        <button className="btn-secondary" onClick={() => setShowEditBudget(null)}>Cancelar</button>
+                        <button
+                            className="btn-primary"
+                            onClick={handleUpdateBudget}
+                            disabled={saving || !editForm.name.trim() || !editForm.target}
+                        >
+                            {saving ? 'Guardando…' : 'Guardar'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
             <Modal isOpen={!!showDeletePayment} onClose={() => setShowDeletePayment(null)} title="Eliminar pago">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
@@ -342,7 +426,7 @@ export default function BudgetsPage() {
     );
 }
 
-function BudgetCard({ budget, payments, paid, pct, complete, expanded, onToggle, onPay, onDelete, onDeletePayment }) {
+function BudgetCard({ budget, payments, paid, pct, complete, expanded, onToggle, onPay, onDelete, onEdit, onDeletePayment }) {
     const remaining = Math.max(0, budget.target_amount - paid);
     const lastPayment = payments[0];
     const color = complete ? '#22c55e' : budget.color;
@@ -363,12 +447,20 @@ function BudgetCard({ budget, payments, paid, pct, complete, expanded, onToggle,
                         {budget.description && <p style={{ margin: '1px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>{budget.description}</p>}
                     </div>
                 </div>
-                <button
-                    onClick={onDelete}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '6px' }}
-                >
-                    <Trash2 size={14} />
-                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                        onClick={onEdit}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '6px' }}
+                    >
+                        <Edit2 size={14} />
+                    </button>
+                    <button
+                        onClick={onDelete}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '6px' }}
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
             </div>
 
             {/* Amounts */}
