@@ -1,5 +1,5 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -8,27 +8,30 @@ import styles from '../paywall.module.css';
 function SuccessContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [status, setStatus] = useState('verifying'); // verifying | active | waiting
+    // status: 'activating' | 'active' | 'manual'
+    const [status, setStatus] = useState('activating');
+    const [canContinue, setCanContinue] = useState(false);
+    const attemptsRef = useRef(0);
+    const activatedRef = useRef(false);
 
     useEffect(() => {
         const paymentId = searchParams.get('payment_id');
 
-        async function activate() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) { router.replace('/login'); return; }
+        async function tryActivate() {
+            if (activatedRef.current) return;
 
-            // 1. If MP gave us a payment_id, verify directly (immediate activation)
+            // 1. Direct verification via MP payment_id
             if (paymentId) {
                 try {
                     const res = await fetch(`/api/mp/verify-payment?payment_id=${paymentId}`);
                     const json = await res.json();
                     if (json.activated) {
-                        // Refresh local session so middleware picks up new metadata
+                        activatedRef.current = true;
                         await supabase.auth.refreshSession();
-                        const { data: { user: activated } } = await supabase.auth.getUser();
-                        const dest = activated?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
+                        const { data: { user } } = await supabase.auth.getUser();
+                        const dest = user?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
                         setStatus('active');
-                        setTimeout(() => router.replace(dest), 2000);
+                        setTimeout(() => router.replace(dest), 1800);
                         return;
                     }
                 } catch (e) {
@@ -36,32 +39,45 @@ function SuccessContent() {
                 }
             }
 
-            // 2. Fallback: poll refreshSession (webhook may have already fired)
-            let attempts = 0;
-            async function poll() {
-                await supabase.auth.refreshSession();
-                const { data: { user: refreshed } } = await supabase.auth.getUser();
-
-                if (refreshed?.user_metadata?.subscription_status === 'active') {
-                    const dest = refreshed?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
-                    setStatus('active');
-                    setTimeout(() => router.replace(dest), 2000);
-                    return;
-                }
-
-                attempts++;
-                if (attempts < 5) {
-                    setTimeout(poll, 2000);
-                } else {
-                    setStatus('waiting');
-                }
+            // 2. Fallback: check if webhook already activated via session refresh
+            await supabase.auth.refreshSession();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user?.user_metadata?.subscription_status === 'active') {
+                activatedRef.current = true;
+                const dest = user?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
+                setStatus('active');
+                setTimeout(() => router.replace(dest), 1800);
+                return;
             }
 
-            poll();
+            attemptsRef.current++;
+
+            // After 3 attempts (~9s), show manual continue button
+            if (attemptsRef.current >= 3) {
+                setCanContinue(true);
+            }
+
+            // Keep retrying up to 10 attempts (~30s)
+            if (attemptsRef.current < 10) {
+                setTimeout(tryActivate, 3000);
+            }
         }
 
-        activate();
+        tryActivate();
     }, [router, searchParams]);
+
+    async function handleManualContinue() {
+        await supabase.auth.refreshSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.user_metadata?.subscription_status === 'active') {
+            const dest = user?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
+            router.replace(dest);
+        } else {
+            // Force sign out and back in to get fresh token
+            await supabase.auth.signOut();
+            router.replace('/login');
+        }
+    }
 
     return (
         <div className={styles.root}>
@@ -74,32 +90,29 @@ function SuccessContent() {
                     <>
                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
                         <h1 className={styles.title}>¡Cuenta activada!</h1>
-                        <p className={styles.subtitle}>Entrando a tu dashboard...</p>
+                        <p className={styles.subtitle}>Entrando a la app...</p>
                     </>
                 )}
 
-                {status === 'verifying' && (
+                {status === 'activating' && (
                     <>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
-                        <h1 className={styles.title}>Verificando pago...</h1>
-                        <p className={styles.subtitle}>Un momento, confirmando con MercadoPago</p>
-                    </>
-                )}
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                        <h1 className={styles.title}>¡Pago recibido!</h1>
+                        <p className={styles.subtitle}>Activando tu cuenta...</p>
 
-                {status === 'waiting' && (
-                    <>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📧</div>
-                        <h1 className={styles.title}>Pago recibido</h1>
-                        <p className={styles.subtitle} style={{ maxWidth: 280 }}>
-                            La confirmación puede tardar unos minutos. Cierra sesión y vuelve a entrar para activar tu cuenta.
-                        </p>
-                        <button
-                            className={styles.payBtn}
-                            style={{ marginTop: '1.5rem' }}
-                            onClick={() => supabase.auth.signOut().then(() => router.replace('/login'))}
-                        >
-                            Cerrar sesión
-                        </button>
+                        {canContinue && (
+                            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+                                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', maxWidth: 260, textAlign: 'center' }}>
+                                    La activación está tomando más de lo esperado.
+                                </p>
+                                <button
+                                    className={styles.payBtn}
+                                    onClick={handleManualContinue}
+                                >
+                                    Continuar →
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
