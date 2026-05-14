@@ -87,7 +87,7 @@ function PaywallInner() {
                     onClick={handlePay}
                     disabled={loading}
                 >
-                    {loading ? 'Redirigiendo...' : 'Pagar con MercadoPago'}
+                    {loading ? 'Redirigiendo...' : 'Pagar con Stripe'}
                 </button>
 
                 <p className={styles.note}>

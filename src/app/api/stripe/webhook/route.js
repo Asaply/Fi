@@ -20,7 +20,7 @@ export async function POST(request) {
 
     let event;
     try {
-        event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+        event = getStripe().webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
         console.error('[stripe/webhook] Invalid signature:', err.message);
         return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
@@ -43,8 +43,6 @@ export async function POST(request) {
             .upsert({
                 user_id: userId,
                 status: 'active',
-                stripe_session_id: session.id,
-                stripe_payment_data: session,
                 updated_at: new Date().toISOString(),
             }, { onConflict: 'user_id' });
 
