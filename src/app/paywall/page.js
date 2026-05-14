@@ -55,7 +55,7 @@ function PaywallInner() {
                 <p className={styles.subtitle}>Acceso completo, pago único</p>
 
                 <div className={styles.priceBlock}>
-                    <span className={styles.price}>$50</span>
+                    <span className={styles.price}>$99</span>
                     <span className={styles.currency}>MXN</span>
                 </div>
 
