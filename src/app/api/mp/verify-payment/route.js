@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthUser, unauthorized } from '@/lib/apiAuth';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -12,12 +14,25 @@ function getAdminClient() {
 }
 
 export async function GET(request) {
+    // Require authenticated user
+    const user = await getAuthUser();
+    if (!user) return unauthorized();
+
+    // Rate limit: 10 attempts per minute per user
+    const rl = checkRateLimit(`verify-payment:${user.id}`, { maxRequests: 10, windowMs: 60_000 });
+    if (!rl.allowed) {
+        return NextResponse.json({ error: 'Demasiadas solicitudes.' }, {
+            status: 429,
+            headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+        });
+    }
+
     try {
         const { searchParams } = new URL(request.url);
         const paymentId = searchParams.get('payment_id');
 
-        if (!paymentId) {
-            return NextResponse.json({ error: 'Missing payment_id' }, { status: 400 });
+        if (!paymentId || !/^\d+$/.test(paymentId)) {
+            return NextResponse.json({ error: 'Missing or invalid payment_id' }, { status: 400 });
         }
 
         // Fetch payment from MP
@@ -27,16 +42,17 @@ export async function GET(request) {
 
         if (!mpRes.ok) {
             console.error('[verify-payment] MP fetch failed for payment:', paymentId);
-            return NextResponse.json({ error: 'MP fetch failed' }, { status: 502 });
+            return NextResponse.json({ error: 'Error verificando pago.' }, { status: 502 });
         }
 
         const payment = await mpRes.json();
-        const userId = payment.external_reference;
-        const status = payment.status; // approved | rejected | pending | in_process
+        const paymentOwner = payment.external_reference;
+        const status = payment.status;
 
-        if (!userId) {
-            console.error('[verify-payment] No external_reference for payment:', paymentId);
-            return NextResponse.json({ status, activated: false });
+        // Ownership check: payment must belong to the authenticated user
+        if (!paymentOwner || paymentOwner !== user.id) {
+            console.warn('[verify-payment] Ownership mismatch:', { user: user.id, owner: paymentOwner, paymentId });
+            return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });
         }
 
         if (status !== 'approved') {
@@ -49,7 +65,7 @@ export async function GET(request) {
         await supabase
             .from('subscriptions')
             .upsert({
-                user_id: userId,
+                user_id: user.id,
                 status: 'active',
                 mp_payment_id: String(paymentId),
                 mp_payment_data: payment,
@@ -57,19 +73,19 @@ export async function GET(request) {
             }, { onConflict: 'user_id' });
 
         // Activate user metadata immediately
-        const { error: metaErr } = await supabase.auth.admin.updateUserById(userId, {
+        const { error: metaErr } = await supabase.auth.admin.updateUserById(user.id, {
             user_metadata: { subscription_status: 'active' },
         });
 
         if (metaErr) {
             console.error('[verify-payment] Metadata update error:', metaErr.message);
-            return NextResponse.json({ status, activated: false, error: metaErr.message }, { status: 500 });
+            return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
         }
 
         return NextResponse.json({ status, activated: true });
 
     } catch (err) {
         console.error('[verify-payment] Error:', err?.message);
-        return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+        return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }
