@@ -25,8 +25,10 @@ function SuccessContent() {
                     if (json.activated) {
                         // Refresh local session so middleware picks up new metadata
                         await supabase.auth.refreshSession();
+                        const { data: { user: activated } } = await supabase.auth.getUser();
+                        const dest = activated?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
                         setStatus('active');
-                        setTimeout(() => router.replace('/finanzas'), 2000);
+                        setTimeout(() => router.replace(dest), 2000);
                         return;
                     }
                 } catch (e) {
@@ -41,8 +43,9 @@ function SuccessContent() {
                 const { data: { user: refreshed } } = await supabase.auth.getUser();
 
                 if (refreshed?.user_metadata?.subscription_status === 'active') {
+                    const dest = refreshed?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
                     setStatus('active');
-                    setTimeout(() => router.replace('/finanzas'), 2000);
+                    setTimeout(() => router.replace(dest), 2000);
                     return;
                 }
 

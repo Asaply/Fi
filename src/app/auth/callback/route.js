@@ -7,14 +7,9 @@ export async function GET(request) {
     const next = requestUrl.searchParams.get('next')
 
     if (code) {
-        // Default redirect — onboarding handles routing for existing users too
-        const redirectUrl = (next && /^\/[^/]/.test(next))
-            ? new URL(next, requestUrl.origin)
-            : new URL('/onboarding', requestUrl.origin)
+        // Create response first — cookies MUST be set on the returned response
+        const response = NextResponse.redirect(new URL('/paywall', requestUrl.origin))
 
-        const response = NextResponse.redirect(redirectUrl)
-
-        // Cookies MUST be set on the response object that is returned
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -39,17 +34,35 @@ export async function GET(request) {
             return NextResponse.redirect(new URL('/login', requestUrl.origin))
         }
 
-        // Already onboarded → skip onboarding, go to finanzas
-        // Redirect to finanzas but preserve cookies already set on response
-        if (!next && data?.user?.user_metadata?.onboarded) {
-            const finanzasResponse = NextResponse.redirect(new URL('/finanzas', requestUrl.origin))
+        const user = data?.user
+
+        // Explicit next param (e.g. password reset) — validate relative path
+        if (next && /^\/[^/]/.test(next)) {
+            const nextResponse = NextResponse.redirect(new URL(next, requestUrl.origin))
             response.cookies.getAll().forEach(({ name, value, ...opts }) => {
-                finanzasResponse.cookies.set(name, value, opts)
+                nextResponse.cookies.set(name, value, opts)
             })
-            return finanzasResponse
+            return nextResponse
         }
 
-        return response
+        // Determine correct destination based on user state
+        const isPaid = user?.user_metadata?.subscription_status === 'active'
+        const isOnboarded = !!user?.user_metadata?.onboarded
+
+        let dest = '/paywall'
+        if (isPaid && isOnboarded) dest = '/finanzas'
+        else if (isPaid && !isOnboarded) dest = '/onboarding'
+        // else: not paid → /paywall (default)
+
+        if (dest !== '/paywall') {
+            const destResponse = NextResponse.redirect(new URL(dest, requestUrl.origin))
+            response.cookies.getAll().forEach(({ name, value, ...opts }) => {
+                destResponse.cookies.set(name, value, opts)
+            })
+            return destResponse
+        }
+
+        return response // → /paywall with session cookies
     }
 
     // No code — send to login

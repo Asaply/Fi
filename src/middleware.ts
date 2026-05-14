@@ -39,22 +39,40 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Authenticated user on login or root → send to app
-  if (pathname === '/login' || pathname === '/') {
-    return NextResponse.redirect(new URL('/finanzas', request.url))
-  }
-
-  // Paywall check — skip for paywall pages and API routes
+  // Authenticated user state
   const isPaid = user.user_metadata?.subscription_status === 'active'
+  const isOnboarded = !!user.user_metadata?.onboarded
   const isPaywallRoute = pathname.startsWith('/paywall')
+  const isOnboardingRoute = pathname.startsWith('/onboarding')
   const isApiRoute = pathname.startsWith('/api/')
 
-  if (!isPaid && !isPaywallRoute && !isApiRoute) {
+  // Smart destination for this user
+  function getSmartDest() {
+    if (!isPaid) return '/paywall'
+    if (!isOnboarded) return '/onboarding'
+    return '/finanzas'
+  }
+
+  // Authenticated user at login or root → smart redirect
+  if (pathname === '/login' || pathname === '/') {
+    return NextResponse.redirect(new URL(getSmartDest(), request.url))
+  }
+
+  // API routes pass through
+  if (isApiRoute) return response
+
+  // Not paid → must be at paywall
+  if (!isPaid && !isPaywallRoute) {
     return NextResponse.redirect(new URL('/paywall', request.url))
   }
 
-  // Paid user trying to access paywall → send to app
+  // Paid user at paywall → move to next step
   if (isPaid && isPaywallRoute) {
+    return NextResponse.redirect(new URL(isOnboarded ? '/finanzas' : '/onboarding', request.url))
+  }
+
+  // Onboarded user hitting onboarding again → finanzas
+  if (isOnboarded && isOnboardingRoute) {
     return NextResponse.redirect(new URL('/finanzas', request.url))
   }
 
@@ -65,6 +83,7 @@ export const config = {
   matcher: [
     '/',
     '/login',
+    '/onboarding',
     '/paywall/:path*',
     '/dev/:path*',
     '/dashboard/:path*',
