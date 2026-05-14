@@ -286,7 +286,7 @@ interface ImportState {
 }
 
 export function StatementImporter() {
-  const [state, setState] = useState<ImportState>({ status: 'idle', progress: '' })
+  const [state, setState] = use<ImportState>({ status: 'idle', progress: '' })
   const supabase = createClient()
 
   const handleFile = useCallback(async (file: File) => {

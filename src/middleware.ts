@@ -29,7 +29,9 @@ export async function middleware(request: NextRequest) {
   const isPublic = pathname === '/' || pathname === '/login' ||
     pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
     pathname.startsWith('/terms') || pathname.startsWith('/privacy') ||
-    pathname.startsWith('/paywall') || pathname.startsWith('/api/mp/webhook')
+    pathname.startsWith('/paywall') ||
+    pathname.startsWith('/api/stripe/webhook') ||
+    pathname.startsWith('/api/mp/webhook')
 
   if (!user) {
     if (pathname.startsWith('/api/')) {
