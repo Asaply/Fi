@@ -30,14 +30,14 @@ function PaywallInner() {
         setLoading(true);
         setError('');
         try {
-            const res = await fetch('/api/mp/create-preference', { method: 'POST' });
+            const res = await fetch('/api/stripe/create-checkout', { method: 'POST' });
             const data = await res.json();
-            if (!res.ok || !data.init_point) {
+            if (!res.ok || !data.url) {
                 setError(data.error || 'Error al iniciar el pago. Intenta de nuevo.');
                 setLoading(false);
                 return;
             }
-            window.location.href = data.init_point;
+            window.location.href = data.url;
         } catch {
             setError('Error de conexión. Intenta de nuevo.');
             setLoading(false);
@@ -91,7 +91,7 @@ function PaywallInner() {
                 </button>
 
                 <p className={styles.note}>
-                    Pago seguro vía MercadoPago · Tarjetas, OXXO, transferencia
+                    Pago seguro vía Stripe · Tarjetas de crédito y débito
                 </p>
 
                 {userEmail && (

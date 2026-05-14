@@ -15,15 +15,15 @@ function SuccessContent() {
     const activatedRef = useRef(false);
 
     useEffect(() => {
-        const paymentId = searchParams.get('payment_id');
+        const sessionId = searchParams.get('session_id');
 
         async function tryActivate() {
             if (activatedRef.current) return;
 
-            // 1. Direct verification via MP payment_id
-            if (paymentId) {
+            // 1. Direct verification via Stripe session_id
+            if (sessionId) {
                 try {
-                    const res = await fetch(`/api/mp/verify-payment?payment_id=${paymentId}`);
+                    const res = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
                     const json = await res.json();
                     if (json.activated) {
                         activatedRef.current = true;

@@ -23,7 +23,7 @@ Lee AGENTS.md y TASKS.md, luego implementa todas las tareas pendientes en orden.
 
 Al terminar cada tarea, márcala como `✅` en TASKS.md antes de continuar con la siguiente.
 
-## APIs externas
+## s externas
 - **Yahoo Finance:** requiere proxy via API route de Next.js (CORS), cachear respuestas
 - **CoinGecko:** free tier, sin API key, respetar rate limits, cachear respuestas
 
