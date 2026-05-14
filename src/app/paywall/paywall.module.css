@@ -24,7 +24,7 @@
 }
 
 .logo {
-    border-radius: 14px;
+    border-radius: 0;
     filter: drop-shadow(0 0 16px rgba(255, 122, 26, 0.4));
 }
 
