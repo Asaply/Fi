@@ -40,15 +40,18 @@ export async function GET(request) {
 
         const supabase = getAdminClient();
 
-        await supabase
+        // upsert is best-effort — don't let it block activation
+        const { error: upsertErr } = await supabase
             .from('subscriptions')
             .upsert({
                 user_id: userId,
                 status: 'active',
-                stripe_session_id: session.id,
-                stripe_payment_data: session,
                 updated_at: new Date().toISOString(),
             }, { onConflict: 'user_id' });
+
+        if (upsertErr) {
+            console.error('[stripe/verify-session] Upsert error (non-fatal):', upsertErr.message);
+        }
 
         const { error: metaErr } = await supabase.auth.admin.updateUserById(userId, {
             user_metadata: { subscription_status: 'active' },
