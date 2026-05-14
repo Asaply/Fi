@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getAuthUser, unauthorized } from '@/lib/apiAuth';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
@@ -13,18 +12,15 @@ function getAdminClient() {
     );
 }
 
+// No session required — ownership verified through MP's external_reference (server-to-server).
+// An attacker providing a payment_id can only activate the rightful owner of that payment,
+// which is harmless since that user already paid.
 export async function GET(request) {
-    // Require authenticated user
-    const user = await getAuthUser();
-    if (!user) return unauthorized();
-
-    // Rate limit: 10 attempts per minute per user
-    const rl = checkRateLimit(`verify-payment:${user.id}`, { maxRequests: 10, windowMs: 60_000 });
+    // Rate limit by IP: 20 attempts per minute
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    const rl = checkRateLimit(`verify-payment-ip:${ip}`, { maxRequests: 20, windowMs: 60_000 });
     if (!rl.allowed) {
-        return NextResponse.json({ error: 'Demasiadas solicitudes.' }, {
-            status: 429,
-            headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
-        });
+        return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429 });
     }
 
     try {
@@ -35,7 +31,7 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Missing or invalid payment_id' }, { status: 400 });
         }
 
-        // Fetch payment from MP
+        // Fetch payment from MP (server-to-server)
         const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
             headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
         });
@@ -46,13 +42,11 @@ export async function GET(request) {
         }
 
         const payment = await mpRes.json();
-        const paymentOwner = payment.external_reference;
+        const userId = payment.external_reference; // set by our server at preference creation
         const status = payment.status;
 
-        // Ownership check: payment must belong to the authenticated user
-        if (!paymentOwner || paymentOwner !== user.id) {
-            console.warn('[verify-payment] Ownership mismatch:', { user: user.id, owner: paymentOwner, paymentId });
-            return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });
+        if (!userId) {
+            return NextResponse.json({ status, activated: false });
         }
 
         if (status !== 'approved') {
@@ -65,15 +59,15 @@ export async function GET(request) {
         await supabase
             .from('subscriptions')
             .upsert({
-                user_id: user.id,
+                user_id: userId,
                 status: 'active',
                 mp_payment_id: String(paymentId),
                 mp_payment_data: payment,
                 updated_at: new Date().toISOString(),
             }, { onConflict: 'user_id' });
 
-        // Activate user metadata immediately
-        const { error: metaErr } = await supabase.auth.admin.updateUserById(user.id, {
+        // Activate user metadata
+        const { error: metaErr } = await supabase.auth.admin.updateUserById(userId, {
             user_metadata: { subscription_status: 'active' },
         });
 
@@ -82,7 +76,7 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
         }
 
-        return NextResponse.json({ status, activated: true });
+        return NextResponse.json({ status, activated: true, userId });
 
     } catch (err) {
         console.error('[verify-payment] Error:', err?.message);
