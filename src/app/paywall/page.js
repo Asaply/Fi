@@ -16,13 +16,13 @@ function PaywallInner() {
     const paymentStatus = searchParams.get('status');
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (!user) { router.replace('/login'); return; }
-            if (user.user_metadata?.subscription_status === 'active') {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) { router.replace('/login'); return; }
+            if (session.user?.user_metadata?.subscription_status === 'active') {
                 router.replace('/finanzas');
                 return;
             }
-            setUserEmail(user.email || '');
+            setUserEmail(session.user?.email || '');
         });
     }, [router]);
 
