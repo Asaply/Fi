@@ -21,7 +21,7 @@ const TOTAL_STEPS = 6;
 
 const USE_OPTIONS = [
     { id: 'personal',  icon: Wallet,    label: 'Finanzas personales', desc: 'Controla gastos e ingresos' },
-    { id: 'business',  icon: BarChart3,  label: 'Mi negocio',          desc: 'Ingresos, egresos y clientes' },
+    { id: 'business',  icon: BarChart3,  label: 'Mi negocio',          desc: 'Ingresos, egresos y gastos' },
     { id: 'investing', icon: TrendingUp, label: 'Inversiones',          desc: 'Portfolio, trading y activos' },
 ];
 
