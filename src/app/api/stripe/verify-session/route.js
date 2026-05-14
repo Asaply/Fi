@@ -34,6 +34,8 @@ export async function GET(request) {
         const userId = session.client_reference_id || session.metadata?.user_id;
         const paid = session.payment_status === 'paid';
 
+        console.log('[stripe/verify-session] userId:', userId, 'paid:', paid, 'payment_status:', session.payment_status);
+
         if (!userId || !paid) {
             return NextResponse.json({ paid: false });
         }
@@ -53,9 +55,12 @@ export async function GET(request) {
             console.error('[stripe/verify-session] Upsert error (non-fatal):', upsertErr.message);
         }
 
-        const { error: metaErr } = await supabase.auth.admin.updateUserById(userId, {
+        console.log('[stripe/verify-session] Calling updateUserById for:', userId);
+        const { data: updatedUser, error: metaErr } = await supabase.auth.admin.updateUserById(userId, {
             user_metadata: { subscription_status: 'active' },
         });
+
+        console.log('[stripe/verify-session] updateUserById result:', updatedUser?.user?.id, 'error:', metaErr?.message);
 
         if (metaErr) {
             console.error('[stripe/verify-session] Metadata error:', metaErr.message);
