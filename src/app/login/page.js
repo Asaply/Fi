@@ -97,8 +97,14 @@ function LoginPageInner() {
 
         if (mode === 'login') {
             const { data: loginData, error: err } = await supabase.auth.signInWithPassword({ email, password });
-            if (err) setError(translateError(err.message));
-            else {
+            if (err) {
+                // Email not confirmed → show verify screen instead of generic error
+                if (err.message.includes('Email not confirmed')) {
+                    transition('verify-email');
+                } else {
+                    setError(translateError(err.message));
+                }
+            } else {
                 // Clear PIN if user came from "forgot PIN" flow
                 if (localStorage.getItem('fnce_pin_clear_on_login') === '1') {
                     localStorage.removeItem('fnce_pin_clear_on_login');
@@ -108,8 +114,11 @@ function LoginPageInner() {
                     localStorage.removeItem('fnce_biometric_enabled');
                     localStorage.removeItem('fnce_pin_attempts');
                 }
-                const onboarded = loginData?.user?.user_metadata?.onboarded;
-                router.push(onboarded ? '/finanzas' : '/onboarding');
+                const isPaid = loginData?.user?.user_metadata?.subscription_status === 'active';
+                const isOnboarded = !!loginData?.user?.user_metadata?.onboarded;
+                if (!isPaid) router.push('/paywall');
+                else if (!isOnboarded) router.push('/onboarding');
+                else router.push('/finanzas');
             }
         } else {
             if (password !== confirmPass) {
@@ -372,7 +381,7 @@ function LoginPageInner() {
                     </div>
                 )}
 
-                {/* ── EMAIL SENT ───────────────────────────── */}
+                {/* ── EMAIL SENT (after register) ──────────── */}
                 {mode === 'registered' && (
                     <div className="lp-registered">
                         <div className="lp-check-wrap">
@@ -390,6 +399,14 @@ function LoginPageInner() {
                             Volver al inicio
                         </button>
                     </div>
+                )}
+
+                {/* ── VERIFY EMAIL (unverified login attempt) ── */}
+                {mode === 'verify-email' && (
+                    <VerifyEmailScreen
+                        email={email}
+                        onBack={() => transition('login')}
+                    />
                 )}
             </div>
         </div>
@@ -447,6 +464,54 @@ function PasswordStrength({ password }) {
                     </span>
                 ))}
             </div>
+        </div>
+    );
+}
+
+function VerifyEmailScreen({ email, onBack }) {
+    const [resent, setResent] = useState(false);
+    const [sending, setSending] = useState(false);
+
+    async function handleResend() {
+        setSending(true);
+        await supabase.auth.resend({
+            type: 'signup',
+            email,
+            options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        });
+        setSending(false);
+        setResent(true);
+    }
+
+    return (
+        <div className="lp-registered">
+            <div className="lp-check-wrap">
+                <div className="lp-check-circle" style={{ background: 'rgba(255,102,0,0.12)' }}>
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke="#ff6600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+            <h2 className="lp-form-title">Confirma tu email</h2>
+            <p className="lp-form-sub" style={{ maxWidth: 300, textAlign: 'center' }}>
+                Enviamos un link a <strong style={{ color: 'rgba(255,255,255,0.85)' }}>{email || 'tu correo'}</strong>. Haz click en él para activar tu cuenta.
+            </p>
+            {resent && (
+                <p style={{ fontSize: 13, color: '#22c55e', marginTop: 4 }}>
+                    ¡Correo reenviado!
+                </p>
+            )}
+            <button
+                className="auth-btn-primary"
+                style={{ marginTop: '1.5rem', maxWidth: 260 }}
+                onClick={handleResend}
+                disabled={sending || resent}
+            >
+                {sending ? 'Enviando...' : resent ? 'Correo enviado' : 'Reenviar correo'}
+            </button>
+            <button className="auth-btn-link" onClick={onBack}>
+                Volver al inicio
+            </button>
         </div>
     );
 }
