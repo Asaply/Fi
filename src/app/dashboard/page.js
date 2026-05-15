@@ -89,42 +89,66 @@ export default function DashboardPage() {
                     });
                 }
 
-                // Credit cards — load deuda + limite from localStorage per-card configs
-                const creditCards = [];
-                let deudaCredito = 0;
-                for (const bank of creditBankSet) {
-                    const raw = localStorage.getItem(`fnce_credit_config_${uid}_${bank}`);
-                    if (raw) {
-                        try {
-                            const cfg = JSON.parse(raw);
-                            const deuda = Number(cfg.deudaAlCorte) || 0;
-                            const limite = Number(cfg.limit) || 0;
-                            creditCards.push({ bank, deuda, limite });
-                            deudaCredito += deuda;
-                        } catch (_) {}
-                    } else {
-                        creditCards.push({ bank, deuda: 0, limite: 0 });
-                    }
-                }
-
-                // Debit cards — derive bank list from Supabase (all-time), then fetch balance from localStorage
-                const { data: debitBankRows } = await supabase
+                // All-time transactions for per-bank balance computation
+                const { data: allTxs } = await supabase
                     .from('transactions')
-                    .select('bank')
+                    .select('type, amount, account_type, bank')
                     .eq('user_id', uid)
-                    .eq('account_type', 'debito')
                     .not('bank', 'is', null)
                     .neq('bank', 'Desconocido');
-                const debitBankSet = new Set((debitBankRows || []).map(r => r.bank).filter(Boolean));
-                const debitCards = [];
-                for (const bank of debitBankSet) {
-                    const key = `nva_bank_balance_${uid}_${bank.toLowerCase().replace(/\s+/g, '_')}`;
-                    try {
-                        const bb = JSON.parse(localStorage.getItem(key) || 'null');
-                        debitCards.push(bb || { banco: bank, saldo_anterior: 0, saldo_final: 0, periodo: '' });
-                    } catch (_) {
-                        debitCards.push({ banco: bank, saldo_anterior: 0, saldo_final: 0, periodo: '' });
+
+                const debitNetMap = {};
+                const creditDeudaMap = {};
+                const creditBankSetAll = new Set();
+                const debitBankSetAll = new Set();
+                (allTxs || []).forEach(t => {
+                    const type = t.type?.toLowerCase().trim();
+                    const amt = Number(t.amount) || 0;
+                    const bank = t.bank;
+                    const at = t.account_type || 'debito';
+                    if (!bank) return;
+                    if (at === 'debito') {
+                        debitBankSetAll.add(bank);
+                        debitNetMap[bank] = debitNetMap[bank] || 0;
+                        if (type === 'ingreso') debitNetMap[bank] += amt;
+                        if (['egreso', 'gasto personal'].includes(type)) debitNetMap[bank] -= amt;
+                    } else if (at === 'credito') {
+                        creditBankSetAll.add(bank);
+                        creditDeudaMap[bank] = creditDeudaMap[bank] || 0;
+                        if (type === 'egreso') creditDeudaMap[bank] += amt;
+                        if (['ingreso', 'transferencia'].includes(type)) creditDeudaMap[bank] -= amt;
                     }
+                });
+
+                // Credit cards — use computed deuda from all-time txs; supplement with limit from localStorage
+                const creditCards = [];
+                let deudaCredito = 0;
+                for (const bank of creditBankSetAll) {
+                    const deuda = Math.max(0, creditDeudaMap[bank] || 0);
+                    const raw = localStorage.getItem(`fnce_credit_config_${uid}_${bank}`);
+                    let limite = 0;
+                    if (raw) {
+                        try { limite = Number(JSON.parse(raw).limit) || 0; } catch (_) {}
+                    }
+                    creditCards.push({ bank, deuda, limite });
+                    deudaCredito += deuda;
+                }
+
+                // Debit cards — use computed net from all-time txs; use localStorage saldo_final if newer/more accurate
+                const debitCards = [];
+                for (const bank of debitBankSetAll) {
+                    const key = `nva_bank_balance_${uid}_${bank.toLowerCase().replace(/\s+/g, '_')}`;
+                    let bb = null;
+                    try { bb = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) {}
+                    const saldo_final = (bb && (bb.saldo_anterior > 0 || bb.saldo_final > 0))
+                        ? bb.saldo_final
+                        : (debitNetMap[bank] || 0);
+                    debitCards.push({
+                        banco: bb?.banco || bank,
+                        saldo_anterior: bb?.saldo_anterior || 0,
+                        saldo_final,
+                        periodo: bb?.periodo || '',
+                    });
                 }
 
                 // Per-user por cobrar
