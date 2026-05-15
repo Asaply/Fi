@@ -19,8 +19,9 @@ const ONBOARDING_KEY = 'fnce_onboarding_v1';
 // 4 = Goal selection
 // 5 = Security
 // 6 = Import CTA
-// 7 = Done
-const TOTAL_STEPS = 8;
+// 7 = Plans / payment
+// 8 = Done
+const TOTAL_STEPS = 9;
 
 const GOAL_OPTIONS = [
     { id: 'save',    label: 'Ahorrar más',          desc: 'Encuentra dónde recortar gastos' },
@@ -71,6 +72,20 @@ export default function OnboardingPage() {
         router.push(dest);
     }
 
+    async function completeAndPay() {
+        if (selectedGoal) localStorage.setItem('fnce_primary_use', selectedGoal);
+        localStorage.setItem(ONBOARDING_KEY, '1');
+        try {
+            await supabase.auth.updateUser({ data: { onboarded: true } });
+        } catch (_) {}
+        try {
+            const res = await fetch('/api/stripe/create-checkout', { method: 'POST' });
+            const data = await res.json();
+            if (data.url) { window.location.href = data.url; return; }
+        } catch (_) {}
+        router.push('/paywall');
+    }
+
     return (
         <div className="ob-root">
             <div className="ob-bg-speedlines" aria-hidden />
@@ -90,11 +105,17 @@ export default function OnboardingPage() {
                 {step === 5 && <StepSecurity onNext={() => advance(6)} />}
                 {step === 6 && (
                     <StepImport
-                        onImport={() => complete('/finanzas')}
+                        onImport={() => advance(7)}
                         onSkip={() => advance(7)}
                     />
                 )}
-                {step === 7 && <StepDone onFinish={() => complete('/finanzas')} />}
+                {step === 7 && (
+                    <StepPlans
+                        onPay={completeAndPay}
+                        onSkip={() => advance(8)}
+                    />
+                )}
+                {step === 8 && <StepDone onFinish={() => complete('/finanzas')} />}
             </div>
 
             {/* Progress dots — hide on spinner and success */}
@@ -442,7 +463,83 @@ function StepImport({ onImport, onSkip }) {
     );
 }
 
-/* ── Step 7: Done ────────────────────────────────────────── */
+/* ── Step 7: Plans ───────────────────────────────────────── */
+const PLAN_FEATURES = [
+    'Análisis ilimitados de estados de cuenta',
+    'Categorización automática con IA',
+    'Detección de fugas de dinero',
+    'Dashboard financiero completo',
+    'Portfolio y trading tracker',
+    'Actualizaciones incluidas para siempre',
+];
+
+function StepPlans({ onPay, onSkip }) {
+    const [loading, setLoading]   = useState(false);
+    const [checking, setChecking] = useState(true);
+    const [error, setError]       = useState('');
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            if (data?.user?.user_metadata?.subscription_status === 'active') {
+                onSkip();
+            } else {
+                setChecking(false);
+            }
+        });
+    }, [onSkip]);
+
+    async function handlePay() {
+        setLoading(true);
+        setError('');
+        try {
+            await onPay();
+        } catch (_) {
+            setError('Error al iniciar el pago. Intenta de nuevo.');
+            setLoading(false);
+        }
+    }
+
+    if (checking) return null;
+
+    return (
+        <div className="ob-step">
+            <p className="ob-overline">Último paso</p>
+            <h1 className="ob-title ob-title-xl">
+                Activa NVA<br />al 100%.
+            </h1>
+            <p className="ob-subtitle">Pago único · Sin suscripción</p>
+
+            <ul className="ob-plan-features">
+                {PLAN_FEATURES.map((f, i) => (
+                    <li key={i} className="ob-plan-feature-item">
+                        <span className="ob-plan-check"><Check size={12} strokeWidth={3} /></span>
+                        {f}
+                    </li>
+                ))}
+            </ul>
+
+            <div className="ob-plan-price-card">
+                <div className="ob-plan-price-row">
+                    <span className="ob-plan-currency">$</span>
+                    <span className="ob-plan-price">99</span>
+                    <span className="ob-plan-period">MXN · pago único</span>
+                </div>
+                <p className="ob-plan-note">Pago seguro vía Stripe · Tarjetas de crédito y débito</p>
+            </div>
+
+            {error && <p className="ob-error">{error}</p>}
+
+            <div className="ob-actions">
+                <button className="ob-btn-pay" onClick={handlePay} disabled={loading}>
+                    {loading ? 'Redirigiendo...' : 'Activar NVA — $99 MXN'}
+                </button>
+                <button className="ob-btn-link" onClick={onSkip}>Ahora no</button>
+            </div>
+        </div>
+    );
+}
+
+/* ── Step 8: Done ────────────────────────────────────────── */
 function StepDone({ onFinish }) {
     return (
         <div className="ob-step">
