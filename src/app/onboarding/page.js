@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Check, FileText, TrendingUp,
-    Wallet, BarChart3, ArrowUpRight,
+    Lock, Eye, Shield, Building2,
+    FileSearch, Lightbulb,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import './Onboarding.css';
@@ -12,26 +13,29 @@ const ONBOARDING_KEY = 'fnce_onboarding_v1';
 
 // Steps:
 // 0 = Loading spinner (auto 2.6s)
-// 1 = Account created success
-// 2 = Display name input
-// 3 = Use-case selection
-// 4 = Import CTA
-// 5 = Done
-const TOTAL_STEPS = 6;
+// 1 = Account created success (auto 2.2s)
+// 2 = Value proposition
+// 3 = Display name input
+// 4 = Goal selection
+// 5 = Security
+// 6 = Import CTA
+// 7 = Done
+const TOTAL_STEPS = 8;
 
-const USE_OPTIONS = [
-    { id: 'personal',  icon: Wallet,    label: 'Finanzas personales', desc: 'Controla gastos e ingresos' },
-    { id: 'business',  icon: BarChart3,  label: 'Mi negocio',          desc: 'Ingresos, egresos y gastos' },
-    { id: 'investing', icon: TrendingUp, label: 'Inversiones',          desc: 'Portfolio, trading y activos' },
+const GOAL_OPTIONS = [
+    { id: 'save',    label: 'Ahorrar más',          desc: 'Encuentra dónde recortar gastos' },
+    { id: 'control', label: 'Controlar mis gastos',  desc: 'Categoriza y visualiza cada peso' },
+    { id: 'invest',  label: 'Invertir mi dinero',    desc: 'Portfolio, trading y activos' },
+    { id: 'debt',    label: 'Mejorar mis finanzas',  desc: 'Deudas, crédito y flujo de caja' },
 ];
 
 export default function OnboardingPage() {
-    const [step, setStep]           = useState(0);
-    const [visible, setVisible]     = useState(false);
-    const [selectedUse, setSelectedUse] = useState(null);
+    const [step, setStep]               = useState(0);
+    const [visible, setVisible]         = useState(false);
+    const [selectedGoal, setSelectedGoal] = useState(null);
     const router = useRouter();
 
-    // Skip if already onboarded (localStorage OR Supabase metadata)
+    // Skip if already onboarded
     useEffect(() => {
         if (typeof window !== 'undefined' && localStorage.getItem(ONBOARDING_KEY)) {
             router.replace('/finanzas');
@@ -59,9 +63,8 @@ export default function OnboardingPage() {
     }
 
     async function complete(dest = '/finanzas') {
-        if (selectedUse) localStorage.setItem('fnce_primary_use', selectedUse);
+        if (selectedGoal) localStorage.setItem('fnce_primary_use', selectedGoal);
         localStorage.setItem(ONBOARDING_KEY, '1');
-        // Persist onboarded flag in Supabase so existing-user check works on any device
         try {
             await supabase.auth.updateUser({ data: { onboarded: true } });
         } catch (_) {}
@@ -70,35 +73,37 @@ export default function OnboardingPage() {
 
     return (
         <div className="ob-root">
-            <div className="ob-bg-speedlines"  aria-hidden />
+            <div className="ob-bg-speedlines" aria-hidden />
 
             <div className={`ob-content ${visible ? 'ob-visible' : ''}`}>
                 {step === 0 && <StepLoading />}
                 {step === 1 && <StepSuccess onNext={() => advance(2)} />}
-                {step === 2 && <StepName    onNext={() => advance(3)} />}
-                {step === 3 && (
-                    <StepUse
-                        selected={selectedUse}
-                        onSelect={setSelectedUse}
-                        onNext={() => advance(4)}
+                {step === 2 && <StepValueProp onNext={() => advance(3)} />}
+                {step === 3 && <StepName onNext={() => advance(4)} />}
+                {step === 4 && (
+                    <StepGoal
+                        selected={selectedGoal}
+                        onSelect={setSelectedGoal}
+                        onNext={() => advance(5)}
                     />
                 )}
-                {step === 4 && (
+                {step === 5 && <StepSecurity onNext={() => advance(6)} />}
+                {step === 6 && (
                     <StepImport
                         onImport={() => complete('/finanzas')}
-                        onSkip={() => advance(5)}
+                        onSkip={() => advance(7)}
                     />
                 )}
-                {step === 5 && <StepDone onFinish={() => complete('/finanzas')} />}
+                {step === 7 && <StepDone onFinish={() => complete('/finanzas')} />}
             </div>
 
-            {/* Progress dots — hide on spinner */}
-            {step > 0 && (
+            {/* Progress dots — hide on spinner and success */}
+            {step > 1 && (
                 <div className="ob-dots" aria-hidden>
-                    {Array.from({ length: TOTAL_STEPS - 1 }).map((_, i) => (
+                    {Array.from({ length: TOTAL_STEPS - 2 }).map((_, i) => (
                         <div
                             key={i}
-                            className={`ob-dot${(i + 1) === step ? ' ob-dot-active' : (i + 1) < step ? ' ob-dot-done' : ''}`}
+                            className={`ob-dot${(i + 2) === step ? ' ob-dot-active' : (i + 2) < step ? ' ob-dot-done' : ''}`}
                         />
                     ))}
                 </div>
@@ -109,7 +114,6 @@ export default function OnboardingPage() {
 
 /* ── Step 0: Loading spinner ─────────────────────────────── */
 function StepLoading() {
-    // 2*PI*44 ≈ 276.46
     return (
         <div className="ob-step">
             <div className="ob-spinner-wrap">
@@ -158,7 +162,37 @@ function StepSuccess({ onNext }) {
     );
 }
 
-/* ── Step 2: Display name ────────────────────────────────── */
+/* ── Step 2: Value proposition ───────────────────────────── */
+function StepValueProp({ onNext }) {
+    const features = [
+        { icon: FileSearch, text: 'Analizamos tus estados de cuenta automáticamente.' },
+        { icon: Lightbulb,  text: 'Detectamos patrones invisibles en tus gastos.' },
+        { icon: TrendingUp, text: 'Recibe insights reales, no solo gráficas.' },
+    ];
+
+    return (
+        <div className="ob-step">
+            <h1 className="ob-title ob-title-xl">
+                Entiende a dónde<br />va tu dinero.
+            </h1>
+            <div className="ob-feature-list">
+                {features.map(({ icon: Icon, text }, i) => (
+                    <div key={i} className="ob-feature-item">
+                        <div className="ob-feature-icon">
+                            <Icon size={18} strokeWidth={1.8} />
+                        </div>
+                        <p className="ob-feature-text">{text}</p>
+                    </div>
+                ))}
+            </div>
+            <div className="ob-actions">
+                <button className="ob-btn-primary" onClick={onNext}>Comenzar</button>
+            </div>
+        </div>
+    );
+}
+
+/* ── Step 3: Display name ────────────────────────────────── */
 function StepName({ onNext }) {
     const [name, setName]       = useState('');
     const [loading, setLoading] = useState(false);
@@ -206,17 +240,17 @@ function StepName({ onNext }) {
     );
 }
 
-/* ── Step 3: Use case ────────────────────────────────────── */
-function StepUse({ selected, onSelect, onNext }) {
+/* ── Step 4: Goal selection ──────────────────────────────── */
+function StepGoal({ selected, onSelect, onNext }) {
     return (
         <div className="ob-step ob-step-use">
-            <h1 className="ob-title ob-title-left">¿Para qué usarás NVA?</h1>
+            <h1 className="ob-title ob-title-left">¿Cuál es tu objetivo principal?</h1>
             <p className="ob-subtitle ob-subtitle-left">
-                Personaliza tu experiencia desde el inicio.
+                Personalizamos NVA según tu meta.
             </p>
 
             <div className="ob-option-list">
-                {USE_OPTIONS.map(({ id, label, desc }) => (
+                {GOAL_OPTIONS.map(({ id, label, desc }) => (
                     <button
                         key={id}
                         className={`ob-option${selected === id ? ' ob-option-selected' : ''}`}
@@ -226,7 +260,9 @@ function StepUse({ selected, onSelect, onNext }) {
                             <span className="ob-option-label">{label}</span>
                             <span className="ob-option-desc">{desc}</span>
                         </div>
-                        <ArrowUpRight size={16} className="ob-option-arrow" />
+                        <div className={`ob-option-check${selected === id ? ' ob-option-check-active' : ''}`}>
+                            {selected === id && <Check size={13} strokeWidth={3} />}
+                        </div>
                     </button>
                 ))}
             </div>
@@ -245,35 +281,72 @@ function StepUse({ selected, onSelect, onNext }) {
     );
 }
 
-/* ── Step 4: Import CTA ──────────────────────────────────── */
-function StepImport({ onImport, onSkip }) {
+/* ── Step 5: Security ────────────────────────────────────── */
+function StepSecurity({ onNext }) {
+    const items = [
+        { icon: Lock,      title: 'Cifrado de 256-bit',        desc: 'Nivel bancario' },
+        { icon: Eye,       title: 'Solo lectura',               desc: 'No podemos mover tu dinero' },
+        { icon: Building2, title: 'Estándares bancarios',       desc: 'Cumplimos normativas internacionales' },
+        { icon: Shield,    title: 'Tu privacidad es primero',   desc: 'Nunca vendemos tus datos' },
+    ];
+
     return (
         <div className="ob-step">
-            <div className="ob-icon-wrap">
-                <div className="ob-icon-ring">
-                    <div className="ob-icon-circle ob-icon-orange">
-                        <FileText size={38} strokeWidth={1.5} />
+            <p className="ob-overline">Tu seguridad es nuestra prioridad</p>
+            <h1 className="ob-title ob-title-xl">
+                Tus datos están<br />100% protegidos.
+            </h1>
+
+            <div className="ob-security-list">
+                {items.map(({ icon: Icon, title, desc }, i) => (
+                    <div key={i} className="ob-security-item">
+                        <div className="ob-security-icon">
+                            <Icon size={16} strokeWidth={1.8} />
+                        </div>
+                        <div className="ob-security-text">
+                            <span className="ob-security-title">{title}</span>
+                            <span className="ob-security-desc">{desc}</span>
+                        </div>
                     </div>
-                </div>
+                ))}
             </div>
 
-            <h1 className="ob-title">Conecta tu banco</h1>
-            <p className="ob-subtitle">
-                Importa un estado de cuenta en PDF para ver tus movimientos
-                automáticamente, sin teclear nada.
-            </p>
-
             <div className="ob-actions">
-                <button className="ob-btn-primary" onClick={onImport}>
-                    Importar estado de cuenta
-                </button>
-                <button className="ob-btn-link" onClick={onSkip}>Ahora no</button>
+                <button className="ob-btn-primary" onClick={onNext}>Continuar</button>
             </div>
         </div>
     );
 }
 
-/* ── Step 5: Done ────────────────────────────────────────── */
+/* ── Step 6: Import CTA ──────────────────────────────────── */
+function StepImport({ onImport, onSkip }) {
+    return (
+        <div className="ob-step ob-step-form">
+            <p className="ob-overline">Paso 1 de 1</p>
+            <h1 className="ob-title ob-title-left">
+                Sube tu primer<br />estado de cuenta
+            </h1>
+            <p className="ob-subtitle ob-subtitle-left">
+                Puedes subir PDF o imagen. NVA lo analiza automáticamente.
+            </p>
+
+            <div className="ob-upload-box">
+                <FileText size={34} strokeWidth={1.2} color="#ff6600" />
+                <p className="ob-upload-label">Arrastra tu archivo aquí</p>
+                <p className="ob-upload-sub">PDF · PNG · JPG (Máx. 20MB)</p>
+            </div>
+
+            <div className="ob-actions">
+                <button className="ob-btn-primary" onClick={onImport}>
+                    Subir estado de cuenta
+                </button>
+                <button className="ob-btn-link" onClick={onSkip}>¿No lo tienes a mano? Más tarde</button>
+            </div>
+        </div>
+    );
+}
+
+/* ── Step 7: Done ────────────────────────────────────────── */
 function StepDone({ onFinish }) {
     return (
         <div className="ob-step">
@@ -285,14 +358,14 @@ function StepDone({ onFinish }) {
                 </div>
             </div>
 
-            <h1 className="ob-title">¡Todo listo!</h1>
+            <h1 className="ob-title">¡Bienvenido a NVA!</h1>
             <p className="ob-subtitle">
-                Ya puedes usar NVA al 100%. Tu dashboard te espera.
+                Estás listo para tomar el control de tu dinero y lograr tus metas.
             </p>
 
             <div className="ob-actions">
                 <button className="ob-btn-primary" onClick={onFinish}>
-                    Ir al dashboard
+                    Ir a mi dashboard
                 </button>
             </div>
         </div>
