@@ -3,8 +3,18 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import Image from 'next/image';
+import { Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './paywall.module.css';
+
+const FEATURES = [
+    'Análisis ilimitados de estados de cuenta',
+    'Categorización automática con IA',
+    'Detección de fugas de dinero',
+    'Dashboard financiero completo',
+    'Portfolio y trading tracker',
+    'Actualizaciones incluidas para siempre',
+];
 
 function PaywallInner() {
     const [loading, setLoading] = useState(false);
@@ -51,21 +61,22 @@ function PaywallInner() {
                     <Image src="/nva-icon.svg" alt="NVA" width={56} height={56} className={styles.logo} />
                 </div>
 
-                <h1 className={styles.title}>Activa tu cuenta NVA</h1>
-                <p className={styles.subtitle}>Acceso completo, pago único</p>
+                <h1 className={styles.title}>Activa NVA al 100%</h1>
+                <p className={styles.subtitle}>Pago único · Sin suscripción · Sin sorpresas</p>
 
                 <div className={styles.priceBlock}>
-                    <span className={styles.price}>$99</span>
-                    <span className={styles.currency}>MXN</span>
+                    <span className={styles.currency}>$</span>
+                    <span className={styles.price}>99</span>
+                    <span className={styles.priceSuffix}>MXN</span>
                 </div>
 
                 <ul className={styles.features}>
-                    <li>Análisis ilimitados de estados de cuenta</li>
-                    <li>Categorización automática con IA</li>
-                    <li>Insights y fugas de dinero</li>
-                    <li>Dashboard financiero completo</li>
-                    <li>Portfolio y trading tracker</li>
-                    <li>Actualizaciones incluidas</li>
+                    {FEATURES.map((f, i) => (
+                        <li key={i}>
+                            <span className={styles.featureCheck}><Check size={11} strokeWidth={3} /></span>
+                            {f}
+                        </li>
+                    ))}
                 </ul>
 
                 {paymentError && (
@@ -87,7 +98,7 @@ function PaywallInner() {
                     onClick={handlePay}
                     disabled={loading}
                 >
-                    {loading ? 'Redirigiendo...' : 'Pagar con Stripe'}
+                    {loading ? 'Redirigiendo...' : 'Activar NVA — $99 MXN'}
                 </button>
 
                 <p className={styles.note}>
