@@ -320,6 +320,67 @@ function StepSecurity({ onNext }) {
 
 /* ── Step 6: Import CTA ──────────────────────────────────── */
 function StepImport({ onImport, onSkip }) {
+    const [file, setFile]       = useState(null);
+    const [dragging, setDragging] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [statusMsg, setStatusMsg] = useState('');
+    const [error, setError]     = useState('');
+
+    async function handleUpload() {
+        if (!file) return;
+        setLoading(true);
+        setError('');
+        setStatusMsg('Leyendo tu estado de cuenta...');
+
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+
+            setStatusMsg('Detectando banco y transacciones...');
+            const res = await fetch('/api/parse-statement', { method: 'POST', body: fd });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Error al procesar el archivo.');
+            }
+
+            setStatusMsg('Guardando transacciones...');
+
+            const { data: { user } } = await supabase.auth.getUser();
+            const banco = data.data?.banco || 'Desconocido';
+            const accountType = data.data?.tipo_cuenta || 'debito';
+
+            const payload = (data.transactions || []).map(t => ({
+                date: t.fecha,
+                concept: t.concepto,
+                amount: t.monto,
+                type: t.tipo,
+                client: 'N/A',
+                categoria: t.categoria || 'Otros',
+                bank: banco,
+                account_type: accountType,
+                user_id: user.id,
+            }));
+
+            if (payload.length > 0) {
+                const { error: dbErr } = await supabase.from('transactions').insert(payload);
+                if (dbErr) throw new Error('Error al guardar las transacciones.');
+            }
+
+            onImport();
+        } catch (err) {
+            setError(err.message || 'Error al procesar el archivo. Intenta de nuevo.');
+            setLoading(false);
+        }
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        setDragging(false);
+        const dropped = e.dataTransfer.files?.[0];
+        if (dropped) setFile(dropped);
+    }
+
     return (
         <div className="ob-step ob-step-form">
             <p className="ob-overline">Paso 1 de 1</p>
@@ -327,21 +388,56 @@ function StepImport({ onImport, onSkip }) {
                 Sube tu primer<br />estado de cuenta
             </h1>
             <p className="ob-subtitle ob-subtitle-left">
-                Puedes subir PDF o imagen. NVA lo analiza automáticamente.
+                Puedes subir el PDF de tu banco. NVA lo analiza automáticamente.
             </p>
 
-            <div className="ob-upload-box">
-                <FileText size={34} strokeWidth={1.2} color="#ff6600" />
-                <p className="ob-upload-label">Arrastra tu archivo aquí</p>
-                <p className="ob-upload-sub">PDF · PNG · JPG (Máx. 20MB)</p>
-            </div>
+            {!loading ? (
+                <>
+                    <input
+                        type="file"
+                        accept=".pdf"
+                        id="ob-file-input"
+                        style={{ display: 'none' }}
+                        onChange={e => { setFile(e.target.files?.[0] || null); setError(''); }}
+                    />
+                    <label
+                        htmlFor="ob-file-input"
+                        className={`ob-upload-box${dragging ? ' ob-upload-dragging' : ''}${file ? ' ob-upload-has-file' : ''}`}
+                        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                        onDragLeave={() => setDragging(false)}
+                        onDrop={handleDrop}
+                    >
+                        <FileText size={34} strokeWidth={1.2} color={file ? '#fff' : '#ff6600'} />
+                        <p className="ob-upload-label">{file ? file.name : 'Arrastra tu archivo aquí'}</p>
+                        <p className="ob-upload-sub">{file ? 'Clic para cambiar archivo' : 'PDF (Máx. 20MB)'}</p>
+                    </label>
 
-            <div className="ob-actions">
-                <button className="ob-btn-primary" onClick={onImport}>
-                    Subir estado de cuenta
-                </button>
-                <button className="ob-btn-link" onClick={onSkip}>¿No lo tienes a mano? Más tarde</button>
-            </div>
+                    {error && <p className="ob-error">{error}</p>}
+
+                    <div className="ob-actions">
+                        <button
+                            className="ob-btn-primary"
+                            onClick={handleUpload}
+                            disabled={!file}
+                        >
+                            Analizar estado de cuenta
+                        </button>
+                        <button className="ob-btn-link" onClick={onSkip}>¿No lo tienes a mano? Más tarde</button>
+                    </div>
+                </>
+            ) : (
+                <>
+                    <div className="ob-progress-wrap">
+                        <div className="ob-progress-track">
+                            <div className="ob-progress-fill" />
+                        </div>
+                        <p className="ob-progress-msg">{statusMsg}</p>
+                    </div>
+                    <div className="ob-actions" style={{ marginTop: '32px' }}>
+                        <button className="ob-btn-link" onClick={onSkip}>Saltar por ahora</button>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
