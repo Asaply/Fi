@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
   <rect width="300" height="300" rx="66" fill="#0F0F0F"/>
   <text
-    font-family="Impact, 'Arial Narrow', 'Arial Black', Arial, sans-serif"
+    font-family="Impact, 'Arial Narrow', Arial, sans-serif"
     font-weight="900"
-    font-size="155"
-    y="208"
+    font-size="140"
+    y="205"
     x="150"
     text-anchor="middle"
-    letter-spacing="-6"
+    letter-spacing="2"
   >
     <tspan fill="#FFFFFF">NV</tspan><tspan fill="#FF6600">A</tspan>
   </text>
