@@ -37,7 +37,7 @@ export default function ReporteMensual({ startDate, endDate }) {
                     .from('transactions')
                     .select('date, amount, type')
                     .eq('user_id', user.id)
-                    .in('type', ['Ingreso', 'Egreso'])
+                    .in('type', ['Ingreso', 'Egreso', 'ingreso', 'egreso'])
                     .gte('date', from)
                     .lte('date', to),
                 supabase
@@ -63,8 +63,9 @@ export default function ReporteMensual({ startDate, endDate }) {
                 const ym = (t.date || '').slice(0, 7);
                 if (!ym) continue;
                 const m = ensure(ym);
-                if (t.type === 'Ingreso') m.ingresos += Number(t.amount) || 0;
-                if (t.type === 'Egreso')  m.egresos  += Number(t.amount) || 0;
+                const tipo = (t.type || '').toLowerCase();
+                if (tipo === 'ingreso') m.ingresos += Number(t.amount) || 0;
+                if (tipo === 'egreso')  m.egresos  += Number(t.amount) || 0;
             }
 
             for (const t of tradingRows) {
