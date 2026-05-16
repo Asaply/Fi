@@ -1,14 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
   <rect width="300" height="300" rx="66" fill="#0F0F0F"/>
+  <!-- N in white -->
   <text
-    font-family="Impact, 'Arial Narrow', Arial, sans-serif"
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
     font-weight="900"
-    font-size="140"
-    y="205"
-    x="150"
-    text-anchor="middle"
-    letter-spacing="2"
-  >
-    <tspan fill="#FFFFFF">NV</tspan><tspan fill="#FF6600">A</tspan>
-  </text>
+    font-size="200"
+    y="220"
+    x="28"
+    fill="#FFFFFF"
+  >N</text>
+  <!-- A in orange, overlapping N from the right -->
+  <text
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="900"
+    font-size="200"
+    y="220"
+    x="118"
+    fill="#FF6600"
+  >A</text>
 </svg>
