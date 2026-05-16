@@ -49,9 +49,10 @@ export async function middleware(request: NextRequest) {
   const isApiRoute = pathname.startsWith('/api/')
 
   // Smart destination for this user
+  // Order: onboarding first → paywall → app
   function getSmartDest() {
-    if (!isPaid) return '/paywall'
     if (!isOnboarded) return '/onboarding'
+    if (!isPaid) return '/paywall'
     return '/finanzas'
   }
 
@@ -63,18 +64,23 @@ export async function middleware(request: NextRequest) {
   // API routes pass through
   if (isApiRoute) return response
 
-  // Not paid → must be at paywall
-  if (!isPaid && !isPaywallRoute) {
+  // Not onboarded → must complete onboarding first (paywall is inside onboarding)
+  if (!isOnboarded && !isOnboardingRoute) {
+    return NextResponse.redirect(new URL('/onboarding', request.url))
+  }
+
+  // Onboarded but not paid → paywall
+  if (isOnboarded && !isPaid && !isPaywallRoute) {
     return NextResponse.redirect(new URL('/paywall', request.url))
   }
 
-  // Paid user at paywall → move to next step
+  // Paid user at paywall → move on
   if (isPaid && isPaywallRoute) {
     return NextResponse.redirect(new URL(isOnboarded ? '/finanzas' : '/onboarding', request.url))
   }
 
-  // Onboarded user hitting onboarding again → finanzas
-  if (isOnboarded && isOnboardingRoute) {
+  // Onboarded + paid hitting onboarding → finanzas
+  if (isOnboarded && isPaid && isOnboardingRoute) {
     return NextResponse.redirect(new URL('/finanzas', request.url))
   }
 
