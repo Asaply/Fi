@@ -358,7 +358,7 @@ function StepImport({ onImport, onSkip }) {
             fd.append('file', file);
 
             setStatusMsg('Detectando banco y transacciones...');
-            const res = await fetch('/api/parse-statement', { method: 'POST', body: fd });
+            const res = await fetch('/api/analyze', { method: 'POST', body: fd });
             const data = await res.json();
 
             if (!res.ok || !data.success) {
@@ -368,14 +368,14 @@ function StepImport({ onImport, onSkip }) {
             setStatusMsg('Guardando transacciones...');
 
             const { data: { user } } = await supabase.auth.getUser();
-            const banco = data.data?.banco || 'Desconocido';
-            const accountType = data.data?.tipo_cuenta || 'debito';
+            const banco = data.bank || 'Desconocido';
+            const accountType = data.tipo_cuenta || 'debito';
 
             const payload = (data.transactions || []).map(t => ({
                 date: t.fecha,
                 concept: t.concepto,
                 amount: t.monto,
-                type: t.tipo,
+                type: t.tipo === 'ajuste' ? 'egreso' : t.tipo,
                 client: 'N/A',
                 categoria: t.categoria || 'Otros',
                 bank: banco,
