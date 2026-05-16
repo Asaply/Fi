@@ -19,9 +19,10 @@ const ONBOARDING_KEY = 'fnce_onboarding_v1';
 // 4 = Goal selection
 // 5 = Security
 // 6 = Import CTA
-// 7 = Plans / payment
-// 8 = Done
-const TOTAL_STEPS = 9;
+// 7 = Analysis insights (post-import)
+// 8 = Plans / payment (paywall)
+// 9 = Done
+const TOTAL_STEPS = 10;
 
 const GOAL_OPTIONS = [
     { id: 'save',    label: 'Ahorrar más',          desc: 'Encuentra dónde recortar gastos' },
@@ -34,6 +35,7 @@ export default function OnboardingPage() {
     const [step, setStep]               = useState(0);
     const [visible, setVisible]         = useState(false);
     const [selectedGoal, setSelectedGoal] = useState(null);
+    const [analysisData, setAnalysisData] = useState(null);
     const router = useRouter();
 
     // Skip if already onboarded
@@ -105,17 +107,23 @@ export default function OnboardingPage() {
                 {step === 5 && <StepSecurity onNext={() => advance(6)} />}
                 {step === 6 && (
                     <StepImport
-                        onImport={() => advance(7)}
-                        onSkip={() => advance(7)}
-                    />
-                )}
-                {step === 7 && (
-                    <StepPlans
-                        onPay={completeAndPay}
+                        onImportComplete={(data) => { setAnalysisData(data); advance(7); }}
                         onSkip={() => advance(8)}
                     />
                 )}
-                {step === 8 && <StepDone onFinish={() => complete('/finanzas')} />}
+                {step === 7 && (
+                    <StepInsights
+                        data={analysisData}
+                        onNext={() => advance(8)}
+                    />
+                )}
+                {step === 8 && (
+                    <StepPlans
+                        onPay={completeAndPay}
+                        onSkip={() => advance(9)}
+                    />
+                )}
+                {step === 9 && <StepDone onFinish={() => complete('/finanzas')} />}
             </div>
 
             {/* Progress dots — hide on spinner and success */}
@@ -340,7 +348,7 @@ function StepSecurity({ onNext }) {
 }
 
 /* ── Step 6: Import CTA ──────────────────────────────────── */
-function StepImport({ onImport, onSkip }) {
+function StepImport({ onImportComplete, onSkip }) {
     const [file, setFile]       = useState(null);
     const [dragging, setDragging] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -384,11 +392,10 @@ function StepImport({ onImport, onSkip }) {
             }));
 
             if (payload.length > 0) {
-                const { error: dbErr } = await supabase.from('transactions').insert(payload);
-                if (dbErr) throw new Error('Error al guardar las transacciones.');
+                await supabase.from('transactions').insert(payload);
             }
 
-            onImport();
+            onImportComplete(data);
         } catch (err) {
             setError(err.message || 'Error al procesar el archivo. Intenta de nuevo.');
             setLoading(false);
@@ -463,7 +470,71 @@ function StepImport({ onImport, onSkip }) {
     );
 }
 
-/* ── Step 7: Plans ───────────────────────────────────────── */
+/* ── Step 7: Analysis insights ───────────────────────────── */
+function formatMXN(n) {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n || 0);
+}
+
+function StepInsights({ data, onNext }) {
+    const ins = data?.insights || {};
+    const banco = data?.bank || 'tu banco';
+    const count = data?.transactionCount || 0;
+    const topCats = (ins.categories || []).slice(0, 3);
+    const topLeak = ins.topLeaks?.[0];
+
+    return (
+        <div className="ob-step">
+            <p className="ob-overline">¡Listo! Analizamos {count} movimientos</p>
+            <h1 className="ob-title ob-title-xl ob-title-left">
+                ¡Encontramos<br />esto!
+            </h1>
+            <p className="ob-subtitle ob-subtitle-left">
+                Algunos insights clave de tu estado de {banco}.
+            </p>
+
+            <div className="ob-insights-grid">
+                <div className="ob-insight-card ob-insight-card-wide">
+                    <p className="ob-insight-label">Gasto total del período</p>
+                    <p className="ob-insight-value">{formatMXN(ins.totalExpenses)}</p>
+                    {ins.totalIncome > 0 && (
+                        <p className="ob-insight-sub">Ingresos: {formatMXN(ins.totalIncome)}</p>
+                    )}
+                </div>
+
+                {topLeak && (
+                    <div className="ob-insight-card ob-insight-card-wide ob-insight-card-warn">
+                        <p className="ob-insight-label">Mayor gasto recurrente</p>
+                        <p className="ob-insight-value">{formatMXN(topLeak.amount)}</p>
+                        <p className="ob-insight-sub">{topLeak.name}</p>
+                    </div>
+                )}
+
+                {topCats.length > 0 && (
+                    <div className="ob-insight-card ob-insight-card-wide">
+                        <p className="ob-insight-label">Top categorías</p>
+                        <div className="ob-cat-list">
+                            {topCats.map((c, i) => (
+                                <div key={i} className="ob-cat-row">
+                                    <span className="ob-cat-dot" style={{ background: c.color || '#ff6600' }} />
+                                    <span className="ob-cat-name">{c.name}</span>
+                                    <span className="ob-cat-amt">{formatMXN(c.amount)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="ob-actions">
+                <button className="ob-btn-primary" onClick={onNext}>
+                    Ver todos mis insights
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/* ── Step 8: Plans ───────────────────────────────────────── */
 const PLAN_FEATURES = [
     'Análisis ilimitados de estados de cuenta',
     'Categorización automática con IA',
