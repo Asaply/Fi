@@ -125,6 +125,18 @@
     box-shadow: 0 0 40px rgba(34,197,94,0.35);
 }
 
+/* Done step logo */
+.ob-done-logo-wrap {
+    margin-bottom: 32px;
+}
+
+.ob-done-logo {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    filter: drop-shadow(0 0 24px rgba(255, 102, 0, 0.3));
+}
+
 /* FINN logo inside circles */
 .ob-logo-sm {
     width: 52px;

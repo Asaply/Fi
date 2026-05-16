@@ -61,14 +61,16 @@ const PLCalendar = ({ transactions, porCobrar, mode = 'finanzas', accountType = 
 
             filteredTx.forEach(t => {
                 if (t.date === dateStr) {
-                    hasData = true;
                     if (mode === 'finanzas') {
-                        if (t.type === 'Ingreso') dailyIngresos += t.amount || 0;
-                        if (t.type === 'Egreso') dailyEgresos += t.amount || 0;
-                        if (t.type === 'Gasto Personal') dailyGastosPersonales += t.amount || 0;
-                        if (t.type === 'Inversión') dailyInversiones += t.amount || 0;
+                        hasData = true;
+                        const tipo = (t.type || '').toLowerCase();
+                        if (tipo === 'ingreso') dailyIngresos += t.amount || 0;
+                        if (tipo === 'egreso') dailyEgresos += t.amount || 0;
+                        if (tipo === 'gasto personal') dailyGastosPersonales += t.amount || 0;
+                        if (tipo === 'inversión' || tipo === 'inversion') dailyInversiones += t.amount || 0;
                     } else if (mode === 'trading') {
                         if (t.status === 'Cerrado' || t.status === 'Closed') {
+                            hasData = true;
                             tradingPnl += t.pnl || 0;
                         }
                     }

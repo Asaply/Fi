@@ -71,7 +71,7 @@ export default function OnboardingPage() {
         try {
             await supabase.auth.updateUser({ data: { onboarded: true } });
         } catch (_) {}
-        router.push(dest);
+        window.location.href = dest;
     }
 
     async function completeAndPay() {
@@ -612,16 +612,12 @@ function StepPlans({ onPay, onSkip }) {
     );
 }
 
-/* ── Step 8: Done ────────────────────────────────────────── */
+/* ── Step 9: Done ────────────────────────────────────────── */
 function StepDone({ onFinish }) {
     return (
         <div className="ob-step">
-            <div className="ob-icon-wrap">
-                <div className="ob-icon-ring ob-icon-ring-orange">
-                    <div className="ob-icon-circle ob-icon-orange">
-                        <img src="/nva-icon.svg" alt="NVA" className="ob-logo-sm" />
-                    </div>
-                </div>
+            <div className="ob-done-logo-wrap">
+                <img src="/nva-icon.svg" alt="NVA" className="ob-done-logo" />
             </div>
 
             <h1 className="ob-title">¡Bienvenido a NVA!</h1>

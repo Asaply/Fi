@@ -1,24 +1,39 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import Topbar from './Topbar';
 
 const TopbarContext = createContext();
 
 export function TopbarProvider({ children }) {
-    const [profilePic, setProfilePic] = useState(null);
+    const [profilePic, setProfilePicState] = useState(null);
     const [theme, setTheme] = useState('dark');
+    const [userId, setUserId] = useState(null);
 
     useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                setUserId(user.id);
+                try {
+                    const savedPic = localStorage.getItem(`fnce_profile_pic_${user.id}`);
+                    if (savedPic) setProfilePicState(savedPic);
+                } catch (_) {}
+            }
+        });
         try {
-            const savedPic = localStorage.getItem('fnce_profile_pic');
-            if (savedPic) setProfilePic(savedPic);
-
             const savedTheme = localStorage.getItem('fnce-theme') || 'dark';
             setTheme(savedTheme);
             document.documentElement.setAttribute('data-theme', savedTheme);
         } catch (_) {}
     }, []);
+
+    const setProfilePic = (pic) => {
+        setProfilePicState(pic);
+        if (userId) {
+            try { localStorage.setItem(`fnce_profile_pic_${userId}`, pic); } catch (_) {}
+        }
+    };
 
     const toggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';

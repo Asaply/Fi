@@ -84,7 +84,6 @@ export default function PerfilPage() {
         const reader = new FileReader();
         reader.onloadend = () => {
             setProfilePic(reader.result);
-            localStorage.setItem('fnce_profile_pic', reader.result);
         };
         reader.readAsDataURL(file);
     };
