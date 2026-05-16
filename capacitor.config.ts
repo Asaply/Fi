@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.integraweb.fnce',
-  appName: 'FNCE',
+  appId: 'lat.nva.app',
+  appName: 'NVA',
   webDir: 'out',
   server: {
     url: 'https://finanzas-integraweb.vercel.app',
@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: 'always',
-    backgroundColor: '#09090b',
+    backgroundColor: '#000000',
   },
 };
 
