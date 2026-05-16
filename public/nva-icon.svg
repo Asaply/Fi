@@ -3,11 +3,11 @@
   <text
     font-family="'Arial Black', 'Arial Bold', Arial, sans-serif"
     font-weight="900"
-    font-size="170"
-    y="216"
+    font-size="140"
+    y="205"
     x="150"
     text-anchor="middle"
-    letter-spacing="-6"
+    letter-spacing="-4"
   >
     <tspan fill="#FFFFFF">NV</tspan><tspan fill="#FF6600">A</tspan>
   </text>
