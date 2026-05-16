@@ -1,21 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
   <rect width="300" height="300" rx="66" fill="#0F0F0F"/>
-  <!-- N in white -->
-  <text
-    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
-    font-weight="900"
-    font-size="200"
-    y="220"
-    x="28"
-    fill="#FFFFFF"
-  >N</text>
-  <!-- A in orange, overlapping N from the right -->
-  <text
-    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
-    font-weight="900"
-    font-size="200"
-    y="220"
-    x="118"
-    fill="#FF6600"
-  >A</text>
+  <text font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="155" y="210" x="18"  fill="#FFFFFF">N</text>
+  <text font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="155" y="210" x="110" fill="#FFFFFF">V</text>
+  <text font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="155" y="210" x="182" fill="#FF6600">A</text>
 </svg>
