@@ -177,7 +177,7 @@ export default function FinanzasPage() {
     const [tradingOps, setTradingOps] = useState([]);
     const [portfolioAssets, setPortfolioAssets] = useState([]);
     const [userConfig, setUserConfig] = useState({ concepto_custom_label: 'Por Cobrar', concepto_custom_total: 0 });
-    const [periodo, setPeriodo] = useState('1m');
+    const [periodo, setPeriodo] = useState('Todos');
     const [accountType, setAccountType] = useState('debit'); // 'debit' | 'credit'
     const [selectedCard, setSelectedCard] = useState('global'); // 'global' | bank name
     const [mesFilter, setMesFilter] = useState('');
