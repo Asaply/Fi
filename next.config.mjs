@@ -60,7 +60,14 @@ const securityHeaders = [
     },
 ];
 
+const isCapacitor = process.env.CAPACITOR === '1';
+
 const nextConfig = {
+    // Static export for Capacitor native builds
+    ...(isCapacitor && {
+        output: 'export',
+        images: { unoptimized: true },
+    }),
     serverExternalPackages: [
         'pdf-parse', 'pdfjs-dist',
         '@napi-rs/canvas', '@napi-rs/canvas-darwin-arm64',
