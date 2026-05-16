@@ -604,7 +604,9 @@ function StepPlans({ onPay, onSkip }) {
                 <button className="ob-btn-pay" onClick={handlePay} disabled={loading}>
                     {loading ? 'Redirigiendo...' : 'Activar NVA — $99 MXN'}
                 </button>
-                <button className="ob-btn-link" onClick={onSkip}>Ahora no</button>
+                <p className="ob-plan-required-note">
+                    Activa tu cuenta para acceder al dashboard
+                </p>
             </div>
         </div>
     );
