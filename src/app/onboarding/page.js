@@ -201,6 +201,9 @@ function StepValueProp({ onNext }) {
 
     return (
         <div className="ob-step">
+            <div className="ob-vp-logo-wrap">
+                <img src="/nva-icon.svg" alt="NVA" className="ob-vp-logo" />
+            </div>
             <h1 className="ob-title ob-title-xl">
                 Entiende a dónde<br />va tu dinero.
             </h1>
