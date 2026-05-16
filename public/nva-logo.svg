@@ -7,6 +7,6 @@
     x="8"
     letter-spacing="-7"
   >
-    <tspan fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linejoin="round">NV</tspan><tspan fill="#FF6600" stroke="none">A</tspan>
+    <tspan fill="#FFFFFF">NV</tspan><tspan fill="#FF6600">A</tspan>
   </text>
 </svg>
