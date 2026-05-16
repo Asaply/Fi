@@ -125,6 +125,17 @@
     box-shadow: 0 0 40px rgba(34,197,94,0.35);
 }
 
+/* Value prop logo */
+.ob-vp-logo-wrap {
+    margin-bottom: 28px;
+}
+
+.ob-vp-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+}
+
 /* Done step logo */
 .ob-done-logo-wrap {
     margin-bottom: 32px;
