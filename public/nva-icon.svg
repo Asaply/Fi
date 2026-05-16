@@ -1,20 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
-  <defs>
-    <clipPath id="icon-clip">
-      <rect width="300" height="300" rx="72"/>
-    </clipPath>
-  </defs>
-  <rect width="300" height="300" rx="72" fill="#0F0F0F"/>
-  <g clip-path="url(#icon-clip)">
-    <text
-      font-family="Impact, 'Arial Black', Arial, sans-serif"
-      font-weight="900"
-      font-size="160"
-      y="212"
-      x="20"
-      letter-spacing="-4"
-    >
-      <tspan fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round">NV</tspan><tspan fill="#FF6600" stroke="none">A</tspan>
-    </text>
-  </g>
+  <rect width="300" height="300" rx="66" fill="#0F0F0F"/>
+  <text
+    font-family="Impact, 'Arial Narrow', 'Arial Black', Arial, sans-serif"
+    font-weight="900"
+    font-size="155"
+    y="208"
+    x="150"
+    text-anchor="middle"
+    letter-spacing="-6"
+  >
+    <tspan fill="#FFFFFF">NV</tspan><tspan fill="#FF6600">A</tspan>
+  </text>
 </svg>
