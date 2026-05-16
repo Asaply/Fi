@@ -161,7 +161,6 @@ function LoginPageInner() {
                     <div className="lp-landing">
                         <div className="lp-top">
                             <img src="/nva-icon.svg" alt="NVA" className="lp-logo-img" />
-                            <h1 className="lp-brand">NVA</h1>
                             <p className="lp-tagline">Tus finanzas personales, en un solo lugar.</p>
 
                             <label className="tos-row">
