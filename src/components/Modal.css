@@ -18,7 +18,9 @@
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     color: var(--text-primary);
 }
@@ -28,6 +30,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 24px;
+    flex-shrink: 0;
 }
 
 .modal-title {
@@ -39,6 +42,10 @@
 
 .modal-body {
     color: var(--text-primary);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+    flex: 1;
 }
 
 .modal-body p,
@@ -95,11 +102,22 @@
         margin: 0;
         max-width: 100%;
         width: 100%;
-        max-height: 90dvh;
+        max-height: 92dvh;
         border-radius: 24px 24px 0 0;
-        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+        /* tighter padding on mobile */
+        padding: 20px 16px 0 16px !important;
         animation: slideUpSheet 0.32s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
+    .modal-body {
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+    }
+}
+
+/* Suppress card hover animation inside modal */
+.modal-content.card:hover {
+    transform: none;
+    box-shadow: var(--shadow-md);
 }
 
 /* Hide bottom nav while modal is open */
