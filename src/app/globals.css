@@ -743,19 +743,20 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #1c1c1c;
+  background: var(--bg-card);
   color: var(--text-primary);
   font-size: 15px;
   font-weight: 600;
   padding: 12px 24px;
   border-radius: 9999px;
-  border: 1px solid var(--bg-border-subtle);
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .btn-action-secondary:hover {
-  background: #252525;
+  background: var(--bg-hover, var(--bg-card));
+  opacity: 0.85;
 }
 
 /* ── Period filter pills ────────────────────────────────────────── */

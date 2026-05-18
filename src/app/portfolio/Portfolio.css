@@ -254,6 +254,13 @@
     -webkit-backdrop-filter: blur(12px);
 }
 
+[data-theme="light"] .table-section.fnce-dynamic-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -633,6 +640,167 @@
     color: #888888;
 }
 
+/* ---- Controls Row ---- */
+.portfolio-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: nowrap;
+}
+
+.portfolio-controls-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.portfolio-add-btn {
+    padding: 10px 18px !important;
+    font-size: 14px !important;
+    white-space: nowrap;
+}
+
+.portfolio-help-btn {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    flex-shrink: 0;
+}
+
+/* ---- Hero KPI Row ---- */
+.hero-kpi-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 14px 24px;
+    margin: 12px 0 16px;
+    overflow-x: auto;
+}
+
+.hero-kpi-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 110px;
+}
+
+.hero-kpi-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hero-kpi-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.kpi-positive { color: #10b981; }
+.kpi-negative { color: #ef4444; }
+
+.hero-kpi-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--border-color);
+    flex-shrink: 0;
+    margin: 0 20px;
+}
+
+/* ---- Hero Chart ---- */
+.hero-chart-card {
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+}
+
+/* ---- NVA Insights ---- */
+.nva-insights-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+}
+
+.nva-insights-badge {
+    background: var(--accent-color);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.nva-insight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+}
+
+.nva-insight-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+.nva-insight-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.nva-insight-positive {
+    background: rgba(16, 185, 129, 0.06);
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+.nva-insight-warning {
+    background: rgba(245, 158, 11, 0.06);
+    border-color: rgba(245, 158, 11, 0.15);
+}
+
+.nva-insight-info {
+    background: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.12);
+}
+
+/* ---- FAB ---- */
+.portfolio-fab {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s, box-shadow 0.15s;
+    z-index: 100;
+}
+
+.portfolio-fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
     .portfolio-hero {
@@ -662,18 +830,11 @@
         max-width: calc(100vw - 48px);
     }
 
-    /* Chart header — stack title + time selector */
-    .portfolio-chart-header {
-        flex-direction: column !important;
-        gap: 8px !important;
-    }
-
     .portfolio-chart-header h3 {
         font-size: 1rem !important;
         line-height: 1.3 !important;
     }
 
-    /* Time selector compact */
     .time-selector {
         align-self: flex-start;
     }
@@ -681,5 +842,71 @@
     .time-btn {
         font-size: 11px !important;
         padding: 5px 8px !important;
+    }
+
+    /* KPI row → 2×2 grid */
+    .hero-kpi-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 0;
+        padding: 16px;
+    }
+
+    .hero-kpi-divider {
+        display: none;
+    }
+
+    .hero-kpi-item {
+        min-width: unset;
+        padding: 0 8px;
+    }
+
+    .hero-kpi-item:nth-child(odd) {
+        border-right: 1px solid var(--border-color);
+    }
+
+    .hero-kpi-item:nth-child(1),
+    .hero-kpi-item:nth-child(2) {
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Controls row — wrap on mobile */
+    .portfolio-controls-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .period-filter-wrap {
+        overflow-x: auto;
+        flex: 1;
+        min-width: 0;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .portfolio-controls-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .portfolio-add-btn {
+        flex: 1 !important;
+        justify-content: center;
+    }
+
+    .portfolio-add-label {
+        display: inline;
+    }
+
+    /* FAB hidden on mobile — button is in controls row */
+    .portfolio-fab {
+        display: none;
+    }
+
+    /* Chart header stacks */
+    .portfolio-chart-header {
+        flex-direction: column !important;
+        gap: 10px !important;
+        align-items: flex-start !important;
     }
 }
