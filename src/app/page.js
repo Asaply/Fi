@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import styles from './landing.module.css'
+import NativeRedirect from '@/components/NativeRedirect'
 
 export const metadata = {
   title: 'NVA - Tu dinero en claro',
@@ -10,6 +11,7 @@ export const metadata = {
 export default function LandingPage() {
   return (
     <div className={styles.landing}>
+      <NativeRedirect to="/login" />
       {/* Navbar */}
       <nav className={styles.nav}>
         <Image src="/nva-logo.svg" alt="NVA" width={90} height={30} priority />
