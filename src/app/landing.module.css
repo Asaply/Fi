@@ -4,10 +4,9 @@
 
 .landing {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FF6600 0%, #000000 30%, #000000 100%);
+  background: #000;
   color: #fff;
   font-family: inherit;
-  /* Cover body gradient */
   position: relative;
   z-index: 0;
 }
@@ -32,6 +31,12 @@
   .nav { padding: 0 2rem; height: 64px; }
 }
 
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .navLink {
   font-size: 14px;
   color: rgba(255,255,255,0.65);
@@ -46,23 +51,55 @@
   color: #fff;
 }
 
+.navCta {
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+  background: #fff;
+  text-decoration: none;
+  padding: 0.45rem 1rem;
+  border-radius: 50px;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navCta:hover {
+  opacity: 0.85;
+}
+
+@media (max-width: 480px) {
+  .navCta { display: none; }
+}
+
 /* ── Hero ───────────────────────────────────────────────── */
 .hero {
   max-width: 820px;
   margin: 0 auto;
-  padding: 3rem 1.25rem 3rem;
+  padding: 3.5rem 1.25rem 2.5rem;
   text-align: center;
 }
 
 @media (min-width: 600px) {
-  .hero { padding: 5rem 2rem 4rem; }
+  .hero { padding: 5.5rem 2rem 3.5rem; }
+}
+
+.heroBadge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50px;
+  padding: 0.3rem 0.9rem;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.03em;
 }
 
 .title {
-  font-size: clamp(1.9rem, 7vw, 4rem);
+  font-size: clamp(2.2rem, 8vw, 4.5rem);
   font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -1px;
+  line-height: 1.08;
+  letter-spacing: -2px;
   margin: 0 0 1.25rem;
 }
 
@@ -71,10 +108,25 @@
 }
 
 .subtitle {
-  font-size: clamp(1rem, 3.5vw, 1.2rem);
-  color: rgba(255,255,255,0.8);
-  margin: 0 0 2rem;
-  line-height: 1.6;
+  font-size: clamp(1rem, 3.5vw, 1.15rem);
+  color: rgba(255,255,255,0.65);
+  margin: 0 0 2.5rem;
+  line-height: 1.65;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.heroActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 480px) {
+  .heroActions { flex-direction: row; justify-content: center; }
 }
 
 .cta {
@@ -101,10 +153,59 @@
   transform: translateY(-1px);
 }
 
+.ctaSecondary {
+  display: inline-block;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  text-decoration: none;
+  padding: 0.9rem 0.5rem;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ctaSecondary:hover {
+  color: rgba(255,255,255,0.9);
+}
+
 .ctaNote {
-  margin-top: 1rem;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.35);
+  margin: 0;
+}
+
+/* ── Trust Bar ──────────────────────────────────────────── */
+.trustBar {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.25rem 3rem;
+  text-align: center;
+}
+
+.trustLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.3);
+  margin: 0 0 1rem;
+  font-weight: 600;
+}
+
+.trustBanks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.bankChip {
+  font-size: 12px;
+  font-weight: 600;
   color: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50px;
+  padding: 0.35rem 0.85rem;
+  background: rgba(255,255,255,0.03);
 }
 
 /* ── Demo antes / después ───────────────────────────────── */
@@ -167,6 +268,105 @@
   font-size: 0.85rem;
   color: #ff9a4d;
   margin: 0;
+}
+
+/* ── Insights (lado NVA del demo) ── */
+.insightRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.insightRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.insightIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.insightTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 0.2rem;
+}
+
+.insightSub {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Módulos ─────────────────────────────────────────────── */
+.modulesSection {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 4rem;
+  text-align: center;
+}
+
+@media (min-width: 600px) {
+  .modulesSection { padding: 2rem 2rem 5rem; }
+}
+
+.modulesEyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #FF8700;
+  margin: 0 0 0.75rem;
+}
+
+.modulesGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  text-align: left;
+}
+
+@media (min-width: 680px) {
+  .modulesGrid { grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+}
+
+.moduleCard {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 1.75rem;
+  transition: border-color 0.2s;
+}
+
+.moduleCard:hover {
+  border-color: rgba(255,135,0,0.3);
+}
+
+.moduleIcon {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+
+.moduleTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.6rem;
+  color: #fff;
+}
+
+.moduleDesc {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.55);
+  margin: 0;
+  line-height: 1.6;
 }
 
 .excelRows {

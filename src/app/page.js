@@ -4,109 +4,166 @@ import styles from './landing.module.css'
 import NativeRedirect from '@/components/NativeRedirect'
 
 export const metadata = {
-  title: 'NVA - Tu dinero en claro',
-  description: 'Sube tu estado de cuenta y descubre en qué gastas en segundos.',
+  title: 'NVA — Finalmente, entiende tu dinero.',
+  description: 'NVA analiza tus estados de cuenta, gastos e inversiones y te explica tu situación financiera en segundos. Compatible con Nu, BBVA, Spin y más.',
 }
 
 export default function LandingPage() {
   return (
     <div className={styles.landing}>
       <NativeRedirect to="/login" />
-      {/* Navbar */}
+
+      {/* ── Navbar ── */}
       <nav className={styles.nav}>
         <Image src="/nva-logo.svg" alt="NVA" width={90} height={30} priority />
-        <Link href="/login" className={styles.navLink}>Iniciar sesión</Link>
+        <div className={styles.navActions}>
+          <Link href="/login" className={styles.navLink}>Iniciar sesión</Link>
+          <Link href="/analyze" className={styles.navCta}>Empezar gratis</Link>
+        </div>
       </nav>
 
-      {/* Hero */}
+      {/* ── Hero ── */}
       <section className={styles.hero}>
+        <div className={styles.heroBadge}>🇲🇽 Hecho para México</div>
         <h1 className={styles.title}>
-          Sube tu estado de cuenta.
-          <br />
-          <span className={styles.titleAccent}>Ve en qué gastas en segundos.</span>
+          ¿A dónde se fue<br />
+          <span className={styles.titleAccent}>tu dinero este mes?</span>
         </h1>
         <p className={styles.subtitle}>
-          Sin Excel. Sin categorizar manual. Solo sube tu PDF o CSV y listo.
+          NVA analiza tu estado de cuenta y te explica tus gastos,
+          fugas de dinero e inversiones en menos de 30 segundos.
         </p>
-        <Link href="/analyze" className={styles.cta}>
-          Subir estado de cuenta gratis
-        </Link>
-        <p className={styles.ctaNote}>Sin registro. Resultados en 30 segundos.</p>
+        <div className={styles.heroActions}>
+          <Link href="/analyze" className={styles.cta}>
+            Analizar mi estado de cuenta
+          </Link>
+          <Link href="/login" className={styles.ctaSecondary}>
+            Ya tengo cuenta →
+          </Link>
+        </div>
+        <p className={styles.ctaNote}>Sin registro · Sin tarjeta · Compatible con Nu, BBVA, Spin y más</p>
       </section>
 
-      {/* Demo antes / después */}
-      <div className={styles.demoGrid}>
-        <div className={styles.demoCard}>
-          <p className={styles.demoLabel}>Antes (Excel manual)</p>
-          <div className={styles.excelRows}>
-            <div className={styles.excelRow}>
-              <span className={styles.excelDate}>12/04</span>
-              <span className={styles.excelDesc}>OXXO GASOLINERA...</span>
-              <span className={styles.excelAmt}>$580</span>
-            </div>
-            <div className={styles.excelRow}>
-              <span className={styles.excelDate}>13/04</span>
-              <span className={styles.excelDesc}>UBER *TRIP</span>
-              <span className={styles.excelAmt}>$145</span>
-            </div>
-            <div className={styles.excelRow}>
-              <span className={styles.excelDate}>14/04</span>
-              <span className={styles.excelDesc}>RAPPI RESTAURAN...</span>
-              <span className={styles.excelAmt}>$312</span>
-            </div>
-            <div className={styles.excelRow}>
-              <span className={styles.excelDate}>15/04</span>
-              <span className={styles.excelDesc}>NETFLIX.COM</span>
-              <span className={styles.excelAmt}>$219</span>
-            </div>
-          </div>
-          <p className={styles.excelNote}>⏱ 2–3 horas categorizando a mano cada mes</p>
-        </div>
-        <div className={`${styles.demoCard} ${styles.demoCardActive}`}>
-          <p className={`${styles.demoLabel} ${styles.demoLabelActive}`}>Con NVA (automático)</p>
-          <p className={styles.demoAmount}>$4,200</p>
-          <p className={styles.demoDesc}>en comida este mes (35% de tus ingresos)</p>
-          <p className={styles.demoWarn}>Mayor fuga: Uber Eats ($1,200/mes)</p>
+      {/* ── Trust bar — bancos compatibles ── */}
+      <div className={styles.trustBar}>
+        <p className={styles.trustLabel}>Compatible con</p>
+        <div className={styles.trustBanks}>
+          {['Nu', 'BBVA', 'Spin by OXXO', 'Mercado Pago', 'Hey Banco', 'Banamex'].map(b => (
+            <span key={b} className={styles.bankChip}>{b}</span>
+          ))}
         </div>
       </div>
 
-      {/* Cómo funciona */}
+      {/* ── Demo antes / después ── */}
+      <div className={styles.demoGrid}>
+        <div className={styles.demoCard}>
+          <p className={styles.demoLabel}>Sin NVA</p>
+          <div className={styles.excelRows}>
+            {[
+              ['12/04', 'OXXO GASOLINERA...', '$580'],
+              ['13/04', 'UBER *TRIP', '$145'],
+              ['14/04', 'RAPPI RESTAURAN...', '$312'],
+              ['15/04', 'NETFLIX.COM', '$219'],
+              ['16/04', 'UBER EATS...', '$387'],
+            ].map(([d, desc, amt]) => (
+              <div key={d} className={styles.excelRow}>
+                <span className={styles.excelDate}>{d}</span>
+                <span className={styles.excelDesc}>{desc}</span>
+                <span className={styles.excelAmt}>{amt}</span>
+              </div>
+            ))}
+          </div>
+          <p className={styles.excelNote}>⏱ Horas revisando números sin entender nada</p>
+        </div>
+        <div className={`${styles.demoCard} ${styles.demoCardActive}`}>
+          <p className={`${styles.demoLabel} ${styles.demoLabelActive}`}>Con NVA — en 30 seg</p>
+          <div className={styles.insightRow}>
+            <span className={styles.insightIcon}>🍔</span>
+            <div>
+              <p className={styles.insightTitle}>Comida: <strong>$4,200/mes</strong></p>
+              <p className={styles.insightSub}>35% de tus ingresos. Mayor fuga: Uber Eats.</p>
+            </div>
+          </div>
+          <div className={styles.insightRow}>
+            <span className={styles.insightIcon}>⚠️</span>
+            <div>
+              <p className={styles.insightTitle}>Gastos hormiga detectados</p>
+              <p className={styles.insightSub}>$890/mes en cargos menores de $50.</p>
+            </div>
+          </div>
+          <div className={styles.insightRow}>
+            <span className={styles.insightIcon}>📈</span>
+            <div>
+              <p className={styles.insightTitle}>Podrías ahorrar $2,100/mes</p>
+              <p className={styles.insightSub}>Reduciendo delivery y suscripciones duplicadas.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Módulos ── */}
+      <section className={styles.modulesSection}>
+        <p className={styles.modulesEyebrow}>Todo en un solo lugar</p>
+        <h2 className={styles.sectionTitle}>Tu centro financiero inteligente</h2>
+        <div className={styles.modulesGrid}>
+          <div className={styles.moduleCard}>
+            <div className={styles.moduleIcon}>💸</div>
+            <h3 className={styles.moduleTitle}>Gastos e ingresos</h3>
+            <p className={styles.moduleDesc}>Sube tu PDF o CSV. NVA categoriza todo automáticamente y detecta fugas de dinero que no ves.</p>
+          </div>
+          <div className={styles.moduleCard}>
+            <div className={styles.moduleIcon}>📈</div>
+            <h3 className={styles.moduleTitle}>Portafolio de inversiones</h3>
+            <p className={styles.moduleDesc}>Trackea acciones, crypto y ETFs con precios en tiempo real. Compara tu rendimiento vs S&P 500.</p>
+          </div>
+          <div className={styles.moduleCard}>
+            <div className={styles.moduleIcon}>🧠</div>
+            <h3 className={styles.moduleTitle}>Salud financiera</h3>
+            <p className={styles.moduleDesc}>Un score claro de qué tan bien está tu dinero. Con recomendaciones concretas para mejorar.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Cómo funciona ── */}
       <section className={styles.howSection}>
-        <h2 className={styles.sectionTitle}>Cómo funciona</h2>
+        <h2 className={styles.sectionTitle}>Tres pasos. Sin complicaciones.</h2>
         <div className={styles.stepsGrid}>
           <div className={styles.step}>
             <div className={styles.stepNumber}>1</div>
             <p className={styles.stepTitle}>Sube tu archivo</p>
-            <p className={styles.stepDesc}>PDF o CSV de Nu, BBVA, Spin o cualquier banco</p>
+            <p className={styles.stepDesc}>PDF o CSV de Nu, BBVA, Spin, Mercado Pago o cualquier banco mexicano</p>
           </div>
           <div className={styles.step}>
             <div className={styles.stepNumber}>2</div>
-            <p className={styles.stepTitle}>Espera 30 segundos</p>
-            <p className={styles.stepDesc}>NVA analiza y categoriza automáticamente</p>
+            <p className={styles.stepTitle}>NVA lo interpreta</p>
+            <p className={styles.stepDesc}>Categorización automática, detección de patrones y análisis inteligente</p>
           </div>
           <div className={styles.step}>
             <div className={styles.stepNumber}>3</div>
-            <p className={styles.stepTitle}>Ve tus insights</p>
-            <p className={styles.stepDesc}>Fugas de dinero, recomendaciones, gráficas</p>
+            <p className={styles.stepTitle}>Entiende tu dinero</p>
+            <p className={styles.stepDesc}>Insights claros, sin jerga. Sabes exactamente dónde mejorar</p>
           </div>
         </div>
       </section>
 
-      {/* CTA final */}
+      {/* ── CTA Final ── */}
       <section className={styles.ctaSection}>
-        <h2 className={styles.ctaSectionTitle}>Deja de preguntarte en qué se va tu dinero</h2>
-        <p className={styles.ctaSectionSubtitle}>Súbelo y sabrás en 30 segundos.</p>
+        <h2 className={styles.ctaSectionTitle}>Finalmente, entiende tu dinero.</h2>
+        <p className={styles.ctaSectionSubtitle}>
+          Sube tu estado de cuenta y en 30 segundos tienes claridad total sobre tus finanzas.
+        </p>
         <Link href="/analyze" className={styles.cta}>
-          Probar gratis ahora
+          Empezar gratis ahora
         </Link>
+        <p className={styles.ctaNote}>Sin registro · 100% privado · Tus datos no se guardan</p>
       </section>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div>
             <Image src="/nva-logo.svg" alt="NVA" width={70} height={22} />
-            <p className={styles.footerCopy}>Net Value Analysis &copy; 2025</p>
+            <p className={styles.footerCopy}>Inteligencia financiera para México &copy; 2025</p>
           </div>
           <div className={styles.footerLinks}>
             <Link href="/privacy" className={styles.footerLink}>Privacidad</Link>
