@@ -419,7 +419,7 @@ function StepImport({ onImportComplete, onSkip }) {
                 Sube tu primer<br />estado de cuenta
             </h1>
             <p className="ob-subtitle ob-subtitle-left">
-                Puedes subir el PDF de tu banco. NVA lo analiza automáticamente.
+                Compatible con todos los bancos de México: Nu, BBVA, Banorte, Santander, HSBC, Citibanamex, Spin, Mercado Pago, Hey Banco y más.
             </p>
 
             {!loading ? (
