@@ -41,14 +41,14 @@ export default function LandingPage() {
             Ya tengo cuenta →
           </Link>
         </div>
-        <p className={styles.ctaNote}>Sin registro · Sin tarjeta · Compatible con Nu, BBVA, Spin y más</p>
+        <p className={styles.ctaNote}>Sin registro · Sin tarjeta · Compatible con todos los bancos de México</p>
       </section>
 
       {/* ── Trust bar — bancos compatibles ── */}
       <div className={styles.trustBar}>
         <p className={styles.trustLabel}>Compatible con</p>
         <div className={styles.trustBanks}>
-          {['Nu', 'BBVA', 'Spin by OXXO', 'Mercado Pago', 'Hey Banco', 'Banamex'].map(b => (
+          {['Nu', 'BBVA', 'Banorte', 'Santander', 'HSBC', 'Citibanamex', 'Spin by OXXO', 'Mercado Pago', 'Hey Banco', 'Inbursa', 'Afirme', 'Y más...'].map(b => (
             <span key={b} className={styles.bankChip}>{b}</span>
           ))}
         </div>
@@ -131,7 +131,7 @@ export default function LandingPage() {
           <div className={styles.step}>
             <div className={styles.stepNumber}>1</div>
             <p className={styles.stepTitle}>Sube tu archivo</p>
-            <p className={styles.stepDesc}>PDF o CSV de Nu, BBVA, Spin, Mercado Pago o cualquier banco mexicano</p>
+            <p className={styles.stepDesc}>PDF o CSV — compatible con todos los bancos de México</p>
           </div>
           <div className={styles.step}>
             <div className={styles.stepNumber}>2</div>

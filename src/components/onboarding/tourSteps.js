@@ -7,7 +7,7 @@ export const DASHBOARD_STEPS = [
 
 export const FINANZAS_STEPS = [
     { target: '[data-tour="btn-nueva-transaccion"]', title: 'Registra una transacción', description: 'Agrega ingresos, egresos o inversiones de forma manual.', position: 'bottom' },
-    { target: '[data-tour="btn-importar-csv"]', title: 'Importa tu estado de cuenta', description: 'Sube tu PDF o CSV de cualquier banco mexicano. NVA lo analiza con IA y categoriza todo automáticamente.', position: 'bottom' },
+    { target: '[data-tour="btn-importar-csv"]', title: 'Importa tu estado de cuenta', description: 'Compatible con todos los bancos de México: Nu, BBVA, Banorte, Santander, HSBC, Citibanamex, Spin, Mercado Pago, Hey Banco y más. NVA analiza y categoriza todo automáticamente.', position: 'bottom' },
     { target: '[data-tour="filtros-tipo"]', title: 'Filtra por tipo', description: 'Separa entre Ingresos, Egresos, Inversiones o lo que está por cobrar.', position: 'bottom' },
 ];
 

@@ -1982,7 +1982,7 @@ export default function FinanzasPage() {
                     /* Step 1: upload + column mapping */
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '100px' }}>
                         <p style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
-                            Sube tu estado de cuenta en PDF o CSV. Los PDF de BBVA, Banorte, Santander, HSBC, Citibanamex y Nu se procesan automáticamente.
+                            Sube tu estado de cuenta en PDF o CSV. Compatible con todos los bancos de México: Nu, BBVA, Banorte, Santander, HSBC, Citibanamex, Spin by OXXO, Mercado Pago, Hey Banco, Inbursa, Afirme y más.
                         </p>
                         <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--bg-border)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                             Puedes importar estados de múltiples tarjetas y cuentas. Cada una tendrá su propio análisis y podrás verlas de forma individual o en vista global.
