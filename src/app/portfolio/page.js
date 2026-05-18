@@ -13,6 +13,16 @@ import { openTutorial } from '@/components/AppTutorial';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
+const CATEGORY_COLORS = {
+    'Crypto':            { bg: 'rgba(251,146,60,0.15)',  color: '#fb923c' },
+    'Stock':             { bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
+    'ETF':               { bg: 'rgba(52,211,153,0.15)',  color: '#34d399' },
+    'Bono':              { bg: 'rgba(139,92,246,0.15)',  color: '#8b5cf6' },
+    'REIT':              { bg: 'rgba(236,72,153,0.15)',  color: '#ec4899' },
+    'Fondo/Mutual Fund': { bg: 'rgba(20,184,166,0.15)', color: '#14b8a6' },
+    'Otro':              { bg: 'rgba(113,113,122,0.15)', color: '#71717a' },
+};
+
 const TICKER_HINTS = {
     Crypto: {
         placeholder: 'Ej: BTC, ETH, SOL',
@@ -232,6 +242,26 @@ export default function PortfolioHealth() {
     const beta = 1.0 + (cryptoPerc > 30 ? 0.8 : 0) + (totalPnlPerc > 20 ? 0.3 : -0.1);
     const sharpe = (totalPnlPerc / 100) / (beta * 0.15) || 0;
 
+    const dailyChange = enrichedAssets.reduce((sum, a) => {
+        const sp = a.sparkline;
+        if (sp.length < 2) return sum;
+        return sum + (sp[sp.length - 1] - sp[sp.length - 2]) * a.quantity;
+    }, 0);
+    const riskLabel = beta > 1.8 ? 'Alto' : beta > 1.2 ? 'Moderado' : 'Bajo';
+    const riskColor = beta > 1.8 ? 'var(--danger)' : beta > 1.2 ? '#f59e0b' : 'var(--success)';
+    const monthlyReturn = totalCost > 0 ? totalPnlPerc / 12 : 0;
+
+    const insights = [];
+    if (enrichedAssets.length > 0) {
+        if (cryptoPerc > 50) insights.push({ type: 'warning', icon: '⚠️', text: `Alta concentración en Crypto (${cryptoPerc.toFixed(0)}%). Considera diversificar en stocks o ETFs para reducir volatilidad.` });
+        if (enrichedAssets.length < 4) insights.push({ type: 'info', icon: '💡', text: 'Portafolio poco diversificado. Agregar más activos reduce tu riesgo general.' });
+        if (bestAsset.ticker !== '-' && bestAsset.pnlPerc > 15) insights.push({ type: 'positive', icon: '📈', text: `${bestAsset.ticker} es tu activo estrella con +${bestAsset.pnlPerc.toFixed(1)}% de rendimiento.` });
+        if (totalPnlPerc < 0) insights.push({ type: 'warning', icon: '📉', text: `Tu portafolio está en pérdida (${totalPnlPerc.toFixed(1)}%). Revisa las posiciones con mayor pérdida.` });
+        const hasETF = enrichedAssets.some(a => a.category === 'ETF');
+        if (!hasETF) insights.push({ type: 'info', icon: '🛡️', text: 'Sin ETFs en tu portafolio. Agregar SPY o VOO puede reducir volatilidad hasta un 18%.' });
+        if (divScore > 70) insights.push({ type: 'positive', icon: '✅', text: `Buena diversificación (${divScore}/100). Ningún activo domina en exceso tu portafolio.` });
+    }
+
     const openModal = (assetToEdit = null) => {
         setFormError(null);
         if (assetToEdit) {
@@ -289,8 +319,8 @@ export default function PortfolioHealth() {
 
     return (
         <div className="page-container portfolio-page">
-            {/* HERO — Valor total (siempre visible arriba) */}
-            <div className="app-hero" style={{ marginBottom: '16px' }}>
+            {/* HERO — Valor total */}
+            <div className="app-hero" style={{ marginBottom: assets.length > 0 ? '0' : '16px' }}>
                 <p className="app-hero-label">Valor total del portafolio</p>
                 <div className="app-hero-amount">
                     <span className="app-hero-int">{valInt}</span>
@@ -304,27 +334,55 @@ export default function PortfolioHealth() {
                 )}
             </div>
 
-            {/* Controles */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-                <div className="page-actions" style={{ justifyContent: 'center' }}>
-                    <div className="period-filter-wrap">
-                        {[
-                            { label: 'Este mes', range: '1M' },
-                            { label: '3 meses', range: '3M' },
-                            { label: '6 meses', range: '6M' },
-                            { label: 'Este año', range: '1A' },
-                        ].map(p => (
-                            <button key={p.range} onClick={() => { setFilter('portfolio', p.range); setActiveRange(p.range); }}
-                                className={`period-filter-btn ${activeRange === p.range ? 'active' : ''}`}
-                            >{p.label}</button>
-                        ))}
+            {/* KPI ROW */}
+            {assets.length > 0 && (
+                <div className="hero-kpi-row">
+                    <div className="hero-kpi-item">
+                        <span className="hero-kpi-label">Cambio hoy</span>
+                        <span className={`hero-kpi-value ${dailyChange >= 0 ? 'kpi-positive' : 'kpi-negative'}`}>
+                            {dailyChange >= 0 ? '+' : ''}{formatCurrency(dailyChange)}
+                        </span>
+                    </div>
+                    <div className="hero-kpi-divider" />
+                    <div className="hero-kpi-item">
+                        <span className="hero-kpi-label">Retorno mensual est.</span>
+                        <span className={`hero-kpi-value ${monthlyReturn >= 0 ? 'kpi-positive' : 'kpi-negative'}`}>
+                            {monthlyReturn >= 0 ? '+' : ''}{monthlyReturn.toFixed(2)}%
+                        </span>
+                    </div>
+                    <div className="hero-kpi-divider" />
+                    <div className="hero-kpi-item">
+                        <span className="hero-kpi-label">Riesgo</span>
+                        <span className="hero-kpi-value" style={{ color: riskColor }}>{riskLabel}</span>
+                    </div>
+                    <div className="hero-kpi-divider" />
+                    <div className="hero-kpi-item">
+                        <span className="hero-kpi-label">Diversificación</span>
+                        <span className="hero-kpi-value" style={{ color: healthColor }}>{divScore}/100</span>
                     </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                    <button className="btn-cta-primary" data-tour="btn-agregar-activo" onClick={() => openModal()}>
-                        <Plus size={16} /> Agregar Activo
+            )}
+
+            {/* Controles */}
+            <div className="portfolio-controls-row">
+                <div className="period-filter-wrap">
+                    {[
+                        { label: 'Este mes', range: '1M' },
+                        { label: '3 meses', range: '3M' },
+                        { label: '6 meses', range: '6M' },
+                        { label: 'Este año', range: '1A' },
+                    ].map(p => (
+                        <button key={p.range} onClick={() => { setFilter('portfolio', p.range); setActiveRange(p.range); }}
+                            className={`period-filter-btn ${activeRange === p.range ? 'active' : ''}`}
+                        >{p.label}</button>
+                    ))}
+                </div>
+                <div className="portfolio-controls-actions">
+                    <button className="btn-cta-primary portfolio-add-btn" data-tour="btn-agregar-activo" onClick={() => openModal()}>
+                        <Plus size={15} />
+                        <span className="portfolio-add-label">Agregar Activo</span>
                     </button>
-                    <button onClick={openTutorial} className="btn-action-secondary" title="Tutorial de la app">?</button>
+                    <button onClick={openTutorial} className="btn-action-secondary portfolio-help-btn" title="Tutorial">?</button>
                 </div>
             </div>
 
@@ -354,7 +412,34 @@ export default function PortfolioHealth() {
 
             ) : (
                 <>
-                    {/* METRIC GRID 2x2 */}
+                    {/* 1. HERO CHART — Performance vs mercado */}
+                    <div className="chart-card hero-chart-card" style={{ padding: '24px' }}>
+                        <div className="portfolio-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Performance del portafolio</h3>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>vs S&amp;P 500 y Nasdaq — simulado basado en rendimiento actual</p>
+                            </div>
+                            <div className="time-selector">
+                                {timeRanges.map(tr => (
+                                    <button key={tr} className={`time-btn ${activeRange === tr ? 'active' : ''}`} onClick={() => { setFilter('portfolio', tr); setActiveRange(tr); }}>{tr}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={historyChartData}>
+                                <XAxis dataKey="day" stroke="#666" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
+                                <YAxis yAxisId="left" stroke="#666" fontSize={11} tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} width={55} tickLine={false} axisLine={false} />
+                                <YAxis yAxisId="right" orientation="right" stroke="#666" fontSize={11} tickLine={false} axisLine={false} hide />
+                                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px' }} labelStyle={{ color: 'var(--text-secondary)' }} formatter={(val) => formatCurrency(val)} />
+                                <Legend iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
+                                <Line yAxisId="left" type="monotone" dataKey="Tu portafolio" stroke="#10b981" strokeWidth={3} dot={false} />
+                                <Line yAxisId="right" type="monotone" dataKey="S&P 500" stroke="#3b82f6" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+                                <Line yAxisId="right" type="monotone" dataKey="Nasdaq" stroke="#8b5cf6" strokeWidth={2} dot={false} strokeDasharray="3 3" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* 2. METRIC GRID */}
                     <div className="app-metric-grid">
                         <div className="app-metric-card" data-tour="card-pnl">
                             <div className="app-metric-icon" style={{ background: totalPnl >= 0 ? 'rgba(52, 211, 153, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: totalPnl >= 0 ? '#34d399' : '#ef4444' }}>
@@ -365,7 +450,6 @@ export default function PortfolioHealth() {
                                 {totalPnl > 0 ? '+' : ''}{formatCurrency(totalPnl)}
                             </span>
                         </div>
-
                         <div className="app-metric-card">
                             <div className="app-metric-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
                                 <Wallet size={16} />
@@ -373,7 +457,6 @@ export default function PortfolioHealth() {
                             <span className="app-metric-title">Capital Invertido</span>
                             <span className="app-metric-value">{formatCurrency(totalCost)}</span>
                         </div>
-
                         <div className="app-metric-card">
                             <div className="app-metric-icon" style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>
                                 <ArrowUpRight size={16} />
@@ -382,7 +465,6 @@ export default function PortfolioHealth() {
                             <span className="app-metric-value" style={{ color: 'var(--success)' }}>{bestAsset.ticker}</span>
                             <span className="app-metric-subtext" style={{ color: 'var(--success)' }}>{bestAsset.pnlPerc === -Infinity ? '-' : `+${bestAsset.pnlPerc.toFixed(1)}%`}</span>
                         </div>
-
                         <div className="app-metric-card">
                             <div className="app-metric-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }}>
                                 <ArrowDownRight size={16} />
@@ -393,7 +475,7 @@ export default function PortfolioHealth() {
                         </div>
                     </div>
 
-                    {/* 2. TABLA DE ACTIVOS */}
+                    {/* 3. TABLA DE ACTIVOS */}
                     <div className="table-section fnce-dynamic-panel" data-tour="tabla-activos">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>Mis Activos</h3>
@@ -412,10 +494,9 @@ export default function PortfolioHealth() {
                                 <thead>
                                     <tr>
                                         <th onClick={() => requestSort('ticker')}>Activo {getSortIcon('ticker')}</th>
-                                        <th onClick={() => requestSort('category')}>Categoría {getSortIcon('category')}</th>
                                         <th onClick={() => requestSort('quantity')}>Cantidad {getSortIcon('quantity')}</th>
                                         <th onClick={() => requestSort('currentPrice')}>Precio actual {getSortIcon('currentPrice')}</th>
-                                        <th onClick={() => requestSort('avg_buy_price')}>Costo promedio {getSortIcon('avg_buy_price')}</th>
+                                        <th onClick={() => requestSort('avg_buy_price')}>Costo prom. {getSortIcon('avg_buy_price')}</th>
                                         <th onClick={() => requestSort('value')}>Valor {getSortIcon('value')}</th>
                                         <th onClick={() => requestSort('pnl')}>G/P {getSortIcon('pnl')}</th>
                                         <th onClick={() => requestSort('pnlPerc')}>% {getSortIcon('pnlPerc')}</th>
@@ -425,14 +506,29 @@ export default function PortfolioHealth() {
                                 </thead>
                                 <tbody>
                                     {sortedAssets.length === 0 ? (
-                                        <tr><td colSpan="10" style={{ textAlign: 'center', opacity: 0.5, padding: '32px' }}>Sin resultados</td></tr>
+                                        <tr><td colSpan="9" style={{ textAlign: 'center', opacity: 0.5, padding: '32px' }}>Sin resultados</td></tr>
                                     ) : sortedAssets.map(t => {
                                         const trendData = t.sparkline.map((val, i) => ({ i, val }));
                                         const isUp = t.sparkline[t.sparkline.length - 1] >= t.sparkline[0];
+                                        const catStyle = CATEGORY_COLORS[t.category] || CATEGORY_COLORS['Otro'];
                                         return (
                                             <tr key={t.id}>
-                                                <td style={{ fontWeight: 700 }}>{t.ticker}</td>
-                                                <td><span className="category-badge">{t.category}</span></td>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{
+                                                            width: '36px', height: '36px', borderRadius: '50%',
+                                                            background: catStyle.bg, color: catStyle.color,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            fontSize: '11px', fontWeight: 700, flexShrink: 0, letterSpacing: '-0.5px'
+                                                        }}>
+                                                            {t.ticker.slice(0, 3)}
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontWeight: 700, fontSize: '14px', lineHeight: 1.2 }}>{t.ticker}</div>
+                                                            <div style={{ fontSize: '11px', color: catStyle.color, fontWeight: 500 }}>{t.category}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
                                                 <td>{t.quantity}</td>
                                                 <td>{formatCurrency(t.currentPrice)}</td>
                                                 <td>{formatCurrency(t.avg_buy_price)}</td>
@@ -460,33 +556,28 @@ export default function PortfolioHealth() {
                         </div>
                     </div>
 
-                    {/* 3. GRÁFICAS */}
-                    <div className="chart-card" style={{ padding: '24px' }}>
-                        <div className="portfolio-chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Cómo ha crecido tu portafolio vs el mercado</h3>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>Comparativa simulada basada en tu rendimiento actual</p>
+                    {/* 4. NVA INSIGHTS */}
+                    {insights.length > 0 && (
+                        <div className="nva-insights-card">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                <div className="nva-insights-badge">NVA</div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Insights de tu portafolio</h3>
+                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Análisis automático basado en tus datos reales</p>
+                                </div>
                             </div>
-                            <div className="time-selector">
-                                {timeRanges.map(tr => (
-                                    <button key={tr} className={`time-btn ${activeRange === tr ? 'active' : ''}`} onClick={() => { setFilter('portfolio', tr); setActiveRange(tr); }}>{tr}</button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {insights.map((ins, i) => (
+                                    <div key={i} className={`nva-insight-item nva-insight-${ins.type}`}>
+                                        <span className="nva-insight-icon">{ins.icon}</span>
+                                        <span className="nva-insight-text">{ins.text}</span>
+                                    </div>
                                 ))}
                             </div>
                         </div>
-                        <ResponsiveContainer width="100%" height={280}>
-                            <LineChart data={historyChartData}>
-                                <XAxis dataKey="day" stroke="#666" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
-                                <YAxis yAxisId="left" stroke="#666" fontSize={11} tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} width={55} tickLine={false} axisLine={false} />
-                                <YAxis yAxisId="right" orientation="right" stroke="#666" fontSize={11} tickLine={false} axisLine={false} hide />
-                                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px' }} labelStyle={{ color: 'var(--text-secondary)' }} formatter={(val) => formatCurrency(val)} />
-                                <Legend iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
-                                <Line yAxisId="left" type="monotone" dataKey="Tu portafolio" stroke="#10b981" strokeWidth={3} dot={false} />
-                                <Line yAxisId="right" type="monotone" dataKey="S&P 500" stroke="#3b82f6" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                                <Line yAxisId="right" type="monotone" dataKey="Nasdaq" stroke="#8b5cf6" strokeWidth={2} dot={false} strokeDasharray="3 3" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
+                    )}
 
+                    {/* 5. CHARTS ROW */}
                     <div className="charts-row">
                         <div className="chart-card">
                             <h3>Distribución por Categoría</h3>
@@ -517,120 +608,63 @@ export default function PortfolioHealth() {
                         </div>
                     </div>
 
-                    {/* 4. MÉTRICAS DE RIESGO */}
+                    {/* 6. MÉTRICAS DE RIESGO */}
                     <div className="card">
                         <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: 'var(--text-primary)' }}>Métricas de Riesgo</h3>
                         <div className="risk-metrics-row">
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    Beta vs S&amp;P 500
-                                    <Tooltip text="Mide qué tan volátil es tu portafolio vs el mercado. Beta > 1 = más volátil que el S&P 500." />
-                                </span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Beta vs S&amp;P 500<Tooltip text="Mide qué tan volátil es tu portafolio vs el mercado. Beta > 1 = más volátil que el S&P 500." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? beta.toFixed(2) : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    Ratio de Sharpe
-                                    <Tooltip text="Rendimiento ajustado al riesgo. Mayor = mejor relación riesgo/recompensa. Por encima de 1.0 es bueno." />
-                                </span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Ratio de Sharpe<Tooltip text="Rendimiento ajustado al riesgo. Mayor = mejor. Por encima de 1.0 es bueno." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? sharpe.toFixed(2) : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    Volatilidad Anual
-                                    <Tooltip text="Qué tanto fluctúan los precios de tus activos en un año. Menor volatilidad = mayor estabilidad." />
-                                </span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Volatilidad Anual<Tooltip text="Qué tanto fluctúan los precios de tus activos en un año." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? '14.2%' : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    Pérdida Máxima
-                                    <Tooltip text="La mayor caída que tuvo tu portafolio desde un pico hasta un valle. Indica el peor escenario histórico." />
-                                </span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Pérdida Máxima<Tooltip text="La mayor caída desde un pico hasta un valle. Peor escenario histórico." /></span>
                                 <span className="risk-card-val" style={{ color: 'var(--danger)' }}>{enrichedAssets.length > 0 ? '-22.4%' : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    Correlación S&amp;P
-                                    <Tooltip text="Qué tan parecido se mueve tu portafolio al S&P 500. Cerca de 1.0 = muy correlacionado con el mercado." />
-                                </span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Correlación S&amp;P<Tooltip text="Qué tan parecido se mueve tu portafolio al S&P 500. Cerca de 1.0 = muy correlacionado." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? '0.85' : '-'}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* 5. SALUD DEL PORTAFOLIO */}
+                    {/* 7. SALUD DEL PORTAFOLIO */}
                     <div className="health-card">
                         <div className="health-header">
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Salud de tu Portafolio</h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                    Mide qué tan equilibrado y seguro está tu portafolio. 0 = muy arriesgado, 100 = muy diversificado
+                                    0 = muy arriesgado · 100 = muy diversificado
                                 </p>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '36px', fontWeight: 800, color: healthColor, lineHeight: 1 }}>{overallHealth.toFixed(0)}</div>
-                                <div style={{ fontSize: '13px', color: healthColor, fontWeight: 600 }}>{healthLabel}</div>
+                                <div style={{ fontSize: '48px', fontWeight: 800, color: healthColor, lineHeight: 1, letterSpacing: '-2px' }}>{overallHealth.toFixed(0)}</div>
+                                <div style={{ fontSize: '13px', color: healthColor, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>{healthLabel}</div>
                             </div>
                         </div>
-
                         <div className="health-bars-container">
-                            <div className="health-bar-row">
-                                <div className="h-bar-header">
-                                    <span>
-                                        Diversificación
-                                        <Tooltip text="Qué tan repartido está tu portafolio. Mayor puntaje = ningún activo domina demasiado." />
-                                    </span>
-                                    <span>{divScore}/100</span>
+                            {[
+                                { label: 'Diversificación', score: divScore, tip: 'Qué tan repartido está tu portafolio. Mayor puntaje = ningún activo domina demasiado.' },
+                                { label: 'Riesgo de Volatilidad', score: volScore, tip: 'Qué tan estable es tu portafolio. Alta exposición a cripto reduce este puntaje.' },
+                                { label: 'Rendimiento vs Mercado', score: benchScore, tip: 'Cómo se compara tu rendimiento total con el mercado general (S&P 500).' },
+                                { label: 'Liquidez', score: liqScore, tip: 'Qué tan fácil es convertir tus activos en efectivo sin perder valor.' },
+                            ].map(({ label, score, tip }) => (
+                                <div key={label} className="health-bar-row">
+                                    <div className="h-bar-header">
+                                        <span>{label}<Tooltip text={tip} /></span>
+                                        <span style={{ fontWeight: 600 }}>{score}/100</span>
+                                    </div>
+                                    <div className="h-bar-track"><div className={`h-bar-fill ${getBarColor(score)}`} style={{ width: `${score}%` }} /></div>
                                 </div>
-                                <div className="h-bar-track"><div className={`h-bar-fill ${getBarColor(divScore)}`} style={{ width: `${divScore}%` }} /></div>
-                            </div>
-                            <div className="health-bar-row">
-                                <div className="h-bar-header">
-                                    <span>
-                                        Riesgo de Volatilidad
-                                        <Tooltip text="Qué tan estable es tu portafolio. Alta exposición a cripto reduce este puntaje." />
-                                    </span>
-                                    <span>{volScore}/100</span>
-                                </div>
-                                <div className="h-bar-track"><div className={`h-bar-fill ${getBarColor(volScore)}`} style={{ width: `${volScore}%` }} /></div>
-                            </div>
-                            <div className="health-bar-row">
-                                <div className="h-bar-header">
-                                    <span>
-                                        Rendimiento vs Mercado
-                                        <Tooltip text="Cómo se compara tu rendimiento total con el mercado general (S&P 500)." />
-                                    </span>
-                                    <span>{benchScore}/100</span>
-                                </div>
-                                <div className="h-bar-track"><div className={`h-bar-fill ${getBarColor(benchScore)}`} style={{ width: `${benchScore}%` }} /></div>
-                            </div>
-                            <div className="health-bar-row">
-                                <div className="h-bar-header">
-                                    <span>
-                                        Liquidez
-                                        <Tooltip text="Qué tan fácil es convertir tus activos en efectivo sin perder valor." />
-                                    </span>
-                                    <span>{liqScore}/100</span>
-                                </div>
-                                <div className="h-bar-track"><div className={`h-bar-fill ${getBarColor(liqScore)}`} style={{ width: `${liqScore}%` }} /></div>
-                            </div>
+                            ))}
                         </div>
-
-                        {recs.length > 0 && (
-                            <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
-                                <h4 style={{ color: 'var(--accent-color)', marginBottom: '12px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Target size={15} /> Recomendaciones personalizadas
-                                </h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {recs.map((rec, i) => (
-                                        <div key={i} style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '10px 14px', background: 'var(--bg-primary)', borderRadius: '8px', borderLeft: '3px solid var(--accent-color)' }}>
-                                            {rec}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                 </>
@@ -705,6 +739,11 @@ export default function PortfolioHealth() {
                     </div>
                 </form>
             </Modal>
+
+            {/* FAB — Agregar Activo */}
+            <button className="portfolio-fab" data-tour="btn-agregar-activo" onClick={() => openModal()} title="Agregar Activo">
+                <Plus size={22} />
+            </button>
 
             {/* MODAL — Confirmar eliminación */}
             <Modal isOpen={itemToDelete !== null} onClose={() => setItemToDelete(null)} title="Confirmar Eliminación">
