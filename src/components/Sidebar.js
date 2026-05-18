@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Wallet, Users, Target, Home, Activity, LayoutDashboard, TrendingUp, PiggyBank } from "lucide-react";
+import { Wallet, Target, Home, Activity, LayoutDashboard, TrendingUp, PiggyBank } from "lucide-react";
 import "./Sidebar.css";
 
 const MODULES_KEY = 'fnce_modules';
@@ -21,7 +21,6 @@ export default function Sidebar() {
     const pathname = usePathname();
     const [modules, setModules] = useState({
         trading: false,
-        clientes: false,
         prospectos: false,
         airbnb: false,
     });
@@ -67,12 +66,6 @@ export default function Sidebar() {
                     <Link href="/trading" className={`nav-item ${pathname === '/trading' ? 'active' : ''}`}>
                         <TrendingUp size={20} />
                         <span>Trading</span>
-                    </Link>
-                )}
-                {modules.clientes && (
-                    <Link href="/clientes" className={`nav-item ${pathname === '/clientes' ? 'active' : ''}`}>
-                        <Users size={20} />
-                        <span>Clientes</span>
                     </Link>
                 )}
                 {modules.prospectos && (
