@@ -18,7 +18,7 @@ export default function BlogPage() {
       {/* Navbar */}
       <nav className={styles.nav}>
         <Link href="/">
-          <Image src="/nva-logo.svg" alt="NVA" width={80} height={26} priority />
+          <Image src="/nva-icon.svg" alt="NVA" width={32} height={32} priority style={{ borderRadius: 8 }} />
         </Link>
         <div className={styles.navActions}>
           <Link href="/login" className={styles.navLink}>Iniciar sesión</Link>
@@ -73,7 +73,7 @@ export default function BlogPage() {
       {/* Footer */}
       <footer className={styles.footer}>
         <Link href="/">
-          <Image src="/nva-logo.svg" alt="NVA" width={64} height={20} />
+          <Image src="/nva-icon.svg" alt="NVA" width={28} height={28} style={{ borderRadius: 7 }} />
         </Link>
         <p className={styles.footerCopy}>Inteligencia financiera para México &copy; 2025</p>
       </footer>
