@@ -220,7 +220,7 @@ export default function TradingPage() {
                 </div>
             ) : (
                 <div className="app-hero">
-                    <p className="app-hero-label">Total P&L Realizado</p>
+                    <p className="app-hero-label">Lo que has ganado operando</p>
                     <div className="app-hero-amount">
                         <span className={`app-hero-int${totalPnL < 0 ? ' negative' : ''}`}>
                             {totalPnL > 0 ? '+' : ''}{pnlInt}
@@ -262,7 +262,7 @@ export default function TradingPage() {
                         <div className="app-metric-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
                             <Target size={16} />
                         </div>
-                        <span className="app-metric-title">Win Rate</span>
+                        <span className="app-metric-title">Operaciones ganadoras</span>
                         <span className={`app-metric-value ${Number(winRate) >= 60 ? 'amount-positive' : Number(winRate) >= 40 ? 'amount-warning' : closedTrades.length === 0 ? 'amount-neutral' : 'amount-negative'}`}>
                             {winRate}%
                         </span>
