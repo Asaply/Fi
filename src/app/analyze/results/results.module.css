@@ -273,19 +273,7 @@
 .ctaBtn:hover { opacity: 0.88; }
 
 .ctaSecondary {
-  display: block;
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.4);
-  font-size: 0.85rem;
-  cursor: pointer;
-  font-family: inherit;
-  transition: color 0.15s;
-}
-
-.ctaSecondary:hover { color: rgba(255,255,255,0.7); }
-
-.ctaSecondaryLink {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.3);
+  margin: 0;
 }

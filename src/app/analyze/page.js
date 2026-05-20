@@ -77,12 +77,18 @@ export default function AnalyzePage() {
       <div className={styles.card}>
         <div className={styles.header}>
           <Image src="/nva-logo.svg" alt="NVA" width={110} height={36} priority />
-          <h1 className={styles.title}>Analiza tu estado de cuenta</h1>
-          <p className={styles.subtitle}>Sube PDF o CSV de tu banco</p>
+          <h1 className={styles.title}>¿A dónde se fue<br />tu dinero este mes?</h1>
+          <p className={styles.subtitle}>Sube tu estado de cuenta y NVA te explica todo en segundos. Gratis.</p>
         </div>
 
         {!loading ? (
           <>
+            <div className={styles.bankChips}>
+              {['Nu', 'BBVA', 'Banorte', 'Santander', 'HSBC', 'Citibanamex', 'Spin', 'Mercado Pago', 'Hey Banco', 'y más...'].map(b => (
+                <span key={b} className={styles.bankChip}>{b}</span>
+              ))}
+            </div>
+
             <input
               type="file"
               accept=".pdf,.csv"
@@ -102,18 +108,21 @@ export default function AnalyzePage() {
                 </svg>
               </div>
               <p className={styles.dropzoneText}>
-                {file ? file.name : 'Arrastra tu archivo o haz clic'}
+                {file ? file.name : 'Toca para seleccionar tu PDF'}
               </p>
-              <p className={styles.dropzoneHint}>PDF o CSV (max 15MB)</p>
+              <p className={styles.dropzoneHint}>{file ? 'Toca para cambiar' : 'PDF o CSV · Máx. 15MB · Sin registro'}</p>
             </label>
 
             {error && <p style={{ color: '#ff4d4d', fontSize: '0.85rem', textAlign: 'center', marginTop: '1rem' }}>{error}</p>}
 
-            {file && (
-              <button onClick={handleAnalyze} className={styles.uploadBtn}>
-                Analizar gratis
-              </button>
-            )}
+            <button onClick={handleAnalyze} className={styles.uploadBtn} disabled={!file}>
+              {file ? 'Analizar mi estado de cuenta' : 'Selecciona tu archivo para continuar'}
+            </button>
+
+            <div className={styles.bottomRow}>
+              <p className={styles.privacyNote}>🔒 Cifrado 256-bit · No guardamos tu PDF</p>
+              <a href="/login" className={styles.loginLink}>Ya tengo cuenta →</a>
+            </div>
           </>
         ) : (
           <div className={styles.progressCard}>
@@ -123,10 +132,6 @@ export default function AnalyzePage() {
             <p className={styles.progressMsg}>{statusMsg}</p>
           </div>
         )}
-
-        <p className={styles.privacyNote}>
-          Tus datos son privados. No los compartimos.
-        </p>
       </div>
     </div>
   )

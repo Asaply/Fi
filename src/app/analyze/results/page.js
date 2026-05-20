@@ -144,16 +144,14 @@ export default function ResultsPage() {
 
         {/* CTA */}
         <div className={`${styles.card} ${styles.ctaCard}`}>
-          <p className={styles.ctaTitle}>¿Quieres ver más insights?</p>
+          <p className={styles.ctaTitle}>Guarda este análisis.<br />Es gratis.</p>
           <p className={styles.ctaSub}>
-            Crea tu cuenta gratis para guardar este análisis y ver predicciones de flujo
+            Crea tu cuenta para guardar tus resultados, subir más estados de cuenta y ver tu historial completo.
           </p>
           <button className={styles.ctaBtn} onClick={() => router.push('/login')}>
-            Crear cuenta gratis
+            Crear cuenta — es gratis
           </button>
-          <button className={styles.ctaSecondary} onClick={() => router.push('/login?reason=more_analyses')}>
-            <span className={styles.ctaSecondaryLink}>¿Más estados de cuenta? Crea tu cuenta para análisis ilimitados</span>
-          </button>
+          <p className={styles.ctaSecondary}>Sin tarjeta · Sin suscripción</p>
         </div>
       </div>
     </div>
