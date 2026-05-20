@@ -11,7 +11,7 @@ export async function POST(request) {
     if (!user) return unauthorized();
 
     try {
-        const origin = request.headers.get('origin') || 'https://finanzas-integraweb.vercel.app';
+        const origin = request.headers.get('origin') || 'https://nva.lat';
 
         const session = await getStripe().checkout.sessions.create({
             mode: 'payment',
