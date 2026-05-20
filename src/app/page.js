@@ -17,6 +17,7 @@ export default function LandingPage() {
       <nav className={styles.nav}>
         <Image src="/nva-logo.svg" alt="NVA" width={90} height={30} priority />
         <div className={styles.navActions}>
+          <Link href="/blog" className={styles.navLink}>Blog</Link>
           <Link href="/login" className={styles.navLink}>Iniciar sesión</Link>
           <Link href="/analyze" className={styles.navCta}>Empezar gratis</Link>
         </div>
