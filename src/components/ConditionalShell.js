@@ -54,7 +54,7 @@ export default function ConditionalShell({ children }) {
     if (pathname === '/login' || pathname === '/' || pathname === '/onboarding' ||
         pathname === '/terms' || pathname === '/privacy' ||
         pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
-        pathname.startsWith('/paywall')) {
+        pathname.startsWith('/paywall') || pathname.startsWith('/blog')) {
         return <>{children}</>;
     }
 
