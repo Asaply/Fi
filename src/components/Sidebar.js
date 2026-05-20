@@ -21,8 +21,6 @@ export default function Sidebar() {
     const pathname = usePathname();
     const [modules, setModules] = useState({
         trading: false,
-        prospectos: false,
-        airbnb: false,
     });
 
     useEffect(() => {
@@ -66,18 +64,6 @@ export default function Sidebar() {
                     <Link href="/trading" className={`nav-item ${pathname === '/trading' ? 'active' : ''}`}>
                         <TrendingUp size={20} />
                         <span>Trading</span>
-                    </Link>
-                )}
-                {modules.prospectos && (
-                    <Link href="/prospectos" className={`nav-item ${pathname === '/prospectos' ? 'active' : ''}`}>
-                        <Target size={20} />
-                        <span>Prospectos</span>
-                    </Link>
-                )}
-                {modules.airbnb && (
-                    <Link href="/airbnb" className={`nav-item ${pathname === '/airbnb' ? 'active' : ''}`}>
-                        <Home size={20} />
-                        <span>Airbnb</span>
                     </Link>
                 )}
             </nav>

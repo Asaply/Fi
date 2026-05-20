@@ -120,7 +120,7 @@ export default function AnalyzePage() {
             </button>
 
             <div className={styles.bottomRow}>
-              <p className={styles.privacyNote}>🔒 Cifrado 256-bit · No guardamos tu PDF</p>
+              <p className={styles.privacyNote}>🔒 Cifrado 256-bit · No guardamos tu PDF · <a href="/privacy" className={styles.privacyLink}>Analizado con IA (Anthropic, EE.UU.) — ver política de privacidad</a></p>
               <a href="/login" className={styles.loginLink}>Ya tengo cuenta →</a>
             </div>
           </>

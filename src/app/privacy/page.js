@@ -61,7 +61,12 @@ export default function PrivacyPage() {
                         <h3 className={styles.h3}>4.1 Supabase</h3>
                         <p className={styles.p}>Almacenamos tus datos en Supabase (infraestructura en AWS). Los datos están cifrados en tránsito (TLS) y en reposo. Supabase actúa como encargado del tratamiento bajo contrato.</p>
                         <h3 className={styles.h3}>4.2 Anthropic (Claude AI)</h3>
-                        <p className={styles.p}>El contenido de los estados de cuenta que subes se envía a Anthropic para su análisis mediante IA. Anthropic no utiliza datos de usuarios de API para entrenar sus modelos. Consulta la <a className={styles.a} href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer">política de privacidad de Anthropic</a>.</p>
+                        <p className={styles.p}>Cuando subes un estado de cuenta, el contenido completo del archivo (transacciones, saldos y cualquier dato personal que contenga el documento) se transmite a los servidores de Anthropic, PBC, ubicados en Estados Unidos, para su análisis mediante inteligencia artificial.</p>
+                        <ul className={styles.ul}>
+                            <li className={styles.li}><strong className={styles.strong}>NVA no almacena tu archivo original.</strong> Solo conservamos las transacciones extraídas, no el PDF ni el CSV.</li>
+                            <li className={styles.li}><strong className={styles.strong}>Anthropic no entrena sus modelos con datos de API.</strong> Los datos enviados a través de la API de Anthropic no se usan para entrenar modelos de IA, conforme a sus <a className={styles.a} href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer">términos de uso de API</a>.</li>
+                            <li className={styles.li}><strong className={styles.strong}>Procesamiento en tiempo real.</strong> Anthropic procesa el archivo durante la solicitud y no retiene el contenido una vez completado el análisis.</li>
+                        </ul>
                         <h3 className={styles.h3}>4.3 Belvo</h3>
                         <p className={styles.p}>Si conectas cuentas bancarias, Belvo actúa como agregador financiero regulado con acceso de solo lectura a tus cuentas. Consulta la <a className={styles.a} href="https://belvo.com/legal/privacy-policy/" target="_blank" rel="noopener noreferrer">política de privacidad de Belvo</a>.</p>
                         <h3 className={styles.h3}>4.4 Vercel</h3>
@@ -69,7 +74,18 @@ export default function PrivacyPage() {
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>5. Almacenamiento local (dispositivo)</h2>
+                        <h2 className={styles.h2}>5. Transferencias internacionales de datos</h2>
+                        <p className={styles.p}>Conforme al Artículo 37 de la LFPDPPP, te informamos que tus datos personales son transferidos fuera de México en los siguientes casos:</p>
+                        <ul className={styles.ul}>
+                            <li className={styles.li}><strong className={styles.strong}>Destinatario:</strong> Anthropic, PBC · <strong className={styles.strong}>País:</strong> Estados Unidos de América · <strong className={styles.strong}>Finalidad:</strong> Análisis automatizado de estados de cuenta bancarios mediante IA · <strong className={styles.strong}>Base legal:</strong> La transferencia es necesaria para la prestación del servicio contratado (Art. 37, fracción II). Anthropic actúa como encargado del tratamiento bajo su política de privacidad de API.</li>
+                            <li className={styles.li}><strong className={styles.strong}>Destinatario:</strong> Supabase, Inc. · <strong className={styles.strong}>País:</strong> Estados Unidos de América (infraestructura AWS) · <strong className={styles.strong}>Finalidad:</strong> Almacenamiento y autenticación de datos · <strong className={styles.strong}>Base legal:</strong> Necesario para la prestación del servicio. Los datos están cifrados en tránsito y en reposo.</li>
+                        </ul>
+                        <p className={styles.p}>Al usar NVA y subir un estado de cuenta, otorgas tu consentimiento para estas transferencias internacionales conforme a lo descrito. Puedes revocar este consentimiento eliminando tu cuenta desde Perfil → Eliminar cuenta.</p>
+                    </section>
+
+                    <section className={styles.section}>
+                        <h2 className={styles.h2}>6. Almacenamiento local (dispositivo)</h2>
+
                         <p className={styles.p}>Algunos datos se almacenan en tu navegador (localStorage / sessionStorage) para mejorar la experiencia:</p>
                         <ul className={styles.ul}>
                             <li className={styles.li}>Preferencias de visualización (tema, filtros).</li>
@@ -79,12 +95,12 @@ export default function PrivacyPage() {
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>6. No compartimos tus datos</h2>
+                        <h2 className={styles.h2}>7. No compartimos tus datos</h2>
                         <p className={styles.p}>No vendemos, rentamos ni compartimos tus datos personales con terceros con fines comerciales. Los datos solo se comparten con los encargados del tratamiento descritos en la sección 4, necesarios para operar el servicio.</p>
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>7. Retención de datos</h2>
+                        <h2 className={styles.h2}>8. Retención de datos</h2>
                         <ul className={styles.ul}>
                             <li className={styles.li}>Tus datos se conservan mientras tu cuenta esté activa.</li>
                             <li className={styles.li}>Al eliminar tu cuenta, los datos se borran de nuestros servidores en un plazo máximo de 30 días.</li>
@@ -93,7 +109,7 @@ export default function PrivacyPage() {
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>8. Tus derechos (ARCO)</h2>
+                        <h2 className={styles.h2}>9. Tus derechos (ARCO)</h2>
                         <p className={styles.p}>Conforme a la LFPDPPP, tienes derecho a:</p>
                         <ul className={styles.ul}>
                             <li className={styles.li}><strong className={styles.strong}>Acceso:</strong> Solicitar qué datos tenemos sobre ti.</li>
@@ -105,7 +121,7 @@ export default function PrivacyPage() {
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>9. Seguridad</h2>
+                        <h2 className={styles.h2}>10. Seguridad</h2>
                         <p className={styles.p}>Implementamos medidas técnicas para proteger tus datos:</p>
                         <ul className={styles.ul}>
                             <li className={styles.li}>Cifrado TLS en todas las comunicaciones.</li>
@@ -117,22 +133,22 @@ export default function PrivacyPage() {
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>10. Cookies</h2>
+                        <h2 className={styles.h2}>11. Cookies</h2>
                         <p className={styles.p}>Usamos cookies estrictamente necesarias para mantener tu sesión activa (cookies de autenticación de Supabase). No usamos cookies de rastreo ni publicidad.</p>
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>11. Menores de edad</h2>
+                        <h2 className={styles.h2}>12. Menores de edad</h2>
                         <p className={styles.p}>La Plataforma no está dirigida a menores de 18 años. Si detectamos una cuenta de un menor, la cancelaremos y eliminaremos sus datos.</p>
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>12. Cambios a esta política</h2>
+                        <h2 className={styles.h2}>13. Cambios a esta política</h2>
                         <p className={styles.p}>Podemos actualizar esta Política en cualquier momento. Te notificaremos por email o mediante aviso en la Plataforma con al menos 15 días de anticipación antes de cambios materiales.</p>
                     </section>
 
                     <section className={styles.section}>
-                        <h2 className={styles.h2}>13. Contacto</h2>
+                        <h2 className={styles.h2}>14. Contacto</h2>
                         <p className={styles.p}>Dudas o solicitudes sobre privacidad: <a className={styles.a} href="mailto:soporte@nva.lat">soporte@nva.lat</a></p>
                     </section>
                 </div>

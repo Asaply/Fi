@@ -193,3 +193,14 @@
 .loginLink:hover {
   color: rgba(255,255,255,0.7);
 }
+
+.privacyLink {
+  color: #555;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.privacyLink:hover {
+  color: #888;
+}

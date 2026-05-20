@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { auditLog } from '@/lib/auditLog';
 
 export const runtime = 'nodejs';
 
@@ -50,7 +51,11 @@ export async function POST(request) {
             user_metadata: { subscription_status: 'active' },
         });
 
-        if (metaErr) console.error('[stripe/webhook] Metadata update error:', metaErr.message);
+        if (metaErr) {
+            console.error('[stripe/webhook] Metadata update error:', metaErr.message);
+        } else {
+            auditLog({ userId, event: 'payment.activated', meta: { source: 'webhook', session_id: session.id } });
+        }
     }
 
     return NextResponse.json({ ok: true });

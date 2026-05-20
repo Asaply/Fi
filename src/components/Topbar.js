@@ -13,8 +13,6 @@ const ROUTE_LABELS = {
     '/trading':       'Trading',
     '/portfolio':     'Portfolio Health',
     '/dashboard':     'Resumen',
-    '/prospectos':    'Prospectos',
-    '/airbnb':        'Airbnb',
     '/perfil':        'Perfil',
     '/configuracion': 'Configuración',
     '/budgets':       'Presupuestos',

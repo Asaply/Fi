@@ -307,3 +307,66 @@
     text-decoration: underline;
     text-underline-offset: 2px;
 }
+
+/* ── MFA Enrollment ── */
+.perfil-mfa-enroll {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.perfil-mfa-title {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+    text-align: center;
+}
+
+.perfil-mfa-qr {
+    width: 160px;
+    height: 160px;
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px;
+}
+
+.perfil-mfa-secret {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 0;
+    text-align: center;
+}
+
+.perfil-mfa-secret code {
+    font-family: monospace;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+}
+
+.perfil-mfa-input {
+    width: 100%;
+    max-width: 180px;
+    text-align: center;
+    letter-spacing: 0.3em;
+    font-size: 1.3rem;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: monospace;
+}
+
+.perfil-mfa-error {
+    font-size: 12px;
+    color: var(--danger);
+    margin: 0;
+}
+
+.perfil-mfa-actions {
+    display: flex;
+    gap: 8px;
+}
