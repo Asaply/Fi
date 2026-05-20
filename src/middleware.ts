@@ -30,8 +30,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
     pathname.startsWith('/terms') || pathname.startsWith('/privacy') ||
     pathname.startsWith('/paywall') ||
-    pathname.startsWith('/api/stripe/webhook') ||
-    pathname.startsWith('/api/mp/webhook')
+    pathname.startsWith('/api/stripe/webhook')
 
   if (!user) {
     if (pathname.startsWith('/api/')) {
@@ -110,6 +109,5 @@ export const config = {
     '/api/price/:path*',
     '/api/crypto/:path*',
     '/api/belvo/:path*',
-    '/api/mp/create-preference/:path*',
   ],
 }
