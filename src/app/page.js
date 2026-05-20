@@ -146,6 +146,59 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Origin Story ── */}
+      <section className={styles.originSection}>
+        <div className={styles.originInner}>
+          <p className={styles.originEyebrow}>Construido desde la frustración.</p>
+
+          <p className={styles.originBody}>
+            Las herramientas financieras modernas fueron diseñadas para registrar movimientos.<br />
+            No para entender patrimonio.
+          </p>
+
+          <div className={styles.originStack}>
+            <span>Tus inversiones viven en una app.</span>
+            <span>Tus gastos en otra.</span>
+            <span className={styles.originStackAccent}>Tu situación financiera real, en ninguna.</span>
+          </div>
+
+          <div className={styles.originDivider} />
+
+          <h2 className={styles.originHeadline}>Por eso creamos NVA.</h2>
+
+          <p className={styles.originBody}>
+            Una plataforma diseñada para unificar patrimonio, inversiones y comportamiento financiero en una sola interfaz.
+          </p>
+
+          <div className={styles.originSins}>
+            <span>Sin hojas de cálculo.</span>
+            <span>Sin fragmentación.</span>
+            <span>Sin fricción.</span>
+          </div>
+          <p className={styles.originClarity}>Solo claridad financiera real.</p>
+
+          <div className={styles.originDivider} />
+
+          <h2 className={styles.originRedefined}>Claridad financiera, rediseñada.</h2>
+
+          <p className={styles.originBody}>
+            NVA transforma estados de cuenta, portafolios y actividad financiera en inteligencia accionable.
+          </p>
+
+          <div className={styles.originWords}>
+            <span>No solo visualización.</span>
+            <span>Contexto.</span>
+            <span>Riesgo.</span>
+            <span>Patrones.</span>
+            <span>Decisiones.</span>
+          </div>
+
+          <p className={styles.originFootnote}>
+            Creado en México.<br />Diseñado para el patrimonio moderno.
+          </p>
+        </div>
+      </section>
+
       {/* ── CTA Final ── */}
       <section className={styles.ctaSection}>
         <h2 className={styles.ctaSectionTitle}>Finalmente, entiende tu dinero.</h2>
