@@ -651,7 +651,7 @@ export default function PortfolioHealth() {
                         </div>
                         <div className="health-bars-container">
                             {[
-                                { label: 'Tus huevos en distintas canastas', score: divScore, tip: 'Qué tan repartido está tu dinero. Un puntaje alto significa que ninguna inversión domina demasiado — eso reduce riesgo.' },
+                                { label: '¿Qué tan diversificado estás?', score: divScore, tip: 'Qué tan repartido está tu dinero. Un puntaje alto significa que ninguna inversión domina demasiado — eso reduce riesgo.' },
                                 { label: '¿Qué tan estable es?', score: volScore, tip: 'Qué tan tranquilo duermes con este portafolio. Alta cripto = más movimiento. ETFs y acciones grandes = más estabilidad.' },
                                 { label: '¿Estás ganando al mercado?', score: benchScore, tip: 'Compara tu rendimiento con el S&P 500. Si estás por encima, tu portafolio le ganó al mercado general.' },
                                 { label: '¿Qué tan fácil puedes salir?', score: liqScore, tip: 'Qué tan rápido puedes convertir tus inversiones en efectivo sin perder valor. Acciones y ETFs son muy líquidos.' },
