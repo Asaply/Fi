@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 
 const ALLOWED_ORIGINS = [
+    'https://nva.lat',
+    'https://www.nva.lat',
     'https://finanzas-integraweb.vercel.app',
     'capacitor://localhost',
     'http://localhost:3005',
