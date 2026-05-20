@@ -176,10 +176,10 @@ function categorizeAI(description: string, type: string): string {
   }
   if (/oxxo|seven|alsuper|costco|walmart|soriana|chedraui|abarr/i.test(description)) return 'Supermercado'
   if (/restaurant|delipollo|burger|mcdonald|pizza|cafet|cafe |taco|pollo/i.test(description)) return 'Restaurantes'
-  if (/gasol|gasolina|pemex|combustible/i.test(description)) return 'Gasolina'
+  if (/gasol|gasolina|pemex|gas|combustible/i.test(description)) return 'Gasolina'
   if (/casetas|autopista/i.test(description)) return 'Casetas'
   if (/uber|didi|cabify/i.test(description)) return 'Transporte'
-  if (/netflix|spotify|apple\.com|amazon prime|disney|paddle/i.test(description)) return 'Suscripciones'
+  if (/netflix|spotify|apple\.com|amazon prime|hbo|disney|paddle/i.test(description)) return 'Suscripciones'
   if (/telcel|telmex|totalplay|izzi|megacable|recarga/i.test(description)) return 'Telefonía'
   if (/cfe|luz y fuerza/i.test(description)) return 'Servicios del hogar'
   if (/farmacia|farma|similar|benavides|medica|hospital/i.test(description)) return 'Salud'
