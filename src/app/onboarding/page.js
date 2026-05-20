@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Check, FileText, TrendingUp,
-    Lock, Eye, Shield, Building2,
+    Shield,
     FileSearch, Lightbulb,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
@@ -17,12 +17,11 @@ const ONBOARDING_KEY = 'fnce_onboarding_v1';
 // 2 = Value proposition
 // 3 = Display name input
 // 4 = Goal selection
-// 5 = Security
-// 6 = Import CTA
-// 7 = Analysis insights (post-import)
-// 8 = Plans / payment (paywall)
-// 9 = Done
-const TOTAL_STEPS = 10;
+// 5 = Import CTA
+// 6 = Analysis insights (post-import)
+// 7 = Plans / payment (paywall)
+// 8 = Done
+const TOTAL_STEPS = 9;
 
 const GOAL_OPTIONS = [
     { id: 'save',    label: 'Ahorrar más',          desc: 'Encuentra dónde recortar gastos' },
@@ -104,26 +103,25 @@ export default function OnboardingPage() {
                         onNext={() => advance(5)}
                     />
                 )}
-                {step === 5 && <StepSecurity onNext={() => advance(6)} />}
-                {step === 6 && (
+                {step === 5 && (
                     <StepImport
-                        onImportComplete={(data) => { setAnalysisData(data); advance(7); }}
-                        onSkip={() => advance(8)}
+                        onImportComplete={(data) => { setAnalysisData(data); advance(6); }}
+                        onSkip={() => advance(7)}
+                    />
+                )}
+                {step === 6 && (
+                    <StepInsights
+                        data={analysisData}
+                        onNext={() => advance(7)}
                     />
                 )}
                 {step === 7 && (
-                    <StepInsights
-                        data={analysisData}
-                        onNext={() => advance(8)}
-                    />
-                )}
-                {step === 8 && (
                     <StepPlans
                         onPay={completeAndPay}
-                        onSkip={() => advance(9)}
+                        onSkip={() => advance(8)}
                     />
                 )}
-                {step === 9 && <StepDone onFinish={() => complete('/finanzas')} />}
+                {step === 8 && <StepDone onFinish={() => complete('/finanzas')} />}
             </div>
 
             {/* Progress dots — hide on spinner and success */}
@@ -313,44 +311,7 @@ function StepGoal({ selected, onSelect, onNext }) {
     );
 }
 
-/* ── Step 5: Security ────────────────────────────────────── */
-function StepSecurity({ onNext }) {
-    const items = [
-        { icon: Lock,      title: 'Cifrado de 256-bit',        desc: 'Nivel bancario' },
-        { icon: Eye,       title: 'Solo lectura',               desc: 'No podemos mover tu dinero' },
-        { icon: Building2, title: 'Estándares bancarios',       desc: 'Cumplimos normativas internacionales' },
-        { icon: Shield,    title: 'Tu privacidad es primero',   desc: 'Nunca vendemos tus datos' },
-    ];
-
-    return (
-        <div className="ob-step">
-            <p className="ob-overline">Tu seguridad es nuestra prioridad</p>
-            <h1 className="ob-title ob-title-xl">
-                Tus datos están<br />100% protegidos.
-            </h1>
-
-            <div className="ob-security-list">
-                {items.map(({ icon: Icon, title, desc }, i) => (
-                    <div key={i} className="ob-security-item">
-                        <div className="ob-security-icon">
-                            <Icon size={16} strokeWidth={1.8} />
-                        </div>
-                        <div className="ob-security-text">
-                            <span className="ob-security-title">{title}</span>
-                            <span className="ob-security-desc">{desc}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="ob-actions">
-                <button className="ob-btn-primary" onClick={onNext}>Continuar</button>
-            </div>
-        </div>
-    );
-}
-
-/* ── Step 6: Import CTA ──────────────────────────────────── */
+/* ── Step 5: Import CTA ──────────────────────────────────── */
 function StepImport({ onImportComplete, onSkip }) {
     const [file, setFile]       = useState(null);
     const [dragging, setDragging] = useState(false);
@@ -421,6 +382,11 @@ function StepImport({ onImportComplete, onSkip }) {
             <p className="ob-subtitle ob-subtitle-left">
                 Compatible con todos los bancos de México: Nu, BBVA, Banorte, Santander, HSBC, Citibanamex, Spin, Mercado Pago, Hey Banco y más.
             </p>
+            <div className="ob-trust-chips">
+                <span className="ob-trust-chip"><Shield size={11} /> Cifrado 256-bit</span>
+                <span className="ob-trust-chip">Solo lectura</span>
+                <span className="ob-trust-chip">No guardamos tu PDF</span>
+            </div>
 
             {!loading ? (
                 <>
@@ -439,8 +405,8 @@ function StepImport({ onImportComplete, onSkip }) {
                         onDrop={handleDrop}
                     >
                         <FileText size={34} strokeWidth={1.2} color={file ? '#fff' : '#ff6600'} />
-                        <p className="ob-upload-label">{file ? file.name : 'Arrastra tu archivo aquí'}</p>
-                        <p className="ob-upload-sub">{file ? 'Clic para cambiar archivo' : 'PDF (Máx. 20MB)'}</p>
+                        <p className="ob-upload-label">{file ? file.name : 'Toca para seleccionar tu PDF'}</p>
+                        <p className="ob-upload-sub">{file ? 'Toca para cambiar archivo' : 'PDF · Máx. 20MB · Solo lectura'}</p>
                     </label>
 
                     {error && <p className="ob-error">{error}</p>}
@@ -473,7 +439,7 @@ function StepImport({ onImportComplete, onSkip }) {
     );
 }
 
-/* ── Step 7: Analysis insights ───────────────────────────── */
+/* ── Step 6: Analysis insights ───────────────────────────── */
 function formatMXN(n) {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n || 0);
 }
@@ -537,7 +503,7 @@ function StepInsights({ data, onNext }) {
     );
 }
 
-/* ── Step 8: Plans ───────────────────────────────────────── */
+/* ── Step 7: Plans ───────────────────────────────────────── */
 const PLAN_FEATURES = [
     'Análisis ilimitados de estados de cuenta',
     'Categorización automática con IA',
@@ -615,7 +581,7 @@ function StepPlans({ onPay, onSkip }) {
     );
 }
 
-/* ── Step 9: Done ────────────────────────────────────────── */
+/* ── Step 8: Done ────────────────────────────────────────── */
 function StepDone({ onFinish }) {
     return (
         <div className="ob-step">
