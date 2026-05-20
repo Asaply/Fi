@@ -23,6 +23,15 @@ export default function LandingPage() {
         </div>
       </nav>
 
+      {/* ── App Store banner ── */}
+      <div className={styles.appBanner}>
+        <span className={styles.appBannerDot} />
+        <p className={styles.appBannerText}>
+          Próximamente en <strong>App Store</strong> y <strong>Google Play</strong>
+        </p>
+        <span className={styles.appBannerBadge}>Muy pronto</span>
+      </div>
+
       {/* ── Hero ── */}
       <section className={styles.hero}>
         <div className={styles.heroBadge}>🇲🇽 Hecho para México</div>
