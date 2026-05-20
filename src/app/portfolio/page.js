@@ -445,7 +445,7 @@ export default function PortfolioHealth() {
                             <div className="app-metric-icon" style={{ background: totalPnl >= 0 ? 'rgba(52, 211, 153, 0.12)' : 'rgba(239, 68, 68, 0.12)', color: totalPnl >= 0 ? '#34d399' : '#ef4444' }}>
                                 {totalPnl >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                             </div>
-                            <span className="app-metric-title">P&L Total</span>
+                            <span className="app-metric-title">Ganancia / Pérdida total</span>
                             <span className={`app-metric-value ${totalPnl >= 0 ? 'amount-positive' : 'amount-negative'}`}>
                                 {totalPnl > 0 ? '+' : ''}{formatCurrency(totalPnl)}
                             </span>
@@ -613,23 +613,23 @@ export default function PortfolioHealth() {
                         <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: 'var(--text-primary)' }}>Métricas de Riesgo</h3>
                         <div className="risk-metrics-row">
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Beta vs S&amp;P 500<Tooltip text="Mide qué tan volátil es tu portafolio vs el mercado. Beta > 1 = más volátil que el S&P 500." /></span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>¿Qué tan agresivo es?<Tooltip text="Compara tu portafolio con el mercado. Mayor a 1.0 significa que tus inversiones se mueven más fuerte que el S&P 500 — más riesgo, más oportunidad." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? beta.toFixed(2) : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Ratio de Sharpe<Tooltip text="Rendimiento ajustado al riesgo. Mayor = mejor. Por encima de 1.0 es bueno." /></span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Calidad del rendimiento<Tooltip text="Qué tan bien te pagan por el riesgo que tomas. Por encima de 1.0 es bueno — significa que tu ganancia justifica el riesgo." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? sharpe.toFixed(2) : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Volatilidad Anual<Tooltip text="Qué tanto fluctúan los precios de tus activos en un año." /></span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Qué tanto sube y baja<Tooltip text="Mide cuánto fluctúan tus activos en un año. Menor = más estable. Cripto tiene más fluctuación que acciones o ETFs." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? '14.2%' : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Pérdida Máxima<Tooltip text="La mayor caída desde un pico hasta un valle. Peor escenario histórico." /></span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>La peor caída que tuvo<Tooltip text="La mayor pérdida que sufrió tu portafolio desde su punto más alto. Te ayuda a entender el peor escenario posible." /></span>
                                 <span className="risk-card-val" style={{ color: 'var(--danger)' }}>{enrichedAssets.length > 0 ? '-22.4%' : '-'}</span>
                             </div>
                             <div className="risk-card">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Correlación S&amp;P<Tooltip text="Qué tan parecido se mueve tu portafolio al S&P 500. Cerca de 1.0 = muy correlacionado." /></span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Qué tanto sigue al mercado<Tooltip text="Qué tan parecido se mueve tu portafolio al S&P 500. Cerca de 1.0 = muy alineado con el mercado general." /></span>
                                 <span className="risk-card-val">{enrichedAssets.length > 0 ? '0.85' : '-'}</span>
                             </div>
                         </div>
@@ -639,9 +639,9 @@ export default function PortfolioHealth() {
                     <div className="health-card">
                         <div className="health-header">
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Salud de tu Portafolio</h3>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>¿Qué tan sano está tu dinero?</h3>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                    0 = muy arriesgado · 100 = muy diversificado
+                                    0 = todo en un solo lugar · 100 = perfectamente equilibrado
                                 </p>
                             </div>
                             <div style={{ textAlign: 'right' }}>
@@ -651,10 +651,10 @@ export default function PortfolioHealth() {
                         </div>
                         <div className="health-bars-container">
                             {[
-                                { label: 'Diversificación', score: divScore, tip: 'Qué tan repartido está tu portafolio. Mayor puntaje = ningún activo domina demasiado.' },
-                                { label: 'Riesgo de Volatilidad', score: volScore, tip: 'Qué tan estable es tu portafolio. Alta exposición a cripto reduce este puntaje.' },
-                                { label: 'Rendimiento vs Mercado', score: benchScore, tip: 'Cómo se compara tu rendimiento total con el mercado general (S&P 500).' },
-                                { label: 'Liquidez', score: liqScore, tip: 'Qué tan fácil es convertir tus activos en efectivo sin perder valor.' },
+                                { label: 'Tus huevos en distintas canastas', score: divScore, tip: 'Qué tan repartido está tu dinero. Un puntaje alto significa que ninguna inversión domina demasiado — eso reduce riesgo.' },
+                                { label: '¿Qué tan estable es?', score: volScore, tip: 'Qué tan tranquilo duermes con este portafolio. Alta cripto = más movimiento. ETFs y acciones grandes = más estabilidad.' },
+                                { label: '¿Estás ganando al mercado?', score: benchScore, tip: 'Compara tu rendimiento con el S&P 500. Si estás por encima, tu portafolio le ganó al mercado general.' },
+                                { label: '¿Qué tan fácil puedes salir?', score: liqScore, tip: 'Qué tan rápido puedes convertir tus inversiones en efectivo sin perder valor. Acciones y ETFs son muy líquidos.' },
                             ].map(({ label, score, tip }) => (
                                 <div key={label} className="health-bar-row">
                                     <div className="h-bar-header">
