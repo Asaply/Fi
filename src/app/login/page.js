@@ -60,6 +60,8 @@ function LoginPageInner() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [isLoading, setIsLoading]     = useState(false);
     const [error, setError]             = useState('');
+    const [mfaFactorId, setMfaFactorId] = useState('');
+    const [mfaCode, setMfaCode]         = useState('');
     const [visible, setVisible]         = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -105,6 +107,18 @@ function LoginPageInner() {
                     setError(translateError(err.message));
                 }
             } else {
+                // Check if MFA is required before redirecting
+                const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (aal?.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel) {
+                    const { data: factors } = await supabase.auth.mfa.listFactors();
+                    const totp = factors?.totp?.[0];
+                    if (totp) {
+                        setMfaFactorId(totp.id);
+                        transition('mfa');
+                        setIsLoading(false);
+                        return;
+                    }
+                }
                 // Clear PIN if user came from "forgot PIN" flow
                 if (localStorage.getItem('fnce_pin_clear_on_login') === '1') {
                     localStorage.removeItem('fnce_pin_clear_on_login');
@@ -139,6 +153,22 @@ function LoginPageInner() {
             else transition('registered');
         }
         setIsLoading(false);
+    }
+
+    async function handleMfaVerify(e) {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
+        const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+        if (cErr) { setError('Error al generar desafío MFA.'); setIsLoading(false); return; }
+        const { error: vErr } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challenge.id, code: mfaCode.replace(/\s/g, '') });
+        if (vErr) { setError('Código incorrecto.'); setIsLoading(false); return; }
+        const { data: { user } } = await supabase.auth.getUser();
+        const isPaid = user?.user_metadata?.subscription_status === 'active';
+        const isOnboarded = !!user?.user_metadata?.onboarded;
+        if (!isPaid) router.push('/paywall');
+        else if (!isOnboarded) router.push('/onboarding');
+        else router.push('/finanzas');
     }
 
     async function handleGoogle() {
@@ -406,6 +436,34 @@ function LoginPageInner() {
                         email={email}
                         onBack={() => transition('login')}
                     />
+                )}
+
+                {/* ── MFA VERIFICATION ─────────────────────── */}
+                {mode === 'mfa' && (
+                    <div className="lp-form">
+                        <div className="lp-form-header">
+                            <h2 className="lp-form-title">Verificación en dos pasos</h2>
+                            <p className="lp-form-sub">Ingresa el código de tu app de autenticación.</p>
+                        </div>
+                        <form onSubmit={handleMfaVerify} className="lp-fields">
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="000000"
+                                value={mfaCode}
+                                onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                className="auth-input"
+                                maxLength={6}
+                                autoComplete="one-time-code"
+                                style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.4rem' }}
+                                autoFocus
+                            />
+                            {error && <p className="auth-error">{error}</p>}
+                            <button type="submit" className="auth-btn-primary" disabled={isLoading || mfaCode.length < 6}>
+                                {isLoading ? 'Verificando...' : 'Confirmar'}
+                            </button>
+                        </form>
+                    </div>
                 )}
             </div>
         </div>

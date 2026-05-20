@@ -20,6 +20,12 @@ export default function PerfilPage() {
     const { profilePic, setProfilePic } = useTopbar();
     const router = useRouter();
     const [saving, setSaving] = useState(false);
+    const [mfaFactor, setMfaFactor] = useState(null);
+    const [mfaEnrolling, setMfaEnrolling] = useState(false);
+    const [mfaQR, setMfaQR] = useState(null);
+    const [mfaCode, setMfaCode] = useState('');
+    const [mfaLoading, setMfaLoading] = useState(false);
+    const [mfaError, setMfaError] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -36,6 +42,10 @@ export default function PerfilPage() {
         const prefs = (() => {
             try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
         })();
+        supabase.auth.mfa.listFactors().then(({ data }) => {
+            setMfaFactor(data?.totp?.[0] ?? null);
+        });
+
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) {
                 const displayName = user.user_metadata?.display_name
@@ -114,6 +124,43 @@ export default function PerfilPage() {
         } catch {
             toast.error('Error al exportar los datos.');
         }
+    };
+
+    const handleMfaEnroll = async () => {
+        setMfaLoading(true);
+        const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+        if (error) { toast.error('Error al activar MFA'); setMfaLoading(false); return; }
+        setMfaQR({ id: data.id, qr_code: data.totp.qr_code, secret: data.totp.secret });
+        setMfaEnrolling(true);
+        setMfaLoading(false);
+    };
+
+    const handleMfaVerify = async () => {
+        setMfaLoading(true);
+        setMfaError('');
+        const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId: mfaQR.id });
+        if (cErr) { setMfaError('Error al generar desafío.'); setMfaLoading(false); return; }
+        const { error } = await supabase.auth.mfa.verify({ factorId: mfaQR.id, challengeId: challenge.id, code: mfaCode.replace(/\s/g, '') });
+        if (error) { setMfaError('Código incorrecto. Intenta de nuevo.'); setMfaLoading(false); return; }
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        setMfaFactor(factors?.totp?.[0] ?? null);
+        setMfaEnrolling(false); setMfaQR(null); setMfaCode('');
+        toast.success('Autenticación en dos pasos activada.');
+        setMfaLoading(false);
+    };
+
+    const handleMfaUnenroll = () => {
+        toast.error('¿Desactivar autenticación en dos pasos?', {
+            action: {
+                label: 'Desactivar',
+                onClick: async () => {
+                    const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactor.id });
+                    if (error) { toast.error('Error al desactivar MFA'); return; }
+                    setMfaFactor(null);
+                    toast.success('MFA desactivado.');
+                }
+            }
+        });
     };
 
     const handleClearTransactions = () => {
@@ -213,7 +260,38 @@ export default function PerfilPage() {
                     <p className="perfil-section-label">Seguridad</p>
                     <div className="perfil-card">
                         <SettingAction icon={<Lock size={15}/>} label="Cambiar contraseña" sublabel="Te enviaremos un enlace por correo" onClick={handlePasswordReset} />
-                        <SettingAction icon={<Shield size={15}/>} label="Autenticación en dos pasos" sublabel="Próximamente" disabled last />
+                        {mfaEnrolling ? (
+                            <div className="perfil-mfa-enroll">
+                                <p className="perfil-mfa-title">Escanea con Google Authenticator o Authy</p>
+                                <img
+                                    src={`data:image/svg+xml,${encodeURIComponent(mfaQR.qr_code)}`}
+                                    alt="QR Code MFA"
+                                    className="perfil-mfa-qr"
+                                />
+                                <p className="perfil-mfa-secret">Clave manual: <code>{mfaQR.secret}</code></p>
+                                <input
+                                    className="perfil-mfa-input"
+                                    placeholder="Código de 6 dígitos"
+                                    value={mfaCode}
+                                    onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                />
+                                {mfaError && <p className="perfil-mfa-error">{mfaError}</p>}
+                                <div className="perfil-mfa-actions">
+                                    <button className="btn-primary" onClick={handleMfaVerify} disabled={mfaLoading || mfaCode.length < 6}>
+                                        {mfaLoading ? 'Verificando...' : 'Activar'}
+                                    </button>
+                                    <button className="btn-secondary" onClick={() => { setMfaEnrolling(false); setMfaQR(null); setMfaCode(''); setMfaError(''); }}>
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        ) : mfaFactor ? (
+                            <SettingAction icon={<Shield size={15}/>} label="Autenticación en dos pasos" sublabel="Activa — toca para desactivar" onClick={handleMfaUnenroll} last />
+                        ) : (
+                            <SettingAction icon={<Shield size={15}/>} label="Autenticación en dos pasos" sublabel="Toca para configurar" onClick={mfaLoading ? undefined : handleMfaEnroll} last />
+                        )}
                     </div>
                 </div>
 

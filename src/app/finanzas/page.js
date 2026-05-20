@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import BankConnectWidget from "@/components/BankConnectWidget";
 import "./Finanzas.css";
 import { API_BASE } from "@/lib/apiBase";
-import { nvaEngine } from "@/nvaEngine";
 
 const MOCK_DATA = [
     { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },

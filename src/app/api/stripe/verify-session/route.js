@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { auditLog, getIp } from '@/lib/auditLog';
 
 export const runtime = 'nodejs';
 
@@ -16,8 +17,8 @@ function getAdminClient() {
 }
 
 export async function GET(request) {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const rl = checkRateLimit(`stripe-verify:${ip}`, { maxRequests: 20, windowMs: 60_000 });
+    const ip = getIp(request);
+    const rl = await checkRateLimit(`stripe-verify:${ip}`, { maxRequests: 20, windowMs: 60_000 });
     if (!rl.allowed) {
         return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429 });
     }
@@ -66,6 +67,8 @@ export async function GET(request) {
             console.error('[stripe/verify-session] Metadata error:', metaErr.message);
             return NextResponse.json({ paid: false, error: metaErr.message }, { status: 500 });
         }
+
+        auditLog({ userId, event: 'payment.activated', meta: { source: 'verify-session', session_id: sessionId }, ip });
 
         return NextResponse.json({ paid: true, activated: true });
 
