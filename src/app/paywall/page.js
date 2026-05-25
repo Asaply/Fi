@@ -34,7 +34,14 @@ function PaywallInner() {
     useEffect(() => {
         setNative(isNativeApp());
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) { router.replace('/login'); return; }
+            if (!session) {
+                const emailParam = new URLSearchParams(window.location.search).get('email');
+                const loginUrl = emailParam
+                    ? `/login?email=${encodeURIComponent(emailParam)}&redirect=/paywall`
+                    : '/login?redirect=/paywall';
+                router.replace(loginUrl);
+                return;
+            }
             if (session.user?.user_metadata?.subscription_status === 'active') {
                 router.replace('/finanzas');
                 return;
@@ -79,7 +86,7 @@ function PaywallInner() {
                         ))}
                     </ul>
                     <a
-                        href="https://nva.lat/paywall"
+                        href={`https://nva.lat/paywall${userEmail ? `?email=${encodeURIComponent(userEmail)}` : ''}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={styles.payBtn}

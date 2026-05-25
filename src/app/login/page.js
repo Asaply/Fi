@@ -66,9 +66,15 @@ function LoginPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const reason = searchParams.get('reason');
+    const redirectTo = searchParams.get('redirect') || null;
 
     useEffect(() => {
         const t = setTimeout(() => setVisible(true), 60);
+        const emailParam = searchParams.get('email');
+        if (emailParam) {
+            setEmail(emailParam);
+            setTimeout(() => { setMode('login'); setVisible(true); }, 60);
+        }
         return () => clearTimeout(t);
     }, []);
 
@@ -130,7 +136,8 @@ function LoginPageInner() {
                 }
                 const isPaid = loginData?.user?.user_metadata?.subscription_status === 'active';
                 const isOnboarded = !!loginData?.user?.user_metadata?.onboarded;
-                if (!isPaid) router.push('/paywall');
+                if (redirectTo) router.push(redirectTo);
+                else if (!isPaid) router.push('/paywall');
                 else if (!isOnboarded) router.push('/onboarding');
                 else router.push('/finanzas');
             }
@@ -166,7 +173,8 @@ function LoginPageInner() {
         const { data: { user } } = await supabase.auth.getUser();
         const isPaid = user?.user_metadata?.subscription_status === 'active';
         const isOnboarded = !!user?.user_metadata?.onboarded;
-        if (!isPaid) router.push('/paywall');
+        if (redirectTo) router.push(redirectTo);
+        else if (!isPaid) router.push('/paywall');
         else if (!isOnboarded) router.push('/onboarding');
         else router.push('/finanzas');
     }
