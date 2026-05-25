@@ -78,8 +78,17 @@ function PaywallInner() {
                             </li>
                         ))}
                     </ul>
-                    <p className={styles.note} style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
-                        Para activar NVA, visita nva.lat desde tu navegador.
+                    <a
+                        href="https://nva.lat/paywall"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.payBtn}
+                        style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}
+                    >
+                        Activar NVA — $99 MXN
+                    </a>
+                    <p className={styles.note}>
+                        Se abrirá nva.lat en tu navegador
                     </p>
                     {userEmail && (
                         <p className={styles.emailNote}>Cuenta: {userEmail}</p>
