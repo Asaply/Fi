@@ -7,6 +7,11 @@ import { Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import styles from './paywall.module.css';
 
+function isNativeApp() {
+    if (typeof window === 'undefined') return false;
+    return !!(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform === 'ios' || window.Capacitor?.platform === 'android');
+}
+
 const FEATURES = [
     'Análisis ilimitados de estados de cuenta',
     'Categorización automática con IA',
@@ -20,12 +25,14 @@ function PaywallInner() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [userEmail, setUserEmail] = useState('');
+    const [native, setNative] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const paymentError = searchParams.get('error');
     const paymentStatus = searchParams.get('status');
 
     useEffect(() => {
+        setNative(isNativeApp());
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (!session) { router.replace('/login'); return; }
             if (session.user?.user_metadata?.subscription_status === 'active') {
@@ -52,6 +59,40 @@ function PaywallInner() {
             setError('Error de conexión. Intenta de nuevo.');
             setLoading(false);
         }
+    }
+
+    if (native) {
+        return (
+            <div className={styles.root}>
+                <div className={styles.card}>
+                    <div className={styles.logoWrap}>
+                        <Image src="/nva-icon.svg" alt="NVA" width={56} height={56} className={styles.logo} />
+                    </div>
+                    <h1 className={styles.title}>Activa NVA al 100%</h1>
+                    <p className={styles.subtitle}>Pago único · Sin suscripción · Sin sorpresas</p>
+                    <ul className={styles.features}>
+                        {FEATURES.map((f, i) => (
+                            <li key={i}>
+                                <span className={styles.featureCheck}><Check size={11} strokeWidth={3} /></span>
+                                {f}
+                            </li>
+                        ))}
+                    </ul>
+                    <p className={styles.note} style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
+                        Para activar NVA, visita nva.lat desde tu navegador.
+                    </p>
+                    {userEmail && (
+                        <p className={styles.emailNote}>Cuenta: {userEmail}</p>
+                    )}
+                    <button
+                        className={styles.logoutBtn}
+                        onClick={() => supabase.auth.signOut().then(() => router.replace('/login'))}
+                    >
+                        Cerrar sesión
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     return (
