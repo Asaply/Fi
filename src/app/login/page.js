@@ -78,6 +78,7 @@ function LoginPageInner() {
         return () => clearTimeout(t);
     }, []);
 
+
     async function handleForgotPassword(e) {
         e.preventDefault();
         if (!email) { setError('Ingresa tu email.'); return; }
@@ -179,11 +180,61 @@ function LoginPageInner() {
         else router.push('/finanzas');
     }
 
+    function isNativeApp() {
+        return typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+    }
+
     async function handleGoogle() {
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
-        });
+        setIsLoading(true);
+        setError('');
+        try {
+            if (isNativeApp()) {
+                // Use localStorage-based client (SSR cookie client has PKCE issues in WKWebView)
+                const { createClient } = await import('@supabase/supabase-js');
+                const nativeSupabase = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                );
+                const { data, error: err } = await nativeSupabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: 'nvaapp://auth/callback', skipBrowserRedirect: true },
+                });
+                if (err) throw err;
+                if (data?.url) {
+                    window.__nvaHandleOAuthTokens = async (accessToken, refreshToken) => {
+                        try {
+                            const { data: authData, error: authErr } = await supabase.auth.setSession({
+                                access_token: accessToken,
+                                refresh_token: refreshToken,
+                            });
+                            if (authErr) throw authErr;
+                            const user = authData?.user;
+                            const isOnboarded = !!user?.user_metadata?.onboarded;
+                            const isPaid = user?.user_metadata?.subscription_status === 'active';
+                            if (!isOnboarded) router.push('/onboarding');
+                            else if (!isPaid) router.push('/paywall');
+                            else router.push('/finanzas');
+                        } catch (e2) {
+                            setError(`Error al autenticar: ${e2.message}`);
+                            setIsLoading(false);
+                        }
+                    };
+                    window.__nvaOAuthError = (reason) => {
+                        setError('OAuth: ' + (reason || 'unknown'));
+                        setIsLoading(false);
+                    };
+                    document.title = '__nvaOAuth:' + data.url;
+                }
+            } else {
+                await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: `${window.location.origin}/auth/callback` },
+                });
+            }
+        } catch (e) {
+            setError(`Error Google: ${e.message}`);
+            setIsLoading(false);
+        }
     }
 
     return (

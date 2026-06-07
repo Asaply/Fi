@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'NVA',
   webDir: 'out',
   server: {
-    url: 'https://finanzas-integraweb.vercel.app',
-    cleartext: false,
+    allowNavigation: ['nva.lat', '*.nva.lat'],
   },
   ios: {
     contentInset: 'always',
