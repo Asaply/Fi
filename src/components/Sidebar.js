@@ -39,7 +39,6 @@ export default function Sidebar() {
                 <div className="brand-icon-wrap">
                     <Image src="/nva-icon.svg" alt="NVA" width={34} height={34} />
                 </div>
-                <span className="brand-name">NVA</span>
             </div>
 
             <nav className="sidebar-nav">
