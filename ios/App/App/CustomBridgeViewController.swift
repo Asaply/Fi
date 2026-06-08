@@ -68,6 +68,10 @@ class CustomBridgeViewController: CAPBridgeViewController {
                 let hashedNonce = String(title.dropFirst("__nvaAppleSignIn:".count))
                 restoreTitle()
                 DispatchQueue.main.async { self?.launchAppleSignIn(hashedNonce: hashedNonce) }
+            } else if title.hasPrefix("__nvaUpload:") {
+                let payload = String(title.dropFirst("__nvaUpload:".count))
+                restoreTitle()
+                DispatchQueue.main.async { self?.handleNativeUpload(payload: payload) }
             }
         }
     }
@@ -127,6 +131,86 @@ class CustomBridgeViewController: CAPBridgeViewController {
         session.presentationContextProvider = self
         session.prefersEphemeralWebBrowserSession = false
         session.start()
+    }
+
+    // MARK: - Native File Upload
+
+    private func handleNativeUpload(payload: String) {
+        // payload = "token" — base64 file data is fetched from JS global
+        let token = payload
+
+        // Get base64 data from JS
+        wkWebView?.evaluateJavaScript("window.__nvaUploadData || ''") { [weak self] (result: Any?, _: Error?) in
+            guard let base64String = result as? String, !base64String.isEmpty,
+                  let fileData = Data(base64Encoded: base64String) else {
+                self?.sendUploadResult(nil, error: "No file data")
+                return
+            }
+
+            // Get filename from JS
+            self?.wkWebView?.evaluateJavaScript("window.__nvaUploadFileName || 'upload.pdf'") { (nameResult: Any?, _: Error?) in
+                let fileName = nameResult as? String ?? "upload.pdf"
+                self?.performUpload(fileData: fileData, fileName: fileName, token: token)
+            }
+        }
+    }
+
+    private func performUpload(fileData: Data, fileName: String, token: String) {
+        let urlString = "https://finanzas-integraweb.vercel.app/api/analyze"
+        guard let url = URL(string: urlString) else {
+            sendUploadResult(nil, error: "Invalid URL")
+            return
+        }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.timeoutInterval = 120
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        let mime = fileName.hasSuffix(".csv") ? "text/csv" : "application/pdf"
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                self?.sendUploadResult(nil, error: error.localizedDescription)
+                return
+            }
+            guard let data = data, let jsonString = String(data: data, encoding: .utf8) else {
+                self?.sendUploadResult(nil, error: "Empty response")
+                return
+            }
+            self?.sendUploadResult(jsonString, error: nil)
+        }.resume()
+    }
+
+    private func sendUploadResult(_ json: String?, error: String?) {
+        DispatchQueue.main.async {
+            if let json = json {
+                let safe = json.replacingOccurrences(of: "\\", with: "\\\\")
+                    .replacingOccurrences(of: "'", with: "\\'")
+                    .replacingOccurrences(of: "\n", with: "\\n")
+                    .replacingOccurrences(of: "\r", with: "")
+                self.wkWebView?.evaluateJavaScript(
+                    "window.__nvaUploadResult && window.__nvaUploadResult('\(safe)')"
+                ) { (_: Any?, _: Error?) in }
+            } else {
+                let safeErr = (error ?? "Unknown error").replacingOccurrences(of: "'", with: "\\'")
+                self.wkWebView?.evaluateJavaScript(
+                    "window.__nvaUploadError && window.__nvaUploadError('\(safeErr)')"
+                ) { (_: Any?, _: Error?) in }
+            }
+        }
     }
 
     // MARK: - Apple Sign In

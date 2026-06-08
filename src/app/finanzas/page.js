@@ -365,25 +365,42 @@ export default function FinanzasPage() {
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
         try {
-            const fd = new FormData();
-            fd.append('file', file);
-
             const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+            const token = session?.access_token || '';
+            const isNative = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
 
-            const uploadUrl = `${API_BASE}/api/analyze`;
-            console.log('[parsePdfFile] uploading to:', uploadUrl, 'file:', file.name, file.size);
-            const data = await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', uploadUrl);
-                if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-                xhr.onload = () => {
-                    try { resolve(JSON.parse(xhr.responseText)); }
-                    catch { reject(new Error(`Server error: ${xhr.status}`)); }
-                };
-                xhr.onerror = () => reject(new Error('Error de red al subir archivo.'));
-                xhr.send(fd);
-            });
+            let data;
+            if (isNative) {
+                // Native iOS: upload via Swift URLSession (WKWebView can't upload files)
+                const base64 = await new Promise((res, rej) => {
+                    const reader = new FileReader();
+                    reader.onload = () => res(reader.result.split(',')[1]);
+                    reader.onerror = rej;
+                    reader.readAsDataURL(file);
+                });
+                window.__nvaUploadData = base64;
+                window.__nvaUploadFileName = file.name;
+                data = await new Promise((resolve, reject) => {
+                    window.__nvaUploadResult = (json) => {
+                        try { resolve(JSON.parse(json)); }
+                        catch { reject(new Error('Invalid server response')); }
+                    };
+                    window.__nvaUploadError = (err) => reject(new Error(err));
+                    document.title = `__nvaUpload:${token}`;
+                    // Timeout after 2 minutes
+                    setTimeout(() => reject(new Error('Upload timeout')), 120000);
+                });
+                delete window.__nvaUploadData;
+                delete window.__nvaUploadFileName;
+            } else {
+                // Web: standard FormData upload
+                const fd = new FormData();
+                fd.append('file', file);
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd, headers });
+                data = await res.json();
+            }
 
             if (!data.success) {
                 toast.error(data.error || 'No se pudo analizar el archivo.');
