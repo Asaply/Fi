@@ -1,10 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-export async function GET(request) {
+async function handleCallback(request, body) {
     const requestUrl = new URL(request.url)
-    const code = requestUrl.searchParams.get('code')
-    const next = requestUrl.searchParams.get('next')
+    const code = body?.get?.('code') || requestUrl.searchParams.get('code')
+    const next = body?.get?.('next') || requestUrl.searchParams.get('next')
 
     if (code) {
         // Create response first — cookies MUST be set on the returned response
@@ -58,4 +58,13 @@ export async function GET(request) {
 
     // No code — send to login
     return NextResponse.redirect(new URL('/login', requestUrl.origin))
+}
+
+export async function GET(request) {
+    return handleCallback(request, null)
+}
+
+export async function POST(request) {
+    const body = await request.formData()
+    return handleCallback(request, body)
 }
