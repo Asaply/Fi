@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { API_BASE } from '@/lib/apiBase';
 import styles from './paywall.module.css';
 
 function isNativeApp() {
@@ -54,7 +55,7 @@ function PaywallInner() {
         setLoading(true);
         setError('');
         try {
-            const res = await fetch('/api/stripe/create-checkout', { method: 'POST' });
+            const res = await fetch(`${API_BASE}/api/stripe/create-checkout`, { method: 'POST' });
             const data = await res.json();
             if (!res.ok || !data.url) {
                 setError(data.error || 'Error al iniciar el pago. Intenta de nuevo.');

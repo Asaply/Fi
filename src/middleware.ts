@@ -2,8 +2,34 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const ALLOWED_ORIGINS = ['capacitor://localhost', 'http://localhost:3005', 'https://finanzas-integraweb.vercel.app']
+
+function corsHeaders(origin: string | null) {
+  const headers: Record<string, string> = {}
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, apikey, x-client-info'
+    headers['Access-Control-Allow-Credentials'] = 'true'
+  }
+  return headers
+}
+
 export async function middleware(request: NextRequest) {
+  const origin = request.headers.get('origin')
+
+  // Handle CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204, headers: corsHeaders(origin) })
+  }
+
   let response = NextResponse.next({ request })
+
+  // Add CORS headers to all API responses
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const cors = corsHeaders(origin)
+    Object.entries(cors).forEach(([k, v]) => response.headers.set(k, v))
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +59,10 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/stripe/webhook')
 
   if (!user) {
+    // API routes with Bearer token — let route handler check auth
+    if (pathname.startsWith('/api/') && request.headers.get('authorization')?.startsWith('Bearer ')) {
+      return response
+    }
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
     }
@@ -100,8 +130,6 @@ export const config = {
     '/portfolio/:path*',
     '/configuracion/:path*',
     '/perfil/:path*',
-    '/api/price/:path*',
-    '/api/crypto/:path*',
-    '/api/belvo/:path*',
+    '/api/:path*',
   ],
 }

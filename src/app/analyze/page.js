@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabaseClient'
+import { API_BASE } from '@/lib/apiBase'
 import styles from './analyze.module.css'
 
 export default function AnalyzePage() {
@@ -40,7 +41,7 @@ export default function AnalyzePage() {
       fd.append('file', file)
 
       setStatusMsg('Detectando banco y patrones...')
-      const res = await fetch('/api/analyze', { method: 'POST', body: fd })
+      const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd })
 
       setStatusMsg('Generando insights...')
       const contentType = res.headers.get('content-type') || ''

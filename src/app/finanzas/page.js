@@ -368,7 +368,10 @@ export default function FinanzasPage() {
             const fd = new FormData();
             fd.append('file', file);
 
-            const res = await fetch('/api/analyze', { method: 'POST', body: fd });
+            const headers = {};
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+            const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd, headers });
             const data = await res.json();
 
             if (!res.ok || !data.success) {
