@@ -368,14 +368,20 @@ export default function FinanzasPage() {
             const fd = new FormData();
             fd.append('file', file);
 
-            const fetchOpts = { method: 'POST', body: fd };
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.access_token) {
-                fetchOpts.headers = { 'Authorization': `Bearer ${session.access_token}` };
-            }
+            const token = session?.access_token;
 
-            const res = await fetch(`${API_BASE}/api/analyze`, fetchOpts);
-            const data = await res.json();
+            const data = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API_BASE}/api/analyze`);
+                if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.onload = () => {
+                    try { resolve(JSON.parse(xhr.responseText)); }
+                    catch { reject(new Error(`Server error: ${xhr.status}`)); }
+                };
+                xhr.onerror = () => reject(new Error('Error de red al subir archivo.'));
+                xhr.send(fd);
+            });
 
             if (!res.ok || !data.success) {
                 toast.error(data.error || 'No se pudo analizar el archivo.');
