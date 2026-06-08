@@ -365,36 +365,17 @@ export default function FinanzasPage() {
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-            const isNative = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+            const fd = new FormData();
+            fd.append('file', file);
 
-            let data;
-            if (isNative) {
-                // WKWebView can't send FormData with File via fetch — use base64 + JSON
-                const base64 = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-                const res = await fetch(`${API_BASE}/api/analyze`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                    },
-                    body: JSON.stringify({ fileBase64: base64, fileName: file.name, fileType: file.type || 'application/pdf' }),
-                });
-                data = await res.json();
-            } else {
-                const fd = new FormData();
-                fd.append('file', file);
-                const headers = {};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd, headers });
-                data = await res.json();
+            const fetchOpts = { method: 'POST', body: fd };
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+                fetchOpts.headers = { 'Authorization': `Bearer ${session.access_token}` };
             }
+
+            const res = await fetch(`${API_BASE}/api/analyze`, fetchOpts);
+            const data = await res.json();
 
             if (!res.ok || !data.success) {
                 toast.error(data.error || 'No se pudo analizar el archivo.');
