@@ -372,11 +372,12 @@ export default function FinanzasPage() {
             let data;
             if (isNative) {
                 // WKWebView can't send FormData with File via fetch — use base64 + JSON
-                const buf = await file.arrayBuffer();
-                const bytes = new Uint8Array(buf);
-                let binary = '';
-                for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-                const base64 = btoa(binary);
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
                 const res = await fetch(`${API_BASE}/api/analyze`, {
                     method: 'POST',
                     headers: {
