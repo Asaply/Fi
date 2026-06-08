@@ -184,6 +184,61 @@ function LoginPageInner() {
         return typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
     }
 
+    async function handleApple() {
+        setIsLoading(true);
+        setError('');
+        try {
+            if (isNativeApp()) {
+                // Generate nonce for Supabase verification
+                const rawNonce = crypto.randomUUID();
+                const hashBuffer = await crypto.subtle.digest(
+                    'SHA-256',
+                    new TextEncoder().encode(rawNonce)
+                );
+                const hashedNonce = Array.from(new Uint8Array(hashBuffer))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+
+                window.__nvaHandleAppleToken = async (identityToken) => {
+                    try {
+                        const { data: authData, error: authErr } = await supabase.auth.signInWithIdToken({
+                            provider: 'apple',
+                            token: identityToken,
+                            nonce: rawNonce,
+                        });
+                        if (authErr) throw authErr;
+                        const user = authData?.user;
+                        const isOnboarded = !!user?.user_metadata?.onboarded;
+                        const isPaid = user?.user_metadata?.subscription_status === 'active';
+                        if (!isOnboarded) router.push('/onboarding');
+                        else if (!isPaid) router.push('/paywall');
+                        else router.push('/finanzas');
+                    } catch (e2) {
+                        setError(`Error al autenticar: ${e2.message}`);
+                        setIsLoading(false);
+                    }
+                };
+                window.__nvaAppleError = (reason) => {
+                    if (reason === 'cancelled') {
+                        setIsLoading(false);
+                    } else {
+                        setError('Apple: ' + (reason || 'unknown'));
+                        setIsLoading(false);
+                    }
+                };
+                document.title = '__nvaAppleSignIn:' + hashedNonce;
+            } else {
+                await supabase.auth.signInWithOAuth({
+                    provider: 'apple',
+                    options: { redirectTo: `${window.location.origin}/auth/callback` },
+                });
+            }
+        } catch (e) {
+            setError(`Error Apple: ${e.message}`);
+            setIsLoading(false);
+        }
+    }
+
     async function handleGoogle() {
         setIsLoading(true);
         setError('');
@@ -415,6 +470,13 @@ function LoginPageInner() {
                         <button onClick={handleGoogle} className="auth-btn-google">
                             <GoogleIcon />
                             Continuar con Google
+                        </button>
+
+                        <button onClick={handleApple} className="auth-btn-apple">
+                            <svg viewBox="0 0 17 20" fill="currentColor" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.04-1.527-2.652-1.89-1.126-.242-2.2.664-2.77.664-.582 0-1.473-.652-2.427-.634a3.58 3.58 0 0 0-3.013 1.837c-1.292 2.237-.33 5.538.924 7.352.62.886 1.35 1.882 2.314 1.846.934-.038 1.284-.6 2.413-.6 1.118 0 1.441.6 2.414.58.999-.016 1.632-.898 2.237-1.79.714-1.024.999-2.024 1.016-2.076-.024-.008-1.94-.744-1.962-2.952zM11.703 3.2C12.21 2.584 12.556 1.733 12.46.87c-.734.03-1.636.494-2.162 1.1-.47.54-.886 1.416-.776 2.248.822.063 1.663-.413 2.181-1.018z"/>
+                            </svg>
+                            Continuar con Apple
                         </button>
                     </div>
                 )}

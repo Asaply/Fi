@@ -1,3 +1,5 @@
+export const dynamic = 'force-static';
+
 export default function sitemap() {
     const base = 'https://nva.lat';
     const now = new Date().toISOString();
