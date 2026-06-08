@@ -2,17 +2,13 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const ALLOWED_ORIGINS = ['capacitor://localhost', 'http://localhost:3005', 'https://finanzas-integraweb.vercel.app']
-
 function corsHeaders(origin: string | null) {
-  const headers: Record<string, string> = {}
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    headers['Access-Control-Allow-Origin'] = origin
-    headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-    headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, apikey, x-client-info'
-    headers['Access-Control-Allow-Credentials'] = 'true'
+  return {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
+    'Access-Control-Allow-Credentials': 'true',
   }
-  return headers
 }
 
 export async function middleware(request: NextRequest) {

@@ -448,7 +448,7 @@ export default function FinanzasPage() {
             toast.success(`${rows.length} transacciones detectadas de ${data.bank || 'tu banco'}.`);
         } catch (err) {
             console.error('[parsePdfFile]', err);
-            toast.error('Error al procesar el archivo PDF.');
+            toast.error(`Error: ${err.message || 'Error al procesar el archivo PDF.'}`);
         } finally {
             setShowPdfPassword(false);
             setPendingPdfFile(null);
