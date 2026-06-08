@@ -371,9 +371,11 @@ export default function FinanzasPage() {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
+            const uploadUrl = `${API_BASE}/api/analyze`;
+            console.log('[parsePdfFile] uploading to:', uploadUrl, 'file:', file.name, file.size);
             const data = await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', `${API_BASE}/api/analyze`);
+                xhr.open('POST', uploadUrl);
                 if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
                 xhr.onload = () => {
                     try { resolve(JSON.parse(xhr.responseText)); }
@@ -383,7 +385,7 @@ export default function FinanzasPage() {
                 xhr.send(fd);
             });
 
-            if (!res.ok || !data.success) {
+            if (!data.success) {
                 toast.error(data.error || 'No se pudo analizar el archivo.');
                 return;
             }
@@ -479,7 +481,12 @@ export default function FinanzasPage() {
             setPdfPasswordError(false);
 
             try {
-                const buffer = await file.arrayBuffer();
+                const buffer = await new Promise((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = () => res(r.result);
+                    r.onerror = rej;
+                    r.readAsArrayBuffer(file);
+                });
                 const text = new TextDecoder('iso-8859-1').decode(new Uint8Array(buffer));
                 if (text.includes('/Encrypt')) {
                     setPendingPdfFile(file);
