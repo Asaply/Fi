@@ -220,32 +220,49 @@ export async function POST(request) {
     }
 
     try {
-        const formData = await request.formData();
-        const file = formData.get('file');
+        let filename, isCSV, fileBuffer, fileText;
+        const contentType = request.headers.get('content-type') || '';
 
-        const uploadError = validateUpload(file, {
-            maxBytes: 15 * 1024 * 1024,
-            allowedTypes: ['application/pdf', 'text/csv', 'text/plain'],
-        });
-        if (uploadError) return NextResponse.json({ error: uploadError }, { status: 400 });
+        if (contentType.includes('application/json')) {
+            // Base64 JSON body (from Capacitor native app)
+            const body = await request.json();
+            if (!body.fileBase64) return NextResponse.json({ error: 'No se recibió archivo.' }, { status: 400 });
+            fileBuffer = Buffer.from(body.fileBase64, 'base64');
+            filename = body.fileName || 'upload.pdf';
+            if (fileBuffer.length > 15 * 1024 * 1024) {
+                return NextResponse.json({ error: 'El archivo excede el límite de 15MB.' }, { status: 400 });
+            }
+        } else {
+            // FormData (web)
+            const formData = await request.formData();
+            const file = formData.get('file');
 
-        const filename = file.name || '';
-        const isCSV = /\.csv$/i.test(filename);
+            const uploadError = validateUpload(file, {
+                maxBytes: 15 * 1024 * 1024,
+                allowedTypes: ['application/pdf', 'text/csv', 'text/plain'],
+            });
+            if (uploadError) return NextResponse.json({ error: uploadError }, { status: 400 });
+
+            filename = file.name || '';
+            fileBuffer = Buffer.from(await file.arrayBuffer());
+            fileText = /\.csv$/i.test(filename) ? await file.text() : null;
+        }
+
+        isCSV = /\.csv$/i.test(filename);
 
         let parsed;
 
         if (isCSV) {
-            const text = await file.text();
+            const text = fileText || fileBuffer.toString('utf-8');
             if (!text || text.trim().length < 20) {
                 return NextResponse.json({ error: 'El archivo CSV está vacío.' }, { status: 400 });
             }
             parsed = await callClaudeText(text);
         } else {
-            const buffer = Buffer.from(await file.arrayBuffer());
-            if (buffer.length === 0) {
+            if (!fileBuffer || fileBuffer.length === 0) {
                 return NextResponse.json({ error: 'El archivo PDF está vacío.' }, { status: 400 });
             }
-            parsed = await callClaudeVision(buffer, 'application/pdf');
+            parsed = await callClaudeVision(fileBuffer, 'application/pdf');
         }
 
         const transactions = (parsed.movimientos ?? [])

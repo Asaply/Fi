@@ -365,14 +365,32 @@ export default function FinanzasPage() {
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
         try {
-            const fd = new FormData();
-            fd.append('file', file);
-
-            const headers = {};
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
-            const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd, headers });
-            const data = await res.json();
+            const token = session?.access_token;
+            const isNative = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+
+            let data;
+            if (isNative) {
+                // WKWebView can't send FormData with File via fetch — use base64 + JSON
+                const buf = await file.arrayBuffer();
+                const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+                const res = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({ fileBase64: base64, fileName: file.name, fileType: file.type || 'application/pdf' }),
+                });
+                data = await res.json();
+            } else {
+                const fd = new FormData();
+                fd.append('file', file);
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd, headers });
+                data = await res.json();
+            }
 
             if (!res.ok || !data.success) {
                 toast.error(data.error || 'No se pudo analizar el archivo.');
