@@ -15,6 +15,7 @@ SERVER_FILES=(
     src/app/api/stripe/verify-session/route.js
     src/app/api/stripe/webhook/route.js
     src/app/auth/callback/route.js
+    src/app/api/account/route.js
     src/app/opengraph-image.js
 )
 

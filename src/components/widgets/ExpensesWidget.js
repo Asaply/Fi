@@ -85,10 +85,18 @@ export default function ExpensesWidget({ widgetId, removeWidget }) {
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    formatter={(v) => `$${v.toLocaleString('es-MX')}`}
-                                    contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '11px' }}
-                                    labelStyle={{ color: 'var(--text-secondary)' }}
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                    content={({ active, payload }) => {
+                                        if (!active || !payload?.length) return null;
+                                        const { name, value } = payload[0].payload;
+                                        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+                                        return (
+                                            <div style={{ background: dark ? '#1c1c1e' : '#fff', border: `1px solid ${dark ? '#333' : '#e5e5e5'}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                                <p style={{ color: dark ? '#fff' : '#111', margin: 0, fontSize: '11px', fontWeight: 600 }}>{name}</p>
+                                                <p style={{ color: dark ? '#ccc' : '#333', margin: 0, fontSize: '11px' }}>${value.toLocaleString('es-MX')}</p>
+                                            </div>
+                                        );
+                                    }}
+                                    cursor={{ fill: 'transparent' }}
                                 />
                                 <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', color: 'var(--text-secondary)' }} />
                             </PieChart>

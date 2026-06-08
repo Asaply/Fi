@@ -235,8 +235,8 @@
 }
 
 .analysis-report {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 14px 18px;
     display: flex;
@@ -246,13 +246,13 @@
 
 .analysis-report p {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.65);
+    color: var(--text-secondary);
     margin: 0;
     line-height: 1.5;
 }
 
 .analysis-report strong {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
 }
 
 /* Mobile Finanzas */
@@ -498,6 +498,49 @@
 }
 .btn-fin-ghost:hover { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
 
+/* ── Account type bar (Débito / Crédito) ────────────────────────── */
+.fin-account-type-bar {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-elevated);
+    padding: 4px;
+    border-radius: 9999px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    margin: 0 auto 12px;
+    width: fit-content;
+    min-height: 40px;
+}
+.fin-account-type-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 24px;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+.fin-account-type-btn.active {
+    background: #333333;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+[data-theme="light"] .fin-account-type-bar {
+    background: var(--bg-surface);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), inset 0 1px 2px rgba(0,0,0,0.02);
+    border: 1px solid var(--border);
+}
+[data-theme="light"] .fin-account-type-btn.active {
+    background: var(--text-primary);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
 /* ── Period + type filters ───────────────────────────────────────── */
 .fin-period-filter { overflow-x: auto; scrollbar-width: none; }
 .fin-period-filter::-webkit-scrollbar { display: none; }
@@ -536,6 +579,28 @@
     border-radius: 4px;
     font-size: 11px;
     margin-left: 2px;
+}
+.period-filter-btn.active .fin-tab-count {
+    background: rgba(255,255,255,0.2);
+    color: #ffffff;
+}
+
+/* Light theme — type tabs */
+[data-theme="light"] .fin-type-tabs .period-filter-btn {
+    color: var(--text-secondary);
+    opacity: 1;
+}
+[data-theme="light"] .fin-type-tabs .period-filter-btn.active {
+    background: var(--text-primary);
+    color: #ffffff;
+}
+[data-theme="light"] .fin-tab-count {
+    background: rgba(0,0,0,0.06);
+    color: var(--text-secondary);
+}
+[data-theme="light"] .period-filter-btn.active .fin-tab-count {
+    background: rgba(255,255,255,0.2);
+    color: #ffffff;
 }
 
 /* ── Mobile ──────────────────────────────────────────────────────── */

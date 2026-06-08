@@ -1042,15 +1042,13 @@ export default function FinanzasPage() {
         <div className="page-container">
 
             {/* Account type selector */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                <div className="period-filter-wrap fin-period-filter" style={{ background: 'var(--bg-elevated)', padding: '4px' }}>
-                    <button className={`period-filter-btn ${accountType === 'debit' ? 'active' : ''}`} onClick={() => setAccountType('debit')} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <Landmark size={12} /> Débito
-                    </button>
-                    <button className={`period-filter-btn ${accountType === 'credit' ? 'active' : ''}`} onClick={() => setAccountType('credit')} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <CreditCardIcon size={12} /> Crédito
-                    </button>
-                </div>
+            <div className="fin-account-type-bar">
+                <button className={`fin-account-type-btn ${accountType === 'debit' ? 'active' : ''}`} onClick={() => setAccountType('debit')}>
+                    <Landmark size={12} /> Débito
+                </button>
+                <button className={`fin-account-type-btn ${accountType === 'credit' ? 'active' : ''}`} onClick={() => setAccountType('credit')}>
+                    <CreditCardIcon size={12} /> Crédito
+                </button>
             </div>
 
             {/* Multi-card discovery hint — shown once when user has transactions */}

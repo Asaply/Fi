@@ -103,20 +103,24 @@ export default function CardGastosCategorias({ fechaInicio }) {
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    formatter={(value, name) => [
-                                        `${formatMXN(value)} (${total > 0 ? ((value / total) * 100).toFixed(1) : 0}%)`,
-                                        name
-                                    ]}
-                                    contentStyle={{
-                                        backgroundColor: 'var(--bg-surface)',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        color: 'var(--text-primary)',
+                                    content={({ active, payload }) => {
+                                        if (!active || !payload?.length) return null;
+                                        const { name, value } = payload[0].payload;
+                                        const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+                                        const bg = dark ? '#1c1c1e' : '#ffffff';
+                                        const border = dark ? '#333' : '#e5e5e5';
+                                        const text = dark ? '#ffffff' : '#111111';
+                                        const muted = dark ? '#999999' : '#888888';
+                                        return (
+                                            <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                                <p style={{ color: text, margin: 0, fontSize: '12px', fontWeight: 600 }}>{name}</p>
+                                                <p style={{ color: text, margin: 0, fontSize: '12px' }}>{formatMXN(value)}</p>
+                                                <p style={{ color: muted, margin: 0, fontSize: '11px' }}>{pct}%</p>
+                                            </div>
+                                        );
                                     }}
-                                    itemStyle={{ color: 'var(--text-primary)' }}
-                                    labelStyle={{ display: 'none' }}
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                    cursor={{ fill: 'transparent' }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>

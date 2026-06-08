@@ -97,10 +97,21 @@ export default function CardFinanzas({ fechaInicio }) {
                                     <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
                                     <YAxis hide />
                                     <Tooltip
-                                        formatter={(v, name) => [formatMXN(v), name === 'ingresos' ? 'Ingresos' : 'Egresos']}
-                                        contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '12px' }}
-                                        labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px' }}
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                        content={({ active, payload, label }) => {
+                                            if (!active || !payload?.length) return null;
+                                            const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+                                            return (
+                                                <div style={{ background: dark ? '#1c1c1e' : '#fff', border: `1px solid ${dark ? '#333' : '#e5e5e5'}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                                    {label && <p style={{ color: dark ? '#999' : '#666', margin: '0 0 4px', fontSize: '11px' }}>{label}</p>}
+                                                    {payload.map((p, i) => (
+                                                        <p key={i} style={{ color: p.color || (dark ? '#fff' : '#111'), margin: 0, fontSize: '12px', fontWeight: 500 }}>
+                                                            {p.name === 'ingresos' ? 'Ingresos' : 'Egresos'}: {formatMXN(p.value)}
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }}
+                                        cursor={{ fill: 'transparent' }}
                                     />
                                     <Bar dataKey="ingresos" fill="var(--success)" radius={[3, 3, 0, 0]} opacity={0.85} />
                                     <Bar dataKey="egresos" fill="var(--danger)" radius={[3, 3, 0, 0]} opacity={0.85} />
