@@ -383,6 +383,29 @@
     color: #fff;
 }
 
+.auth-btn-apple {
+    width: 100%;
+    background: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 50px;
+    padding: 14px 24px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #000;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background 0.15s, border-color 0.15s;
+    margin-top: 8px;
+}
+
+.auth-btn-apple:hover {
+    background: rgba(255,255,255,0.9);
+}
+
 .auth-btn-link {
     background: none;
     border: none;

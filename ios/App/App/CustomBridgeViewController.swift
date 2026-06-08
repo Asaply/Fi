@@ -1,6 +1,7 @@
 import Capacitor
 import WebKit
 import AuthenticationServices
+import CryptoKit
 
 class CustomBridgeViewController: CAPBridgeViewController {
     private var authSession: ASWebAuthenticationSession?
@@ -48,22 +49,32 @@ class CustomBridgeViewController: CAPBridgeViewController {
 
         titleObservation = wv.observe(\.title, options: [.new]) {
             [weak self] (webView: WKWebView, _: NSKeyValueObservedChange<String?>) in
-            guard let title = webView.title, title.hasPrefix("__nvaOAuth:") else { return }
-            let urlString = String(title.dropFirst("__nvaOAuth:".count))
+            guard let title = webView.title else { return }
 
-            DispatchQueue.main.async {
-                webView.evaluateJavaScript("document.title = '\(self?.originalTitle ?? "")'") {
-                    (_: Any?, _: Error?) in }
+            // Restore original title
+            let restoreTitle = {
+                DispatchQueue.main.async {
+                    webView.evaluateJavaScript("document.title = '\(self?.originalTitle ?? "")'") {
+                        (_: Any?, _: Error?) in }
+                }
             }
 
-            guard let url = URL(string: urlString) else { return }
-            DispatchQueue.main.async {
-                self?.launchOAuth(url: url)
+            if title.hasPrefix("__nvaOAuth:") {
+                let urlString = String(title.dropFirst("__nvaOAuth:".count))
+                restoreTitle()
+                guard let url = URL(string: urlString) else { return }
+                DispatchQueue.main.async { self?.launchOAuth(url: url) }
+            } else if title.hasPrefix("__nvaAppleSignIn:") {
+                let hashedNonce = String(title.dropFirst("__nvaAppleSignIn:".count))
+                restoreTitle()
+                DispatchQueue.main.async { self?.launchAppleSignIn(hashedNonce: hashedNonce) }
             }
         }
     }
 
     deinit { titleObservation?.invalidate() }
+
+    // MARK: - OAuth (Google etc.)
 
     private func launchOAuth(url: URL) {
         let session = ASWebAuthenticationSession(
@@ -117,10 +128,72 @@ class CustomBridgeViewController: CAPBridgeViewController {
         session.prefersEphemeralWebBrowserSession = false
         session.start()
     }
+
+    // MARK: - Apple Sign In
+
+    private func launchAppleSignIn(hashedNonce: String) {
+        let provider = ASAuthorizationAppleIDProvider()
+        let request = provider.createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = hashedNonce
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        controller.performRequests()
+    }
 }
+
+// MARK: - ASWebAuthenticationPresentationContextProviding
 
 extension CustomBridgeViewController: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        return view.window ?? UIWindow()
+    }
+}
+
+// MARK: - ASAuthorizationControllerDelegate
+
+extension CustomBridgeViewController: ASAuthorizationControllerDelegate {
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let identityTokenData = appleIDCredential.identityToken,
+              let identityToken = String(data: identityTokenData, encoding: .utf8) else {
+            DispatchQueue.main.async {
+                self.wkWebView?.evaluateJavaScript(
+                    "window.__nvaAppleError && window.__nvaAppleError('no_identity_token')"
+                ) { (_: Any?, _: Error?) in }
+            }
+            return
+        }
+
+        let safeToken = identityToken.replacingOccurrences(of: "'", with: "\\'")
+        DispatchQueue.main.async {
+            self.wkWebView?.evaluateJavaScript(
+                "window.__nvaHandleAppleToken && window.__nvaHandleAppleToken('\(safeToken)')"
+            ) { (_: Any?, _: Error?) in }
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithError error: Error) {
+        let code = (error as NSError).code
+        // 1001 = user cancelled
+        let reason = code == 1001 ? "cancelled" : error.localizedDescription
+        let safeReason = reason.replacingOccurrences(of: "'", with: "\\'")
+        DispatchQueue.main.async {
+            self.wkWebView?.evaluateJavaScript(
+                "window.__nvaAppleError && window.__nvaAppleError('\(safeReason)')"
+            ) { (_: Any?, _: Error?) in }
+        }
+    }
+}
+
+// MARK: - ASAuthorizationControllerPresentationContextProviding
+
+extension CustomBridgeViewController: ASAuthorizationControllerPresentationContextProviding {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         return view.window ?? UIWindow()
     }
 }
