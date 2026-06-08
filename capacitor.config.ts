@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
     allowNavigation: ['nva.lat', '*.nva.lat'],
   },
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
     backgroundColor: '#000000',
   },
 };

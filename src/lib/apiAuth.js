@@ -3,10 +3,25 @@
  * Verifies Supabase session from cookies before processing any request.
  */
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
+import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function getAuthUser() {
+    // Try Bearer token first (Capacitor native app)
+    const headerStore = await headers();
+    const authHeader = headerStore.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+        const { data: { user } } = await supabase.auth.getUser(token);
+        return user;
+    }
+
+    // Fallback: cookie-based auth (web)
     const cookieStore = await cookies();
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -14,7 +29,7 @@ export async function getAuthUser() {
         {
             cookies: {
                 getAll() { return cookieStore.getAll(); },
-                setAll() {}, // read-only in API routes
+                setAll() {},
             },
         }
     );

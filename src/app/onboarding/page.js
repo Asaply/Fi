@@ -7,6 +7,7 @@ import {
     FileSearch, Lightbulb,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { API_BASE } from '@/lib/apiBase';
 import './Onboarding.css';
 
 const ONBOARDING_KEY = 'fnce_onboarding_v1';
@@ -81,7 +82,7 @@ export default function OnboardingPage() {
             await supabase.auth.updateUser({ data: { onboarded: true } });
         } catch (_) {}
         try {
-            const res = await fetch('/api/stripe/create-checkout', { method: 'POST' });
+            const res = await fetch(`${API_BASE}/api/stripe/create-checkout`, { method: 'POST' });
             const data = await res.json();
             if (data.url) { window.location.href = data.url; return; }
         } catch (_) {}
@@ -369,7 +370,7 @@ function StepImport({ onImportComplete, onSkip }) {
             fd.append('file', file);
 
             setStatusMsg('Detectando banco y transacciones...');
-            const res = await fetch('/api/analyze', { method: 'POST', body: fd });
+            const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd });
             const data = await res.json();
 
             if (!res.ok || !data.success) {

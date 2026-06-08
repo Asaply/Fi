@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Landmark } from "lucide-react";
+import { API_BASE } from "@/lib/apiBase";
 
 export default function BankConnectWidget({ onSuccess }) {
     const [isWidgetReady, setIsWidgetReady] = useState(false);
@@ -31,7 +32,7 @@ export default function BankConnectWidget({ onSuccess }) {
         setIsConnecting(true);
         try {
             // 1. Conseguir el access token del backend
-            const tokenResponse = await fetch("/api/belvo/token");
+            const tokenResponse = await fetch(`${API_BASE}/api/belvo/token`);
             const tokenData = await tokenResponse.json();
 
             if (!tokenData.accessToken) {

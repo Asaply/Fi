@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
+import { API_BASE } from '@/lib/apiBase';
 import styles from '../paywall.module.css';
 
 function SuccessContent() {
@@ -23,7 +24,7 @@ function SuccessContent() {
             // 1. Direct verification via Stripe session_id
             if (sessionId) {
                 try {
-                    const res = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
+                    const res = await fetch(`${API_BASE}/api/stripe/verify-session?session_id=${sessionId}`);
                     const json = await res.json();
                     if (json.activated) {
                         activatedRef.current = true;

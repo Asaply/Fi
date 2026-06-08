@@ -150,7 +150,7 @@ export default function GastosPorCategoria({ startDate, endDate, mode = 'debit',
                                             key={entry.name}
                                             fill={getColor(entry.name, idx)}
                                             opacity={activeIndex === null || activeIndex === idx ? 1 : 0.4}
-                                            onClick={() => handlePieClick(entry.name)}
+                                            onClick={() => { setActiveIndex(idx); handlePieClick(entry.name); }}
                                             style={{ cursor: 'pointer' }}
                                         />
                                     ))}
@@ -176,7 +176,6 @@ export default function GastosPorCategoria({ startDate, endDate, mode = 'debit',
                                 />
                             </PieChart>
                         </ResponsiveContainer>
-                        {/* Center label — total when idle, hidden when hovering (avoids tooltip overlap) */}
                         {activeIndex === null && total > 0 && (
                             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
                                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>

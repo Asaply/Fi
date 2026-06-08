@@ -10,6 +10,7 @@ import { useTopbar } from '@/components/TopbarContext';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { exportDataAsPDF } from '@/lib/exportPdf';
+import { API_BASE } from '@/lib/apiBase';
 import Modal from '@/components/Modal';
 import {
     isPinEnabled, isBiometricEnabled, isBiometricSupported,
@@ -188,7 +189,7 @@ export default function ConfiguracionPage() {
                 await supabase.auth.signOut();
             } else {
                 // Web: use server route with service role for full deletion
-                const res = await fetch('/api/account', { method: 'DELETE' });
+                const res = await fetch(`${API_BASE}/api/account`, { method: 'DELETE' });
                 if (!res.ok) {
                     const data = await res.json();
                     throw new Error(data.error || 'Failed');
