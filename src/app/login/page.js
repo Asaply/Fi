@@ -135,10 +135,8 @@ function LoginPageInner() {
                     localStorage.removeItem('fnce_biometric_enabled');
                     localStorage.removeItem('fnce_pin_attempts');
                 }
-                const isPaid = loginData?.user?.user_metadata?.subscription_status === 'active';
                 const isOnboarded = !!loginData?.user?.user_metadata?.onboarded;
                 if (redirectTo) router.push(redirectTo);
-                else if (!isPaid) router.push('/paywall');
                 else if (!isOnboarded) router.push('/onboarding');
                 else router.push('/finanzas');
             }
@@ -172,10 +170,8 @@ function LoginPageInner() {
         const { error: vErr } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challenge.id, code: mfaCode.replace(/\s/g, '') });
         if (vErr) { setError('Código incorrecto.'); setIsLoading(false); return; }
         const { data: { user } } = await supabase.auth.getUser();
-        const isPaid = user?.user_metadata?.subscription_status === 'active';
         const isOnboarded = !!user?.user_metadata?.onboarded;
         if (redirectTo) router.push(redirectTo);
-        else if (!isPaid) router.push('/paywall');
         else if (!isOnboarded) router.push('/onboarding');
         else router.push('/finanzas');
     }

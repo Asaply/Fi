@@ -46,23 +46,14 @@ export async function GET(request) {
         }
 
         // Determine correct destination based on user state
-        const isPaid = user?.user_metadata?.subscription_status === 'active'
         const isOnboarded = !!user?.user_metadata?.onboarded
+        const dest = isOnboarded ? '/finanzas' : '/onboarding'
 
-        let dest = '/paywall'
-        if (isPaid && isOnboarded) dest = '/finanzas'
-        else if (isPaid && !isOnboarded) dest = '/onboarding'
-        // else: not paid → /paywall (default)
-
-        if (dest !== '/paywall') {
-            const destResponse = NextResponse.redirect(new URL(dest, requestUrl.origin))
-            response.cookies.getAll().forEach(({ name, value, ...opts }) => {
-                destResponse.cookies.set(name, value, opts)
-            })
-            return destResponse
-        }
-
-        return response // → /paywall with session cookies
+        const destResponse = NextResponse.redirect(new URL(dest, requestUrl.origin))
+        response.cookies.getAll().forEach(({ name, value, ...opts }) => {
+            destResponse.cookies.set(name, value, opts)
+        })
+        return destResponse
     }
 
     // No code — send to login
