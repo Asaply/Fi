@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Bell, Shield, Database, Download, AlertTriangle,
     ChevronRight, Fingerprint, Lock, KeyRound, Delete, AlertCircle, Sun, Moon,
@@ -21,8 +22,11 @@ const NOTIF_KEY = 'fnce_notif_prefs';
 const PIN_LENGTH = 4;
 
 export default function ConfiguracionPage() {
+    const router = useRouter();
     const { theme, toggleTheme } = useTopbar();
     const [notif, setNotif] = useState({ portfolio: true, resumen: false });
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [pinEnabled, setPinEnabled] = useState(false);
     const [bioEnabled, setBioEnabled] = useState(false);
     const [bioSupported, setBioSupported] = useState(false);
@@ -165,13 +169,37 @@ export default function ConfiguracionPage() {
         }
     };
 
-    const handleDeleteAccount = () => {
-        toast.error('¿Eliminar tu cuenta permanentemente?', {
-            action: {
-                label: 'Confirmar',
-                onClick: () => toast.info('Contacta a soporte para eliminar tu cuenta.'),
-            },
-        });
+    const handleDeleteAccount = () => setShowDeleteConfirm(true);
+
+    const confirmDeleteAccount = async () => {
+        setIsDeleting(true);
+        try {
+            const isNative = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+            if (isNative) {
+                // Native app: call Supabase directly (no server route available)
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) throw new Error('No session');
+
+                const tables = ['transactions', 'trading_operations', 'portfolio_assets', 'clients', 'prospects', 'budgets', 'reminders'];
+                for (const table of tables) {
+                    await supabase.from(table).delete().eq('user_id', session.user.id);
+                }
+                // Sign out — user data deleted, auth user remains but is empty
+                await supabase.auth.signOut();
+            } else {
+                // Web: use server route with service role for full deletion
+                const res = await fetch('/api/account', { method: 'DELETE' });
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Failed');
+                }
+                await supabase.auth.signOut();
+            }
+            router.push('/login');
+        } catch (err) {
+            toast.error('Error al eliminar: ' + err.message);
+            setIsDeleting(false);
+        }
     };
 
     /* ── PIN modal title ── */
@@ -287,6 +315,23 @@ export default function ConfiguracionPage() {
                 </div>
 
             </div>
+
+            {/* Delete Account Modal */}
+            <Modal isOpen={showDeleteConfirm} onClose={() => !isDeleting && setShowDeleteConfirm(false)} title="Eliminar mi cuenta">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                        Se eliminarán <strong>todas tus transacciones, activos, presupuestos y datos</strong>. Esta acción no se puede deshacer.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                        <button className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
+                            Cancelar
+                        </button>
+                        <button className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmDeleteAccount} disabled={isDeleting}>
+                            {isDeleting ? 'Eliminando...' : 'Eliminar cuenta'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
 
             {/* PIN Modal */}
             <Modal isOpen={!!pinModal} onClose={closeModal} title={pinModalTitle}>

@@ -143,7 +143,7 @@ export default function GastosPorCategoria({ startDate, endDate, mode = 'debit',
                                     strokeWidth={0}
                                     onMouseEnter={(_, idx) => setActiveIndex(idx)}
                                     onMouseLeave={() => setActiveIndex(null)}
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                    cursor={{ fill: 'transparent' }}
                                 >
                                     {data.map((entry, idx) => (
                                         <Cell
@@ -160,11 +160,16 @@ export default function GastosPorCategoria({ startDate, endDate, mode = 'debit',
                                         if (!active || !payload?.length) return null;
                                         const { name, value } = payload[0].payload;
                                         const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+                                        const bg = dark ? '#1c1c1e' : '#ffffff';
+                                        const border = dark ? '#333' : '#e5e5e5';
+                                        const text = dark ? '#ffffff' : '#111111';
+                                        const muted = dark ? '#999999' : '#888888';
                                         return (
-                                            <div style={{ background: 'var(--bg-surface)', border: '1px solid #333', borderRadius: 8, padding: '8px 12px' }}>
-                                                <p style={{ color: CATEGORY_COLORS[name] || '#fff', margin: 0, fontSize: '12px', fontWeight: 600 }}>{name}</p>
-                                                <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '12px' }}>{formatMXN(value)}</p>
-                                                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '11px' }}>{pct}%</p>
+                                            <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                                <p style={{ color: text, margin: 0, fontSize: '12px', fontWeight: 600 }}>{name}</p>
+                                                <p style={{ color: text, margin: 0, fontSize: '12px' }}>{formatMXN(value)}</p>
+                                                <p style={{ color: muted, margin: 0, fontSize: '11px' }}>{pct}%</p>
                                             </div>
                                         );
                                     }}
@@ -207,7 +212,7 @@ export default function GastosPorCategoria({ startDate, endDate, mode = 'debit',
                         {/* Ver más / Ver menos */}
                         {data.length > VISIBLE && (
                             <button onClick={() => setShowAll(v => !v)}
-                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 500, padding: '7px 12px', touchAction: 'manipulation', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', marginTop: '2px' }}>
+                                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 500, padding: '7px 12px', touchAction: 'manipulation', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', marginTop: '2px' }}>
                                 {showAll ? '↑ Ver menos' : `↓ Ver ${data.length - VISIBLE} categorías más`}
                             </button>
                         )}

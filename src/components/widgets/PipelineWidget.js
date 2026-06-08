@@ -123,7 +123,21 @@ export default function PipelineWidget({ widgetId, data = {}, updateWidgetData, 
                             <BarChart data={chartData} layout="vertical" margin={{ top: 8, right: 30, left: 20, bottom: 8 }}>
                                 <XAxis type="number" allowDecimals={false} hide />
                                 <YAxis dataKey="step" type="category" axisLine={false} tickLine={false} width={90} style={{ fontSize: '12px', fill: '#a1a1aa' }} />
-                                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }} labelStyle={{ color: 'var(--text-secondary)' }} />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload?.length) return null;
+                                        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+                                        return (
+                                            <div style={{ background: dark ? '#1c1c1e' : '#fff', border: `1px solid ${dark ? '#333' : '#e5e5e5'}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                                {label && <p style={{ color: dark ? '#999' : '#666', margin: '0 0 4px', fontSize: '11px' }}>{label}</p>}
+                                                {payload.map((p, i) => (
+                                                    <p key={i} style={{ color: dark ? '#fff' : '#111', margin: 0, fontSize: '12px' }}>{p.value} leads</p>
+                                                ))}
+                                            </div>
+                                        );
+                                    }}
+                                    cursor={{ fill: 'transparent' }}
+                                />
                                 <Bar dataKey="leads" radius={[0, 4, 4, 0]} barSize={20}>
                                     {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                 </Bar>

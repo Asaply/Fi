@@ -96,13 +96,11 @@
         margin: 0;
         max-width: 100%;
         width: 100%;
-        /* cap height + scroll entire sheet if content overflows */
-        max-height: 92dvh;
+        max-height: 85dvh;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         border-radius: 24px 24px 0 0;
-        /* tighter padding, safe-area at bottom */
-        padding: 20px 16px calc(env(safe-area-inset-bottom, 0px) + 32px) 16px !important;
+        padding: 20px 16px calc(env(safe-area-inset-bottom, 0px) + 24px) 16px !important;
         animation: slideUpSheet 0.32s cubic-bezier(0.16, 1, 0.3, 1);
     }
 }

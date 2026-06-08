@@ -47,6 +47,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>NVA necesita acceso a la cámara para tomar tu foto de perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>NVA necesita acceso a tus fotos para elegir tu foto de perfil.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
