@@ -171,7 +171,6 @@ async function callClaudeVision(fileBuffer, mediaType) {
     });
 
     const raw = response.content[0]?.text?.trim() ?? '';
-    console.log('[callClaudeVision] Raw response length:', raw.length, 'preview:', raw.slice(0, 300));
     const parsed = extractJSON(raw);
     if (!parsed) {
         console.error('[callClaudeVision] JSON extraction failed. Raw:', raw.slice(0, 1000));
@@ -197,7 +196,6 @@ async function callClaudeText(csvText) {
     });
 
     const raw = response.content[0]?.text?.trim() ?? '';
-    console.log('[callClaudeText] Raw response length:', raw.length, 'preview:', raw.slice(0, 300));
     const parsed = extractJSON(raw);
     if (!parsed) {
         console.error('[callClaudeText] JSON extraction failed. Raw:', raw.slice(0, 1000));
@@ -208,11 +206,7 @@ async function callClaudeText(csvText) {
 
 export async function POST(request) {
     try {
-    const authHeader = request.headers.get('authorization');
-    console.log('[api/analyze] Auth header present:', !!authHeader, 'length:', authHeader?.length ?? 0);
-
     const user = await getAuthUser();
-    console.log('[api/analyze] Auth result:', user ? `user=${user.id} email=${user.email}` : 'NO USER (anonymous)');
 
     const ip = getIp(request);
 
