@@ -31,6 +31,18 @@ for f in "${SERVER_FILES[@]}"; do
 done
 
 CAPACITOR=1 NEXT_PUBLIC_API_BASE=https://www.nva.lat npx next build
+
+# Replace landing page with instant redirect to /login for native app
+cat > out/index.html << 'REDIR'
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url=/login">
+<style>html{background:#000}</style>
+<script>window.location.replace('/login');</script>
+</head><body></body></html>
+REDIR
+
 npx cap copy ios
 
 echo "✅ Capacitor build + copy done"

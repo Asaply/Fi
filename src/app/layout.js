@@ -65,14 +65,6 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: `
-          if (window.webkit && window.webkit.messageHandlers && window.location.pathname === '/') {
-            document.documentElement.style.visibility = 'hidden';
-            window.location.replace('/login');
-          }
-        `}} />
-      </head>
       <body className={`${inter.variable} ${geistMono.variable}`}>
         <ConditionalShell>{children}</ConditionalShell>
         <Toaster position="bottom-right" theme="dark" richColors />
