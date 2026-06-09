@@ -381,17 +381,34 @@ export default function FinanzasPage() {
                 window.__nvaUploadData = base64;
                 window.__nvaUploadFileName = file.name;
                 data = await new Promise((resolve, reject) => {
+                    let settled = false;
+                    const cleanup = () => {
+                        delete window.__nvaUploadResult;
+                        delete window.__nvaUploadError;
+                        delete window.__nvaUploadData;
+                        delete window.__nvaUploadFileName;
+                    };
                     window.__nvaUploadResult = (json) => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
                         try { resolve(JSON.parse(json)); }
                         catch { reject(new Error('Invalid server response')); }
                     };
-                    window.__nvaUploadError = (err) => reject(new Error(err));
+                    window.__nvaUploadError = (err) => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        reject(new Error(err));
+                    };
                     document.title = `__nvaUpload:${token}`;
-                    // Timeout after 2 minutes
-                    setTimeout(() => reject(new Error('Upload timeout')), 120000);
+                    setTimeout(() => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        reject(new Error('Upload timeout'));
+                    }, 180000);
                 });
-                delete window.__nvaUploadData;
-                delete window.__nvaUploadFileName;
             } else {
                 // Web: standard FormData upload
                 const fd = new FormData();

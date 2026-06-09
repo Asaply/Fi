@@ -30,7 +30,7 @@ for f in "${SERVER_FILES[@]}"; do
     [ -f "$f" ] && mv "$f" "${f}.capsave"
 done
 
-CAPACITOR=1 NEXT_PUBLIC_API_BASE=https://finanzas-integraweb.vercel.app npx next build
+CAPACITOR=1 NEXT_PUBLIC_API_BASE=https://www.nva.lat npx next build
 npx cap copy ios
 
 echo "✅ Capacitor build + copy done"
