@@ -144,33 +144,38 @@ class CustomBridgeViewController: CAPBridgeViewController {
     // MARK: - Native File Upload
 
     private func handleNativeUpload(payload: String) {
-        let token = payload
-        print("[NVA-Upload] handleNativeUpload called, token length: \(token.count)")
+        print("[NVA-Upload] handleNativeUpload called")
 
-        wkWebView?.evaluateJavaScript("window.__nvaUploadData || ''") { [weak self] (result: Any?, error: Error?) in
-            if let error = error {
-                print("[NVA-Upload] Error getting upload data: \(error)")
-                self?.sendUploadResult(nil, error: "JS eval error: \(error.localizedDescription)")
-                return
-            }
-            guard let base64String = result as? String, !base64String.isEmpty else {
-                print("[NVA-Upload] No base64 data found in window.__nvaUploadData")
-                self?.sendUploadResult(nil, error: "No file data")
-                return
-            }
-            print("[NVA-Upload] Got base64 data, length: \(base64String.count)")
+        // Read token from JS global (avoids document.title encoding issues)
+        wkWebView?.evaluateJavaScript("window.__nvaUploadToken || ''") { [weak self] (tokenResult: Any?, _: Error?) in
+            let token = (tokenResult as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            print("[NVA-Upload] Token from JS global, length: \(token.count), parts: \(token.split(separator: ".").count)")
 
-            guard let fileData = Data(base64Encoded: base64String) else {
-                print("[NVA-Upload] Failed to decode base64")
-                self?.sendUploadResult(nil, error: "Invalid base64 data")
-                return
-            }
-            print("[NVA-Upload] Decoded file data: \(fileData.count) bytes")
+            self?.wkWebView?.evaluateJavaScript("window.__nvaUploadData || ''") { (result: Any?, error: Error?) in
+                if let error = error {
+                    print("[NVA-Upload] Error getting upload data: \(error)")
+                    self?.sendUploadResult(nil, error: "JS eval error: \(error.localizedDescription)")
+                    return
+                }
+                guard let base64String = result as? String, !base64String.isEmpty else {
+                    print("[NVA-Upload] No base64 data found in window.__nvaUploadData")
+                    self?.sendUploadResult(nil, error: "No file data")
+                    return
+                }
+                print("[NVA-Upload] Got base64 data, length: \(base64String.count)")
 
-            self?.wkWebView?.evaluateJavaScript("window.__nvaUploadFileName || 'upload.pdf'") { (nameResult: Any?, _: Error?) in
-                let fileName = nameResult as? String ?? "upload.pdf"
-                print("[NVA-Upload] Uploading \(fileName)")
-                self?.performUpload(fileData: fileData, fileName: fileName, token: token)
+                guard let fileData = Data(base64Encoded: base64String) else {
+                    print("[NVA-Upload] Failed to decode base64")
+                    self?.sendUploadResult(nil, error: "Invalid base64 data")
+                    return
+                }
+                print("[NVA-Upload] Decoded file data: \(fileData.count) bytes")
+
+                self?.wkWebView?.evaluateJavaScript("window.__nvaUploadFileName || 'upload.pdf'") { (nameResult: Any?, _: Error?) in
+                    let fileName = nameResult as? String ?? "upload.pdf"
+                    print("[NVA-Upload] Uploading \(fileName)")
+                    self?.performUpload(fileData: fileData, fileName: fileName, token: token)
+                }
             }
         }
     }
