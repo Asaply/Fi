@@ -37,9 +37,9 @@ cat > out/index.html << 'REDIR'
 <!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0;url=/login">
+<meta http-equiv="refresh" content="0;url=/login.html">
 <style>html{background:#000}</style>
-<script>window.location.replace('/login');</script>
+<script>window.location.replace('/login.html');</script>
 </head><body></body></html>
 REDIR
 
