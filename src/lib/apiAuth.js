@@ -13,12 +13,16 @@ export async function getAuthUser() {
     const authHeader = headerStore.get('authorization');
     if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.slice(7);
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
-        const { data: { user } } = await supabase.auth.getUser(token);
-        return user;
+        if (token) {
+            const supabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            );
+            const { data: { user }, error } = await supabase.auth.getUser(token);
+            if (error) console.error('[getAuthUser] Bearer token rejected:', error.message);
+            if (user) return user;
+        }
+        // If Bearer token failed/empty, fall through to cookie auth
     }
 
     // Fallback: cookie-based auth (web)
