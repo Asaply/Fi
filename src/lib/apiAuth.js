@@ -14,8 +14,6 @@ export async function getAuthUser() {
     if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.slice(7);
         if (token) {
-            const parts = token.split('.');
-            console.log('[getAuthUser] Token length:', token.length, 'parts:', parts.length, 'first20:', token.slice(0, 20), 'last20:', token.slice(-20));
             const supabase = createClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

@@ -3,7 +3,7 @@
 ## Proyecto
 App de finanzas personales. Next.js 15, App Router, React 19, Supabase, Tailwind CSS, dark theme.
 - **Local:** http://localhost:3005
-- **Prod:** https://finanzas-integraweb.vercel.app
+- **Prod:** https://www.nva.lat
 - **Supabase project:** rdmvynbidxfesvdkuqga
 - **Tablas:** transactions, trading_operations, portfolio_assets, clients, prospects
 

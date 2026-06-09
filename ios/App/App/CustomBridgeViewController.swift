@@ -18,7 +18,6 @@ class CustomBridgeViewController: CAPBridgeViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        print("[NVA] viewDidAppear called")
         setupTitleObservation()
     }
 
@@ -31,10 +30,7 @@ class CustomBridgeViewController: CAPBridgeViewController {
     }
 
     private func setupTitleObservation() {
-        guard titleObservation == nil, let myView = self.view else {
-            print("[NVA] setupTitleObservation skipped (already set or no view)")
-            return
-        }
+        guard titleObservation == nil, let myView = self.view else { return }
 
         var foundWebView: WKWebView? = findWKWebView(in: myView)
         if foundWebView == nil, let winRoot = myView.window?.rootViewController?.view {
@@ -42,7 +38,6 @@ class CustomBridgeViewController: CAPBridgeViewController {
         }
 
         guard let wv = foundWebView else {
-            print("[NVA] WKWebView not found yet, retrying in 0.5s")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.setupTitleObservation()
             }
@@ -51,12 +46,10 @@ class CustomBridgeViewController: CAPBridgeViewController {
 
         wkWebView = wv
         originalTitle = wv.title ?? ""
-        print("[NVA] ✅ Title observation set up on WKWebView, current title: '\(originalTitle)'")
 
         titleObservation = wv.observe(\.title, options: [.new]) {
             [weak self] (webView: WKWebView, _: NSKeyValueObservedChange<String?>) in
             guard let title = webView.title else { return }
-            print("[NVA-Title] observed: \(title.prefix(80))")
 
             // Restore original title
             let restoreTitle = {
@@ -77,7 +70,6 @@ class CustomBridgeViewController: CAPBridgeViewController {
                 DispatchQueue.main.async { self?.launchAppleSignIn(hashedNonce: hashedNonce) }
             } else if title.hasPrefix("__nvaUpload:") {
                 let payload = String(title.dropFirst("__nvaUpload:".count))
-                print("[NVA-Upload] Title KVO fired, token length: \(payload.count)")
                 restoreTitle()
                 DispatchQueue.main.async { self?.handleNativeUpload(payload: payload) }
             }
@@ -144,36 +136,25 @@ class CustomBridgeViewController: CAPBridgeViewController {
     // MARK: - Native File Upload
 
     private func handleNativeUpload(payload: String) {
-        print("[NVA-Upload] handleNativeUpload called")
-
         // Read token from JS global (avoids document.title encoding issues)
         wkWebView?.evaluateJavaScript("window.__nvaUploadToken || ''") { [weak self] (tokenResult: Any?, _: Error?) in
             let token = (tokenResult as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            print("[NVA-Upload] Token from JS global, length: \(token.count), parts: \(token.split(separator: ".").count)")
 
             self?.wkWebView?.evaluateJavaScript("window.__nvaUploadData || ''") { (result: Any?, error: Error?) in
-                if let error = error {
-                    print("[NVA-Upload] Error getting upload data: \(error)")
-                    self?.sendUploadResult(nil, error: "JS eval error: \(error.localizedDescription)")
+                if error != nil {
+                    self?.sendUploadResult(nil, error: "JS eval error")
                     return
                 }
                 guard let base64String = result as? String, !base64String.isEmpty else {
-                    print("[NVA-Upload] No base64 data found in window.__nvaUploadData")
                     self?.sendUploadResult(nil, error: "No file data")
                     return
                 }
-                print("[NVA-Upload] Got base64 data, length: \(base64String.count)")
-
                 guard let fileData = Data(base64Encoded: base64String) else {
-                    print("[NVA-Upload] Failed to decode base64")
                     self?.sendUploadResult(nil, error: "Invalid base64 data")
                     return
                 }
-                print("[NVA-Upload] Decoded file data: \(fileData.count) bytes")
-
                 self?.wkWebView?.evaluateJavaScript("window.__nvaUploadFileName || 'upload.pdf'") { (nameResult: Any?, _: Error?) in
                     let fileName = nameResult as? String ?? "upload.pdf"
-                    print("[NVA-Upload] Uploading \(fileName)")
                     self?.performUpload(fileData: fileData, fileName: fileName, token: token)
                 }
             }
@@ -206,28 +187,20 @@ class CustomBridgeViewController: CAPBridgeViewController {
 
         request.httpBody = body
 
-        print("[NVA-Upload] Starting URLSession request to \(urlString), body size: \(body.count) bytes")
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            if let httpResp = response as? HTTPURLResponse {
-                print("[NVA-Upload] HTTP response status: \(httpResp.statusCode)")
-            }
             if let error = error {
-                print("[NVA-Upload] URLSession error: \(error)")
                 self?.sendUploadResult(nil, error: error.localizedDescription)
                 return
             }
             guard let data = data, let jsonString = String(data: data, encoding: .utf8) else {
-                print("[NVA-Upload] Empty response data")
                 self?.sendUploadResult(nil, error: "Empty response")
                 return
             }
-            print("[NVA-Upload] Got response: \(jsonString.prefix(200))")
             self?.sendUploadResult(jsonString, error: nil)
         }.resume()
     }
 
     private func sendUploadResult(_ json: String?, error: String?) {
-        print("[NVA-Upload] sendUploadResult called, hasJSON: \(json != nil), error: \(error ?? "none")")
         DispatchQueue.main.async {
             if let json = json {
                 let safe = json.replacingOccurrences(of: "\\", with: "\\\\")
