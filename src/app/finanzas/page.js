@@ -382,6 +382,7 @@ export default function FinanzasPage() {
                 });
                 window.__nvaUploadData = base64;
                 window.__nvaUploadFileName = file.name;
+                window.__nvaUploadToken = token;
                 data = await new Promise((resolve, reject) => {
                     let settled = false;
                     const cleanup = () => {
@@ -389,6 +390,7 @@ export default function FinanzasPage() {
                         delete window.__nvaUploadError;
                         delete window.__nvaUploadData;
                         delete window.__nvaUploadFileName;
+                        delete window.__nvaUploadToken;
                     };
                     window.__nvaUploadResult = (json) => {
                         if (settled) return;
