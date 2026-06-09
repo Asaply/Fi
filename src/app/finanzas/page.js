@@ -365,7 +365,9 @@ export default function FinanzasPage() {
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
+            // Refresh session to ensure token is valid (getSession returns cached/potentially expired token)
+            const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+            const session = refreshed ?? (await supabase.auth.getSession()).data.session;
             const token = session?.access_token || '';
             const isNative = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
 
