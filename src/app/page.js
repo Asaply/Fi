@@ -11,6 +11,8 @@ export const metadata = {
 export default function LandingPage() {
   return (
     <div className={styles.landing}>
+      {/* Black gate: hides landing until JS decides (native=redirect, web=remove gate) */}
+      <div id="native-gate" style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 99999 }} />
       <NativeRedirect to="/login" />
 
       {/* ── Navbar ── */}

@@ -1,16 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function NativeRedirect({ to }) {
-    const [hiding, setHiding] = useState(false);
     const router = useRouter();
     useEffect(() => {
-        if (typeof window !== "undefined" && window.Capacitor?.isNativePlatform()) {
-            setHiding(true);
+        const isNative = window.Capacitor?.isNativePlatform();
+        if (isNative) {
             router.replace(to);
+        } else {
+            // Web: reveal the page content
+            document.getElementById('native-gate')?.remove();
         }
     }, [router, to]);
-    // Cover the page with black while router navigates
-    return hiding ? <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 99999 }} /> : null;
+    return null;
 }
