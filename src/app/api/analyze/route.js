@@ -208,7 +208,11 @@ async function callClaudeText(csvText) {
 
 export async function POST(request) {
     try {
+    const authHeader = request.headers.get('authorization');
+    console.log('[api/analyze] Auth header present:', !!authHeader, 'length:', authHeader?.length ?? 0);
+
     const user = await getAuthUser();
+    console.log('[api/analyze] Auth result:', user ? `user=${user.id} email=${user.email}` : 'NO USER (anonymous)');
 
     const ip = getIp(request);
 
