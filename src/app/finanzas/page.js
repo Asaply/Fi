@@ -2233,60 +2233,49 @@ export default function FinanzasPage() {
                             </div>
                         </div>
 
-                        <div style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-                            <table className="data-table" style={{ fontSize: '12px' }}>
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Concepto</th>
-                                        <th>Monto</th>
-                                        <th>Tipo</th>
-                                        <th>Categoría</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {pendingRows.map(r => (
-                                        <tr key={r._idx}>
-                                            <td style={{ whiteSpace: 'nowrap' }}>{r.date}</td>
-                                            <td title={r.concept} style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.concept}</td>
-                                            <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(r.amount)}</td>
-                                            <td>
-                                                <select
-                                                    className="select-filter"
-                                                    style={{ fontSize: '11px', padding: '2px 4px' }}
-                                                    value={r.type}
-                                                    onChange={e => updatePendingRow(r._idx, 'type', e.target.value)}
-                                                >
-                                                    {isCreditCard ? (
-                                                        <>
-                                                            <option value="Transferencia">Pago</option>
-                                                            <option value="Egreso">Cargo</option>
-                                                            <option value="Ingreso">Ajuste</option>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <option value="Ingreso">Ingreso</option>
-                                                            <option value="Egreso">Egreso</option>
-                                                            <option value="Inversión">Inversión</option>
-                                                            <option value="Por Cobrar">Por Cobrar</option>
-                                                        </>
-                                                    )}
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <select
-                                                    className="select-filter"
-                                                    style={{ fontSize: '11px', padding: '2px 4px' }}
-                                                    value={r.categoria || 'Otros'}
-                                                    onChange={e => updatePendingRow(r._idx, 'categoria', e.target.value)}
-                                                >
-                                                    {CATEGORIAS_ALL.map(c => <option key={c}>{c}</option>)}
-                                                </select>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div style={{ maxHeight: '50vh', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                            <div className="import-rows-list">
+                                {pendingRows.map(r => (
+                                    <div key={r._idx} className="import-row-card">
+                                        <div className="import-row-top">
+                                            <span className="import-row-date">{r.date}</span>
+                                            <span className="import-row-amount">{formatCurrency(r.amount)}</span>
+                                        </div>
+                                        <div className="import-row-concept" title={r.concept}>{r.concept}</div>
+                                        <div className="import-row-controls">
+                                            <select
+                                                className="select-filter"
+                                                style={{ fontSize: '12px', padding: '3px 6px' }}
+                                                value={r.type}
+                                                onChange={e => updatePendingRow(r._idx, 'type', e.target.value)}
+                                            >
+                                                {isCreditCard ? (
+                                                    <>
+                                                        <option value="Transferencia">Pago</option>
+                                                        <option value="Egreso">Cargo</option>
+                                                        <option value="Ingreso">Ajuste</option>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <option value="Ingreso">Ingreso</option>
+                                                        <option value="Egreso">Egreso</option>
+                                                        <option value="Inversión">Inversión</option>
+                                                        <option value="Por Cobrar">Por Cobrar</option>
+                                                    </>
+                                                )}
+                                            </select>
+                                            <select
+                                                className="select-filter"
+                                                style={{ fontSize: '12px', padding: '3px 6px' }}
+                                                value={r.categoria || 'Otros'}
+                                                onChange={e => updatePendingRow(r._idx, 'categoria', e.target.value)}
+                                            >
+                                                {CATEGORIAS_ALL.map(c => <option key={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>

@@ -635,3 +635,59 @@
         display: none;
     }
 }
+
+/* Import review — card list */
+.import-rows-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.import-row-card {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.import-row-card:last-child {
+    border-bottom: none;
+}
+
+.import-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.import-row-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.import-row-amount {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.import-row-concept {
+    font-size: 13px;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.import-row-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.import-row-controls .select-filter {
+    flex: 1;
+    min-width: 0;
+}
