@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
+import { hasAccess } from '@/lib/access';
+import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
 import './Onboarding.css';
 
 const ONBOARDING_KEY = 'fnce_onboarding_v1';
@@ -75,20 +77,6 @@ export default function OnboardingPage() {
         window.location.href = dest;
     }
 
-    async function completeAndPay() {
-        if (selectedGoal) localStorage.setItem('fnce_primary_use', selectedGoal);
-        localStorage.setItem(ONBOARDING_KEY, '1');
-        try {
-            await supabase.auth.updateUser({ data: { onboarded: true } });
-        } catch (_) {}
-        try {
-            const res = await fetch(`${API_BASE}/api/stripe/create-checkout`, { method: 'POST' });
-            const data = await res.json();
-            if (data.url) { window.location.href = data.url; return; }
-        } catch (_) {}
-        router.push('/paywall');
-    }
-
     return (
         <div className="ob-root">
             <div className="ob-bg-speedlines" aria-hidden />
@@ -120,8 +108,8 @@ export default function OnboardingPage() {
                 )}
                 {step === 8 && (
                     <StepPlans
-                        onPay={completeAndPay}
-                        onSkip={() => advance(9)}
+                        selectedGoal={selectedGoal}
+                        onDone={() => advance(9)}
                     />
                 )}
                 {step === 9 && <StepDone onFinish={() => complete('/finanzas')} />}
@@ -229,6 +217,28 @@ function StepValueProp({ onNext }) {
 function StepName({ onNext }) {
     const [name, setName]       = useState('');
     const [loading, setLoading] = useState(false);
+    const [checking, setChecking] = useState(true);
+
+    // Apple Sign In provides the name via ASAuthorizationAppleIDCredential.fullName,
+    // which Supabase stores in user_metadata. Don't re-ask (App Store Guideline 4).
+    useEffect(() => {
+        let cancelled = false;
+        supabase.auth.getUser().then(({ data }) => {
+            if (cancelled) return;
+            const meta = data?.user?.user_metadata || {};
+            const existing = (meta.display_name || meta.full_name || meta.name || '').trim();
+            if (existing) {
+                // Persist as display_name if not already set, then skip the step.
+                if (!meta.display_name) {
+                    supabase.auth.updateUser({ data: { display_name: existing } }).catch(() => {});
+                }
+                onNext();
+                return;
+            }
+            setChecking(false);
+        }).catch(() => { if (!cancelled) setChecking(false); });
+        return () => { cancelled = true; };
+    }, [onNext]);
 
     async function handleContinue() {
         if (!name.trim()) { onNext(); return; }
@@ -239,6 +249,8 @@ function StepName({ onNext }) {
         setLoading(false);
         onNext();
     }
+
+    if (checking) return null;
 
     return (
         <div className="ob-step ob-step-form">
@@ -548,33 +560,85 @@ const PLAN_FEATURES = [
     'Actualizaciones incluidas para siempre',
 ];
 
-function StepPlans({ onPay, onSkip }) {
-    const [loading, setLoading]   = useState(false);
-    const [checking, setChecking] = useState(true);
-    const [error, setError]       = useState('');
+function StepPlans({ selectedGoal, onDone }) {
+    // phase: 'checking' (claiming free slot) | 'paywall'
+    const [phase, setPhase]     = useState('checking');
+    const [native, setNative]   = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError]     = useState('');
 
+    // On reaching this step: if the user already has access, skip. Otherwise
+    // mark onboarding complete and try to claim one of the first-150 free slots.
+    // The free slot is defined as "first 150 to COMPLETE onboarding".
     useEffect(() => {
-        supabase.auth.getUser().then(({ data }) => {
-            if (data?.user?.user_metadata?.subscription_status === 'active') {
-                onSkip();
-            } else {
-                setChecking(false);
-            }
-        });
-    }, [onSkip]);
+        let cancelled = false;
+        (async () => {
+            setNative(isNativeApp());
+            const { data } = await supabase.auth.getUser();
+            if (hasAccess(data?.user?.user_metadata)) { if (!cancelled) onDone(); return; }
 
-    async function handlePay() {
+            if (selectedGoal) localStorage.setItem('fnce_primary_use', selectedGoal);
+            localStorage.setItem(ONBOARDING_KEY, '1');
+            try { await supabase.auth.updateUser({ data: { onboarded: true } }); } catch (_) {}
+
+            try {
+                const token = (await supabase.auth.getSession()).data.session?.access_token;
+                const res = await fetch(`${API_BASE}/api/access/claim`, {
+                    method: 'POST',
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+                const json = await res.json();
+                if (json.granted) {
+                    await supabase.auth.refreshSession();
+                    if (!cancelled) onDone();
+                    return;
+                }
+            } catch (_) { /* fall through to paywall */ }
+
+            if (!cancelled) setPhase('paywall');
+        })();
+        return () => { cancelled = true; };
+    }, [onDone, selectedGoal]);
+
+    async function handleWebPay() {
         setLoading(true);
         setError('');
         try {
-            await onPay();
+            const res = await fetch(`${API_BASE}/api/stripe/create-checkout`, { method: 'POST' });
+            const data = await res.json();
+            if (data.url) { window.location.href = data.url; return; }
+            throw new Error(data.error || 'no_url');
         } catch (_) {
             setError('Error al iniciar el pago. Intenta de nuevo.');
             setLoading(false);
         }
     }
 
-    if (checking) return null;
+    async function handleNativePurchase() {
+        setLoading(true);
+        setError('');
+        try {
+            await nativePurchase();
+            onDone();
+        } catch (e) {
+            if (e.message !== 'cancelled') setError('No se pudo completar la compra. Intenta de nuevo.');
+            setLoading(false);
+        }
+    }
+
+    async function handleNativeRestore() {
+        setLoading(true);
+        setError('');
+        try {
+            await nativeRestore();
+            onDone();
+        } catch (_) {
+            setError('No encontramos una suscripción activa para restaurar.');
+            setLoading(false);
+        }
+    }
+
+    if (phase !== 'paywall') return null;
 
     return (
         <div className="ob-step">
@@ -582,7 +646,7 @@ function StepPlans({ onPay, onSkip }) {
             <h1 className="ob-title ob-title-xl">
                 Activa NVA<br />al 100%.
             </h1>
-            <p className="ob-subtitle">Pago único · Sin suscripción</p>
+            <p className="ob-subtitle">Suscripción mensual · Cancela cuando quieras</p>
 
             <ul className="ob-plan-features">
                 {PLAN_FEATURES.map((f, i) => (
@@ -597,17 +661,28 @@ function StepPlans({ onPay, onSkip }) {
                 <div className="ob-plan-price-row">
                     <span className="ob-plan-currency">$</span>
                     <span className="ob-plan-price">99</span>
-                    <span className="ob-plan-period">MXN · pago único</span>
+                    <span className="ob-plan-period">MXN / mes</span>
                 </div>
-                <p className="ob-plan-note">Pago seguro vía Stripe · Tarjetas de crédito y débito</p>
+                <p className="ob-plan-note">
+                    {native ? 'Se renueva automáticamente · Gestiona en Ajustes' : 'Pago seguro vía Stripe · Cancela cuando quieras'}
+                </p>
             </div>
 
             {error && <p className="ob-error">{error}</p>}
 
             <div className="ob-actions">
-                <button className="ob-btn-pay" onClick={handlePay} disabled={loading}>
-                    {loading ? 'Redirigiendo...' : 'Activar NVA — $99 MXN'}
+                <button
+                    className="ob-btn-pay"
+                    onClick={native ? handleNativePurchase : handleWebPay}
+                    disabled={loading}
+                >
+                    {loading ? 'Procesando...' : 'Suscribirme — $99 MXN/mes'}
                 </button>
+                {native && (
+                    <button className="ob-btn-link" onClick={handleNativeRestore} disabled={loading}>
+                        Restaurar compras
+                    </button>
+                )}
                 <p className="ob-plan-required-note">
                     Activa tu cuenta para acceder al dashboard
                 </p>

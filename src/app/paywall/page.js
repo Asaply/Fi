@@ -6,12 +6,9 @@ import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
+import { hasAccess } from '@/lib/access';
+import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
 import styles from './paywall.module.css';
-
-function isNativeApp() {
-    if (typeof window === 'undefined') return false;
-    return !!(window.Capacitor?.isNativePlatform?.() || window.Capacitor?.platform === 'ios' || window.Capacitor?.platform === 'android');
-}
 
 const FEATURES = [
     'Análisis ilimitados de estados de cuenta',
@@ -43,7 +40,7 @@ function PaywallInner() {
                 router.replace(loginUrl);
                 return;
             }
-            if (session.user?.user_metadata?.subscription_status === 'active') {
+            if (hasAccess(session.user?.user_metadata)) {
                 router.replace('/finanzas');
                 return;
             }
@@ -69,6 +66,30 @@ function PaywallInner() {
         }
     }
 
+    async function handleNativePurchase() {
+        setLoading(true);
+        setError('');
+        try {
+            await nativePurchase();
+            router.replace('/finanzas');
+        } catch (e) {
+            if (e.message !== 'cancelled') setError('No se pudo completar la compra. Intenta de nuevo.');
+            setLoading(false);
+        }
+    }
+
+    async function handleNativeRestore() {
+        setLoading(true);
+        setError('');
+        try {
+            await nativeRestore();
+            router.replace('/finanzas');
+        } catch {
+            setError('No encontramos una suscripción activa para restaurar.');
+            setLoading(false);
+        }
+    }
+
     if (native) {
         return (
             <div className={styles.root}>
@@ -77,7 +98,14 @@ function PaywallInner() {
                         <Image src="/nva-icon.svg" alt="NVA" width={56} height={56} className={styles.logo} />
                     </div>
                     <h1 className={styles.title}>Activa NVA al 100%</h1>
-                    <p className={styles.subtitle}>Pago único · Sin suscripción · Sin sorpresas</p>
+                    <p className={styles.subtitle}>Suscripción mensual · Cancela cuando quieras</p>
+
+                    <div className={styles.priceBlock}>
+                        <span className={styles.currency}>$</span>
+                        <span className={styles.price}>99</span>
+                        <span className={styles.priceSuffix}>MXN / mes</span>
+                    </div>
+
                     <ul className={styles.features}>
                         {FEATURES.map((f, i) => (
                             <li key={i}>
@@ -86,17 +114,22 @@ function PaywallInner() {
                             </li>
                         ))}
                     </ul>
-                    <a
-                        href={`https://nva.lat/paywall${userEmail ? `?email=${encodeURIComponent(userEmail)}` : ''}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.payBtn}
-                        style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}
+
+                    {error && <p className={styles.errorMsg}>{error}</p>}
+
+                    <button className={styles.payBtn} onClick={handleNativePurchase} disabled={loading}>
+                        {loading ? 'Procesando...' : 'Suscribirme — $99 MXN/mes'}
+                    </button>
+                    <button
+                        className={styles.logoutBtn}
+                        onClick={handleNativeRestore}
+                        disabled={loading}
+                        style={{ marginTop: '0.5rem' }}
                     >
-                        Activar NVA — $99 MXN
-                    </a>
+                        Restaurar compras
+                    </button>
                     <p className={styles.note}>
-                        Se abrirá nva.lat en tu navegador
+                        Se renueva automáticamente · Gestiona en Ajustes de tu Apple ID
                     </p>
                     {userEmail && (
                         <p className={styles.emailNote}>Cuenta: {userEmail}</p>
@@ -120,12 +153,12 @@ function PaywallInner() {
                 </div>
 
                 <h1 className={styles.title}>Activa NVA al 100%</h1>
-                <p className={styles.subtitle}>Pago único · Sin suscripción · Sin sorpresas</p>
+                <p className={styles.subtitle}>Suscripción mensual · Cancela cuando quieras</p>
 
                 <div className={styles.priceBlock}>
                     <span className={styles.currency}>$</span>
                     <span className={styles.price}>99</span>
-                    <span className={styles.priceSuffix}>MXN</span>
+                    <span className={styles.priceSuffix}>MXN / mes</span>
                 </div>
 
                 <ul className={styles.features}>
@@ -156,11 +189,11 @@ function PaywallInner() {
                     onClick={handlePay}
                     disabled={loading}
                 >
-                    {loading ? 'Redirigiendo...' : 'Activar NVA — $99 MXN'}
+                    {loading ? 'Redirigiendo...' : 'Suscribirme — $99 MXN/mes'}
                 </button>
 
                 <p className={styles.note}>
-                    Pago seguro vía Stripe · Tarjetas de crédito y débito
+                    Pago seguro vía Stripe · Cancela cuando quieras
                 </p>
 
                 {userEmail && (

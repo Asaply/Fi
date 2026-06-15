@@ -16,7 +16,7 @@ export default function ResetOnboardingPage() {
 
             // Clear Supabase user metadata
             const { error } = await supabase.auth.updateUser({
-                data: { onboarded: false, subscription_status: null },
+                data: { onboarded: false, subscription_status: null, subscription_source: null, subscription_expires_at: null },
             });
 
             if (error) throw error;
@@ -31,7 +31,7 @@ export default function ResetOnboardingPage() {
         setStatus('Resetting paywall only...');
         try {
             const { error } = await supabase.auth.updateUser({
-                data: { subscription_status: null },
+                data: { subscription_status: null, subscription_source: null, subscription_expires_at: null },
             });
             if (error) throw error;
             setStatus('Paywall reset. Redirecting to paywall...');

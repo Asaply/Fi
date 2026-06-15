@@ -72,6 +72,16 @@ const fetchPrices = async (assets) => {
     const uniqueAssets = [...new Map(assets.map(a => [a.ticker.toUpperCase(), a])).values()];
     const prices = {};
     const histories = {};
+
+    // Get auth token for native app (cookies don't work cross-origin)
+    let authHeaders = {};
+    if (API_BASE) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+            authHeaders = { 'Authorization': `Bearer ${session.access_token}` };
+        }
+    }
+
     await Promise.all(uniqueAssets.map(async (asset) => {
         let endpoint = '';
         const cat = asset.category.toLowerCase();
@@ -79,7 +89,7 @@ const fetchPrices = async (assets) => {
         else if (['stock', 'etf', 'bond', 'bono', 'acciones'].includes(cat)) endpoint = `${API_BASE}/api/price?ticker=${asset.ticker}&range=7d`;
         if (!endpoint) return;
         try {
-            const res = await fetch(endpoint);
+            const res = await fetch(endpoint, { headers: authHeaders });
             if (res.ok) {
                 const data = await res.json();
                 if (data.price) prices[asset.ticker.toUpperCase()] = parseFloat(data.price);

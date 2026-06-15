@@ -28,3 +28,14 @@ create policy "Service role manages subscriptions"
 -- Index for fast lookups
 create index if not exists subscriptions_user_id_idx on public.subscriptions(user_id);
 create index if not exists subscriptions_status_idx on public.subscriptions(status);
+
+-- ── Subscription model v2 (recurring Stripe + Apple StoreKit) ──────────────
+-- Additive columns; safe to run on an existing table.
+alter table public.subscriptions add column if not exists source text;                       -- stripe | apple | free
+alter table public.subscriptions add column if not exists current_period_end timestamptz;
+alter table public.subscriptions add column if not exists stripe_customer_id text;
+alter table public.subscriptions add column if not exists stripe_subscription_id text;
+alter table public.subscriptions add column if not exists apple_original_transaction_id text;
+
+create index if not exists subscriptions_stripe_sub_idx on public.subscriptions(stripe_subscription_id);
+create index if not exists subscriptions_apple_otx_idx on public.subscriptions(apple_original_transaction_id);

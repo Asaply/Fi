@@ -87,8 +87,24 @@ export default function PerfilPage() {
         setSaving(false);
     };
 
+    const isNative = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+
     const handleImageUpload = (e) => {
-        const file = e.target.files[0];
+        if (isNative) {
+            // Use native picker (iPad-safe)
+            window.__nvaPhotoResult = (dataURL) => {
+                setProfilePic(dataURL);
+                delete window.__nvaPhotoResult;
+                delete window.__nvaPhotoCancelled;
+            };
+            window.__nvaPhotoCancelled = () => {
+                delete window.__nvaPhotoResult;
+                delete window.__nvaPhotoCancelled;
+            };
+            document.title = '__nvaPickPhoto';
+            return;
+        }
+        const file = e?.target?.files?.[0];
         if (!file) return;
         if (file.size > 5 * 1024 * 1024) { toast.error('La imagen debe pesar menos de 5MB.'); return; }
         const reader = new FileReader();
@@ -190,11 +206,19 @@ export default function PerfilPage() {
                         ? <img src={profilePic} alt="Avatar" className="perfil-avatar-img" />
                         : <span className="perfil-avatar-initials">{initials}</span>
                     }
-                    <label htmlFor="profile-pic-input" className="perfil-avatar-cam">
-                        <Camera size={14} />
-                    </label>
-                    <input id="profile-pic-input" type="file" style={{ display: 'none' }}
-                        accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} />
+                    {isNative ? (
+                        <button type="button" className="perfil-avatar-cam" onClick={handleImageUpload}>
+                            <Camera size={14} />
+                        </button>
+                    ) : (
+                        <>
+                            <label htmlFor="profile-pic-input" className="perfil-avatar-cam">
+                                <Camera size={14} />
+                            </label>
+                            <input id="profile-pic-input" type="file" style={{ display: 'none' }}
+                                accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} />
+                        </>
+                    )}
                 </div>
                 <div className="perfil-hero-info">
                     <h2 className="perfil-hero-name">{formData.name || 'Mi cuenta'}</h2>

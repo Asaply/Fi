@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { hasAccess } from '@/lib/access';
 import './Login.css';
 
 // mode: 'landing' | 'login' | 'register' | 'registered'
@@ -205,7 +206,7 @@ function LoginPageInner() {
                         if (authErr) throw authErr;
                         const user = authData?.user;
                         const isOnboarded = !!user?.user_metadata?.onboarded;
-                        const isPaid = user?.user_metadata?.subscription_status === 'active';
+                        const isPaid = hasAccess(user?.user_metadata);
                         if (!isOnboarded) router.push('/onboarding');
                         else if (!isPaid) router.push('/paywall');
                         else router.push('/finanzas');
@@ -261,7 +262,7 @@ function LoginPageInner() {
                             if (authErr) throw authErr;
                             const user = authData?.user;
                             const isOnboarded = !!user?.user_metadata?.onboarded;
-                            const isPaid = user?.user_metadata?.subscription_status === 'active';
+                            const isPaid = hasAccess(user?.user_metadata);
                             if (!isOnboarded) router.push('/onboarding');
                             else if (!isPaid) router.push('/paywall');
                             else router.push('/finanzas');

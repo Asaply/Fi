@@ -167,6 +167,14 @@ export default function DashboardPage() {
 
                 let portafolio = 0;
                 let portfolioIsLive = false;
+                // Get auth token for native app (cookies don't work cross-origin)
+                let authHeaders = {};
+                if (API_BASE) {
+                    const { data: { session: authSession } } = await supabase.auth.getSession();
+                    if (authSession?.access_token) {
+                        authHeaders = { 'Authorization': `Bearer ${authSession.access_token}` };
+                    }
+                }
                 if (assets && assets.length > 0) {
                     const pricePromises = assets.map(async (a) => {
                         try {
@@ -174,7 +182,7 @@ export default function DashboardPage() {
                             const endpoint = cat === 'crypto'
                                 ? `${API_BASE}/api/crypto?ticker=${encodeURIComponent(a.ticker)}`
                                 : `${API_BASE}/api/price?ticker=${encodeURIComponent(a.ticker)}`;
-                            const res = await fetch(endpoint);
+                            const res = await fetch(endpoint, { headers: authHeaders });
                             if (res.ok) {
                                 const d = await res.json();
                                 if (d.price) {

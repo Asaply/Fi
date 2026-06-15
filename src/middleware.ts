@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { hasAccess } from '@/lib/access'
 
 function corsHeaders(origin: string | null) {
   return {
@@ -52,7 +53,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
     pathname.startsWith('/terms') || pathname.startsWith('/privacy') ||
     pathname.startsWith('/paywall') ||
-    pathname.startsWith('/api/stripe/webhook')
+    pathname.startsWith('/api/stripe/webhook') ||
+    pathname.startsWith('/api/iap/notifications')
 
   if (!user) {
     // API routes with Bearer token — let route handler check auth
@@ -67,7 +69,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Authenticated user state
-  const isPaid = user.user_metadata?.subscription_status === 'active'
+  const isPaid = hasAccess(user.user_metadata)
   const isOnboarded = !!user.user_metadata?.onboarded
   const isPaywallRoute = pathname.startsWith('/paywall')
   const isOnboardingRoute = pathname.startsWith('/onboarding')
