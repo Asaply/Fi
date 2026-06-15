@@ -5,7 +5,7 @@ import CryptoKit
 import StoreKit
 
 class CustomBridgeViewController: CAPBridgeViewController {
-    static let subscriptionProductID = "lat.nva.app.sub.monthly"
+    nonisolated static let subscriptionProductID = "lat.nva.app.sub.monthly"
 
     private var authSession: ASWebAuthenticationSession?
     private var titleObservation: NSKeyValueObservation?
@@ -303,7 +303,9 @@ class CustomBridgeViewController: CAPBridgeViewController {
     // renewals, Ask-to-Buy approvals, refunds, restores on other devices.
     private func startTransactionListener() {
         guard txUpdatesTask == nil, #available(iOS 15.0, *) else { return }
-        txUpdatesTask = Task.detached { [weak self] in
+        // Plain Task (not detached) inherits the main actor, so the callbacks
+        // into the (main-actor) web view are valid.
+        txUpdatesTask = Task { [weak self] in
             for await update in Transaction.updates {
                 if case .verified(let transaction) = update,
                    transaction.productID == CustomBridgeViewController.subscriptionProductID {
