@@ -45,3 +45,7 @@ server.log
 __local_pdfs__
 __tests__/fixtures/*
 !__tests__/fixtures/.gitkeep
+
+# Apple IAP secrets / helpers
+apple-certs/APPLE_ROOT_CAS.txt
+*.p8
