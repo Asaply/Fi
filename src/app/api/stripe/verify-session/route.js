@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { auditLog, getIp } from '@/lib/auditLog';
+import { getAdminClient, applyStripeSubscription } from '@/lib/stripeSync';
 
 export const runtime = 'nodejs';
 
 function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY); }
-
-function getAdminClient() {
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-}
 
 export async function GET(request) {
     const ip = getIp(request);
@@ -31,44 +23,31 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Invalid session_id' }, { status: 400 });
         }
 
-        const session = await getStripe().checkout.sessions.retrieve(sessionId);
+        const stripe = getStripe();
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
         const userId = session.client_reference_id || session.metadata?.user_id;
         const paid = session.payment_status === 'paid';
 
-        console.log('[stripe/verify-session] userId:', userId, 'paid:', paid, 'payment_status:', session.payment_status);
-
-        if (!userId || !paid) {
+        if (!userId || !paid || !session.subscription) {
             return NextResponse.json({ paid: false });
         }
 
-        const supabase = getAdminClient();
+        const admin = getAdminClient();
+        const sub = await stripe.subscriptions.retrieve(session.subscription);
 
-        // upsert is best-effort — don't let it block activation
-        const { error: upsertErr } = await supabase
-            .from('subscriptions')
-            .upsert({
-                user_id: userId,
-                status: 'active',
-                updated_at: new Date().toISOString(),
-            }, { onConflict: 'user_id' });
-
-        if (upsertErr) {
-            console.error('[stripe/verify-session] Upsert error (non-fatal):', upsertErr.message);
+        // Make sure the subscription carries user_id so later webhooks resolve it.
+        if (!sub.metadata?.user_id) {
+            try { await stripe.subscriptions.update(sub.id, { metadata: { user_id: userId } }); } catch (_) {}
         }
 
-        console.log('[stripe/verify-session] Calling updateUserById for:', userId);
-        const { data: updatedUser, error: metaErr } = await supabase.auth.admin.updateUserById(userId, {
-            user_metadata: { subscription_status: 'active' },
-        });
-
-        console.log('[stripe/verify-session] updateUserById result:', updatedUser?.user?.id, 'error:', metaErr?.message);
-
-        if (metaErr) {
+        try {
+            await applyStripeSubscription(admin, userId, sub);
+        } catch (metaErr) {
             console.error('[stripe/verify-session] Metadata error:', metaErr.message);
             return NextResponse.json({ paid: false, error: metaErr.message }, { status: 500 });
         }
 
-        auditLog({ userId, event: 'payment.activated', meta: { source: 'verify-session', session_id: sessionId }, ip });
+        auditLog({ userId, event: 'subscription.activated', meta: { source: 'verify-session', session_id: sessionId }, ip });
 
         return NextResponse.json({ paid: true, activated: true });
 

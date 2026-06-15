@@ -2,12 +2,16 @@ import Capacitor
 import WebKit
 import AuthenticationServices
 import CryptoKit
+import StoreKit
 
 class CustomBridgeViewController: CAPBridgeViewController {
+    static let subscriptionProductID = "lat.nva.app.sub.monthly"
+
     private var authSession: ASWebAuthenticationSession?
     private var titleObservation: NSKeyValueObservation?
     private var originalTitle: String = ""
     private var wkWebView: WKWebView?
+    private var txUpdatesTask: Task<Void, Never>?
 
     override func instanceDescriptor() -> InstanceDescriptor {
         let descriptor = super.instanceDescriptor()
@@ -19,6 +23,7 @@ class CustomBridgeViewController: CAPBridgeViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         setupTitleObservation()
+        startTransactionListener()
     }
 
     private func findWKWebView(in parentView: UIView) -> WKWebView? {
@@ -72,11 +77,23 @@ class CustomBridgeViewController: CAPBridgeViewController {
                 let payload = String(title.dropFirst("__nvaUpload:".count))
                 restoreTitle()
                 DispatchQueue.main.async { self?.handleNativeUpload(payload: payload) }
+            } else if title == "__nvaPickPhoto" {
+                restoreTitle()
+                DispatchQueue.main.async { self?.handlePickPhoto() }
+            } else if title == "__nvaPurchase" {
+                restoreTitle()
+                DispatchQueue.main.async { self?.handlePurchase() }
+            } else if title == "__nvaRestorePurchases" {
+                restoreTitle()
+                DispatchQueue.main.async { self?.handleRestore() }
             }
         }
     }
 
-    deinit { titleObservation?.invalidate() }
+    deinit {
+        titleObservation?.invalidate()
+        txUpdatesTask?.cancel()
+    }
 
     // MARK: - OAuth (Google etc.)
 
@@ -219,6 +236,53 @@ class CustomBridgeViewController: CAPBridgeViewController {
         }
     }
 
+    // MARK: - Photo Picker (iPad-safe)
+
+    private func handlePickPhoto() {
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            alert.addAction(UIAlertAction(title: "Tomar foto", style: .default) { [weak self] _ in
+                self?.presentImagePicker(sourceType: .camera)
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "Elegir de la biblioteca", style: .default) { [weak self] _ in
+            self?.presentImagePicker(sourceType: .photoLibrary)
+        })
+
+        alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel) { [weak self] _ in
+            self?.wkWebView?.evaluateJavaScript(
+                "window.__nvaPhotoCancelled && window.__nvaPhotoCancelled()"
+            ) { (_: Any?, _: Error?) in }
+        })
+
+        // iPad requires popover sourceView
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = self.view
+            popover.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+
+        present(alert, animated: true)
+    }
+
+    private func presentImagePicker(sourceType: UIImagePickerController.SourceType) {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = self
+        picker.allowsEditing = true
+
+        // iPad requires popover for .photoLibrary
+        if sourceType == .photoLibrary, let popover = picker.popoverPresentationController {
+            popover.sourceView = self.view
+            popover.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+
+        present(picker, animated: true)
+    }
+
     // MARK: - Apple Sign In
 
     private func launchAppleSignIn(hashedNonce: String) {
@@ -231,6 +295,90 @@ class CustomBridgeViewController: CAPBridgeViewController {
         controller.delegate = self
         controller.presentationContextProvider = self
         controller.performRequests()
+    }
+
+    // MARK: - StoreKit In-App Purchase (auto-renewable subscription)
+
+    // Listen for transactions that complete outside the purchase() call:
+    // renewals, Ask-to-Buy approvals, refunds, restores on other devices.
+    private func startTransactionListener() {
+        guard txUpdatesTask == nil, #available(iOS 15.0, *) else { return }
+        txUpdatesTask = Task.detached { [weak self] in
+            for await update in Transaction.updates {
+                if case .verified(let transaction) = update,
+                   transaction.productID == CustomBridgeViewController.subscriptionProductID {
+                    // jwsRepresentation lives on the VerificationResult.
+                    self?.sendPurchaseResult(update.jwsRepresentation)
+                    await transaction.finish()
+                }
+            }
+        }
+    }
+
+    private func handlePurchase() {
+        guard #available(iOS 15.0, *) else { return sendPurchaseError("ios_version") }
+        Task {
+            do {
+                let products = try await Product.products(for: [CustomBridgeViewController.subscriptionProductID])
+                guard let product = products.first else { return sendPurchaseError("product_not_found") }
+
+                let result = try await product.purchase()
+                switch result {
+                case .success(let verification):
+                    switch verification {
+                    case .verified(let transaction):
+                        sendPurchaseResult(verification.jwsRepresentation)
+                        await transaction.finish()
+                    case .unverified:
+                        sendPurchaseError("unverified")
+                    }
+                case .userCancelled: sendPurchaseError("cancelled")
+                case .pending:       sendPurchaseError("pending")
+                @unknown default:    sendPurchaseError("unknown")
+                }
+            } catch {
+                sendPurchaseError(error.localizedDescription)
+            }
+        }
+    }
+
+    private func handleRestore() {
+        guard #available(iOS 15.0, *) else { return sendRestoreError("ios_version") }
+        Task {
+            try? await AppStore.sync()
+            for await result in Transaction.currentEntitlements {
+                if case .verified(let transaction) = result,
+                   transaction.productID == CustomBridgeViewController.subscriptionProductID {
+                    sendRestoreResult(result.jwsRepresentation)
+                    return
+                }
+            }
+            sendRestoreError("no_active_subscription")
+        }
+    }
+
+    private func sendPurchaseResult(_ jws: String) {
+        evalCallback("window.__nvaPurchaseResult", arg: jws)
+    }
+    private func sendPurchaseError(_ reason: String) {
+        evalCallback("window.__nvaPurchaseError", arg: reason)
+    }
+    private func sendRestoreResult(_ jws: String) {
+        evalCallback("window.__nvaRestoreResult", arg: jws)
+    }
+    private func sendRestoreError(_ reason: String) {
+        evalCallback("window.__nvaRestoreError", arg: reason)
+    }
+
+    // Invoke a JS callback with one string arg, escaped like sendUploadResult.
+    private func evalCallback(_ fn: String, arg: String) {
+        let safe = arg.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "")
+        DispatchQueue.main.async {
+            self.wkWebView?.evaluateJavaScript("\(fn) && \(fn)('\(safe)')") { (_: Any?, _: Error?) in }
+        }
     }
 }
 
@@ -285,5 +433,44 @@ extension CustomBridgeViewController: ASAuthorizationControllerDelegate {
 extension CustomBridgeViewController: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         return view.window ?? UIWindow()
+    }
+}
+
+// MARK: - UIImagePickerControllerDelegate
+
+extension CustomBridgeViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    func imagePickerController(_ picker: UIImagePickerController,
+                               didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        picker.dismiss(animated: true)
+        guard let image = (info[.editedImage] ?? info[.originalImage]) as? UIImage else {
+            wkWebView?.evaluateJavaScript(
+                "window.__nvaPhotoCancelled && window.__nvaPhotoCancelled()"
+            ) { (_: Any?, _: Error?) in }
+            return
+        }
+
+        // Resize to max 512px and compress
+        let maxDim: CGFloat = 512
+        let scale = min(maxDim / image.size.width, maxDim / image.size.height, 1.0)
+        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let resized = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        guard let jpegData = (resized ?? image).jpegData(compressionQuality: 0.8) else { return }
+        let base64 = jpegData.base64EncodedString()
+        let dataURL = "data:image/jpeg;base64,\(base64)"
+
+        wkWebView?.evaluateJavaScript(
+            "window.__nvaPhotoResult && window.__nvaPhotoResult('\(dataURL)')"
+        ) { (_: Any?, _: Error?) in }
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+        wkWebView?.evaluateJavaScript(
+            "window.__nvaPhotoCancelled && window.__nvaPhotoCancelled()"
+        ) { (_: Any?, _: Error?) in }
     }
 }
