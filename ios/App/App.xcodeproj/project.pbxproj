@@ -17,6 +17,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A71EA8322FBAA4320012C9DF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A71EA8312FBAA4320012C9DF /* PrivacyInfo.xcprivacy */; };
 		A7230C052FD6252600D2C1F2 /* CustomBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7230C042FD6252600D2C1F2 /* CustomBridgeViewController.swift */; };
+		A7230C092FE046F100D2C1F2 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A7230C082FE046F000D2C1F2 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +34,7 @@
 		A71EA8312FBAA4320012C9DF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A7230C042FD6252600D2C1F2 /* CustomBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomBridgeViewController.swift; sourceTree = "<group>"; };
 		A7230C062FD6E83C00D2C1F2 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+		A7230C082FE046F000D2C1F2 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +43,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+				A7230C092FE046F100D2C1F2 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -55,6 +58,7 @@
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
 				A71EA8312FBAA4320012C9DF /* PrivacyInfo.xcprivacy */,
+				A7230C072FE046F000D2C1F2 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -80,6 +84,14 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		A7230C072FE046F000D2C1F2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A7230C082FE046F000D2C1F2 /* StoreKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

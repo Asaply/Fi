@@ -74,7 +74,14 @@ export default function OnboardingPage() {
         try {
             await supabase.auth.updateUser({ data: { onboarded: true } });
         } catch (_) {}
-        window.location.href = dest;
+        // Native: client-side route (Capacitor static export has no middleware
+        // and window.location to a bare path 404s → bounces to login).
+        // Web: full reload so middleware re-reads the fresh session/metadata.
+        if (isNativeApp()) {
+            router.replace(dest);
+        } else {
+            window.location.href = dest;
+        }
     }
 
     return (
