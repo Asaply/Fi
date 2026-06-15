@@ -14,6 +14,9 @@ SERVER_FILES=(
     src/app/api/stripe/create-checkout/route.js
     src/app/api/stripe/verify-session/route.js
     src/app/api/stripe/webhook/route.js
+    src/app/api/access/claim/route.js
+    src/app/api/iap/verify/route.js
+    src/app/api/iap/notifications/route.js
     src/app/auth/callback/route.js
     src/app/api/account/route.js
     src/app/opengraph-image.js

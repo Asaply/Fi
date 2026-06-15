@@ -52,3 +52,22 @@ export async function POST() {
         return serverError('access/claim', err);
     }
 }
+
+// GET /api/access/claim — how many free slots remain (for the "quedan X de 150" UI).
+// Avoids next/headers (cookies/headers) so it stays compatible with static export.
+// The count is non-sensitive; middleware already gates unauthenticated access.
+export async function GET() {
+    try {
+        const admin = getAdminClient();
+        const { count, error } = await admin
+            .from('free_grants')
+            .select('*', { count: 'exact', head: true });
+        if (error) return serverError('access/claim count', error);
+
+        const taken = count || 0;
+        const remaining = Math.max(0, FREE_LIMIT - taken);
+        return NextResponse.json({ taken, limit: FREE_LIMIT, remaining });
+    } catch (err) {
+        return serverError('access/claim GET', err);
+    }
+}

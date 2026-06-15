@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
 import { hasAccess } from '@/lib/access';
 import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
+import { getRemainingSlots, claimFreeSlot } from '@/lib/freeTier';
 import styles from './paywall.module.css';
 
 const FEATURES = [
@@ -24,6 +25,7 @@ function PaywallInner() {
     const [error, setError] = useState('');
     const [userEmail, setUserEmail] = useState('');
     const [native, setNative] = useState(false);
+    const [remaining, setRemaining] = useState(null);
     const router = useRouter();
     const searchParams = useSearchParams();
     const paymentError = searchParams.get('error');
@@ -45,8 +47,27 @@ function PaywallInner() {
                 return;
             }
             setUserEmail(session.user?.email || '');
+            getRemainingSlots().then((s) => setRemaining(s?.remaining ?? 0));
         });
     }, [router]);
+
+    async function handleFree() {
+        setLoading(true);
+        setError('');
+        try {
+            const json = await claimFreeSlot();
+            if (json.granted) {
+                await supabase.auth.refreshSession();
+                router.replace('/finanzas');
+                return;
+            }
+            setRemaining(0);
+            setError('Se agotaron los lugares gratis. Suscríbete para continuar.');
+        } catch (_) {
+            setError('No se pudo activar el acceso gratis. Intenta de nuevo.');
+        }
+        setLoading(false);
+    }
 
     async function handlePay() {
         setLoading(true);
@@ -117,7 +138,17 @@ function PaywallInner() {
 
                     {error && <p className={styles.errorMsg}>{error}</p>}
 
-                    <button className={styles.payBtn} onClick={handleNativePurchase} disabled={loading}>
+                    {remaining > 0 && (
+                        <button className={styles.payBtn} onClick={handleFree} disabled={loading}>
+                            {loading ? 'Activando...' : `Comenzar gratis — quedan ${remaining} de 150`}
+                        </button>
+                    )}
+                    <button
+                        className={remaining > 0 ? styles.logoutBtn : styles.payBtn}
+                        onClick={handleNativePurchase}
+                        disabled={loading}
+                        style={remaining > 0 ? { marginTop: '0.5rem' } : undefined}
+                    >
                         {loading ? 'Procesando...' : 'Suscribirme — $99 MXN/mes'}
                     </button>
                     <button
@@ -184,10 +215,16 @@ function PaywallInner() {
 
                 {error && <p className={styles.errorMsg}>{error}</p>}
 
+                {remaining > 0 && (
+                    <button className={styles.payBtn} onClick={handleFree} disabled={loading}>
+                        {loading ? 'Activando...' : `Comenzar gratis — quedan ${remaining} de 150`}
+                    </button>
+                )}
                 <button
-                    className={styles.payBtn}
+                    className={remaining > 0 ? styles.logoutBtn : styles.payBtn}
                     onClick={handlePay}
                     disabled={loading}
+                    style={remaining > 0 ? { marginTop: '0.5rem' } : undefined}
                 >
                     {loading ? 'Redirigiendo...' : 'Suscribirme — $99 MXN/mes'}
                 </button>
