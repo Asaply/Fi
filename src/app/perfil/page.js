@@ -9,6 +9,9 @@ import {
 import { useTopbar } from '@/components/TopbarContext';
 import { supabase } from '@/lib/supabaseClient';
 import { exportDataAsPDF } from '@/lib/exportPdf';
+import { API_BASE } from '@/lib/apiBase';
+import { hasAccess } from '@/lib/access';
+import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import './Perfil.css';
@@ -26,6 +29,9 @@ export default function PerfilPage() {
     const [mfaCode, setMfaCode] = useState('');
     const [mfaLoading, setMfaLoading] = useState(false);
     const [mfaError, setMfaError] = useState('');
+    const [native, setNative] = useState(false);
+    const [subBusy, setSubBusy] = useState(false);
+    const [sub, setSub] = useState({ status: null, source: null, expiresAt: null });
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -39,6 +45,7 @@ export default function PerfilPage() {
     });
 
     useEffect(() => {
+        setNative(isNativeApp());
         const prefs = (() => {
             try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); } catch { return {}; }
         })();
@@ -48,6 +55,12 @@ export default function PerfilPage() {
 
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) {
+                const m = user.user_metadata || {};
+                setSub({
+                    status: m.subscription_status || 'none',
+                    source: m.subscription_source || null,
+                    expiresAt: m.subscription_expires_at || null,
+                });
                 const displayName = user.user_metadata?.display_name
                     || user.user_metadata?.full_name
                     || user.user_metadata?.name
@@ -125,6 +138,48 @@ export default function PerfilPage() {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         router.push('/login');
+    };
+
+    const refreshSub = async () => {
+        await supabase.auth.refreshSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        const m = user?.user_metadata || {};
+        setSub({
+            status: m.subscription_status || 'none',
+            source: m.subscription_source || null,
+            expiresAt: m.subscription_expires_at || null,
+        });
+    };
+
+    const handleSubscribe = async () => {
+        setSubBusy(true);
+        try {
+            if (native) {
+                await nativePurchase();
+                await refreshSub();
+                toast.success('¡Suscripción activada!');
+            } else {
+                const res = await fetch(`${API_BASE}/api/stripe/create-checkout`, { method: 'POST' });
+                const data = await res.json();
+                if (data.url) { window.location.href = data.url; return; }
+                throw new Error('no_url');
+            }
+        } catch (e) {
+            if (e.message !== 'cancelled') toast.error('No se pudo completar la suscripción.');
+        }
+        setSubBusy(false);
+    };
+
+    const handleRestore = async () => {
+        setSubBusy(true);
+        try {
+            await nativeRestore();
+            await refreshSub();
+            toast.success('Suscripción restaurada.');
+        } catch {
+            toast.error('No encontramos una suscripción activa.');
+        }
+        setSubBusy(false);
     };
 
     const handleExportData = async () => {
@@ -316,6 +371,57 @@ export default function PerfilPage() {
                         ) : (
                             <SettingAction icon={<Shield size={15}/>} label="Autenticación en dos pasos" sublabel="Toca para configurar" onClick={mfaLoading ? undefined : handleMfaEnroll} last />
                         )}
+                    </div>
+                </div>
+
+                {/* Subscription */}
+                <div className="perfil-section">
+                    <p className="perfil-section-label">Suscripción</p>
+                    <div className="perfil-card">
+                        {(() => {
+                            const isActivePaid = hasAccess({ subscription_status: sub.status, subscription_expires_at: sub.expiresAt })
+                                && (sub.source === 'apple' || sub.source === 'stripe');
+                            const label =
+                                sub.status === 'free'    ? 'Plan gratis de por vida' :
+                                sub.status === 'active'   ? 'Suscripción activa' :
+                                sub.status === 'expired'  ? 'Suscripción vencida' :
+                                                            'Sin plan activo';
+                            const sublabel =
+                                sub.status === 'free'    ? 'Acceso completo, sin costo' :
+                                (sub.status === 'active' && sub.expiresAt) ? `Renueva el ${new Date(sub.expiresAt).toLocaleDateString('es-MX')}` :
+                                'NVA Premium · $99 MXN/mes';
+                            return (
+                                <>
+                                    <div className="perfil-row">
+                                        <span className="perfil-row-icon"><CreditCard size={15}/></span>
+                                        <div className="perfil-row-body">
+                                            <span className="perfil-row-label">{label}</span>
+                                            <span className="perfil-row-sublabel">{sublabel}</span>
+                                        </div>
+                                    </div>
+                                    {!isActivePaid && (
+                                        <SettingAction
+                                            icon={<CreditCard size={15}/>}
+                                            label={subBusy ? 'Procesando...' : 'Suscribirme — $99 MXN/mes'}
+                                            sublabel="Acceso premium mensual"
+                                            onClick={handleSubscribe}
+                                            disabled={subBusy}
+                                            last={!native}
+                                        />
+                                    )}
+                                    {native && (
+                                        <SettingAction
+                                            icon={<Download size={15}/>}
+                                            label="Restaurar compras"
+                                            sublabel="Recupera tu suscripción de Apple"
+                                            onClick={handleRestore}
+                                            disabled={subBusy}
+                                            last
+                                        />
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
 

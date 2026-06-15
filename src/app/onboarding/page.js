@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
 import { hasAccess } from '@/lib/access';
 import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
+import { getRemainingSlots, claimFreeSlot } from '@/lib/freeTier';
 import './Onboarding.css';
 
 const ONBOARDING_KEY = 'fnce_onboarding_v1';
@@ -568,15 +569,16 @@ const PLAN_FEATURES = [
 ];
 
 function StepPlans({ selectedGoal, onDone }) {
-    // phase: 'checking' (claiming free slot) | 'paywall'
-    const [phase, setPhase]     = useState('checking');
-    const [native, setNative]   = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError]     = useState('');
+    // phase: 'checking' | 'plans'
+    const [phase, setPhase]         = useState('checking');
+    const [native, setNative]       = useState(false);
+    const [loading, setLoading]     = useState(false);
+    const [error, setError]         = useState('');
+    const [remaining, setRemaining] = useState(null); // free slots left (null = unknown)
 
     // On reaching this step: if the user already has access, skip. Otherwise
-    // mark onboarding complete and try to claim one of the first-150 free slots.
-    // The free slot is defined as "first 150 to COMPLETE onboarding".
+    // mark onboarding complete and show the plans screen with both the free-tier
+    // claim and the paid subscription (so Apple can review the IAP).
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -588,24 +590,33 @@ function StepPlans({ selectedGoal, onDone }) {
             localStorage.setItem(ONBOARDING_KEY, '1');
             try { await supabase.auth.updateUser({ data: { onboarded: true } }); } catch (_) {}
 
-            try {
-                const token = (await supabase.auth.getSession()).data.session?.access_token;
-                const res = await fetch(`${API_BASE}/api/access/claim`, {
-                    method: 'POST',
-                    headers: token ? { Authorization: `Bearer ${token}` } : {},
-                });
-                const json = await res.json();
-                if (json.granted) {
-                    await supabase.auth.refreshSession();
-                    if (!cancelled) onDone();
-                    return;
-                }
-            } catch (_) { /* fall through to paywall */ }
-
-            if (!cancelled) setPhase('paywall');
+            const slots = await getRemainingSlots();
+            if (!cancelled) {
+                setRemaining(slots?.remaining ?? 0);
+                setPhase('plans');
+            }
         })();
         return () => { cancelled = true; };
     }, [onDone, selectedGoal]);
+
+    async function handleFree() {
+        setLoading(true);
+        setError('');
+        try {
+            const json = await claimFreeSlot();
+            if (json.granted) {
+                await supabase.auth.refreshSession();
+                onDone();
+                return;
+            }
+            // Race lost — slots just filled. Hide free, force subscription.
+            setRemaining(0);
+            setError('Se agotaron los lugares gratis. Suscríbete para continuar.');
+        } catch (_) {
+            setError('No se pudo activar el acceso gratis. Intenta de nuevo.');
+        }
+        setLoading(false);
+    }
 
     async function handleWebPay() {
         setLoading(true);
@@ -645,7 +656,9 @@ function StepPlans({ selectedGoal, onDone }) {
         }
     }
 
-    if (phase !== 'paywall') return null;
+    if (phase !== 'plans') return null;
+
+    const freeAvailable = remaining > 0;
 
     return (
         <div className="ob-step">
@@ -678,8 +691,13 @@ function StepPlans({ selectedGoal, onDone }) {
             {error && <p className="ob-error">{error}</p>}
 
             <div className="ob-actions">
+                {freeAvailable && (
+                    <button className="ob-btn-pay" onClick={handleFree} disabled={loading}>
+                        {loading ? 'Activando...' : `Comenzar gratis — quedan ${remaining} de 150`}
+                    </button>
+                )}
                 <button
-                    className="ob-btn-pay"
+                    className={freeAvailable ? 'ob-btn-link' : 'ob-btn-pay'}
                     onClick={native ? handleNativePurchase : handleWebPay}
                     disabled={loading}
                 >
