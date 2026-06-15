@@ -42,12 +42,10 @@ export default function OnboardingPage() {
     const [analysisData, setAnalysisData] = useState(null);
     const router = useRouter();
 
-    // Skip if already onboarded
+    // Skip if already onboarded. Gate ONLY on user_metadata.onboarded (per-account,
+    // server truth). Do NOT use the localStorage key here: it's device-global, so a
+    // new account on a device that previously onboarded would wrongly skip onboarding.
     useEffect(() => {
-        if (typeof window !== 'undefined' && localStorage.getItem(ONBOARDING_KEY)) {
-            router.replace('/finanzas');
-            return;
-        }
         supabase.auth.getUser().then(({ data }) => {
             if (data?.user?.user_metadata?.onboarded) {
                 router.replace('/finanzas');
