@@ -1,3 +1,66 @@
+# Session Handoff — 2026-06-15 (Session 4) ← CURRENT
+
+## Goal
+Switch monetization to **$99 MXN/month subscription** with **first-150-users-free**
+(grandfathered lifetime). iOS = Apple StoreKit IAP, web = Stripe subscription.
+Fixes the two build-5 rejections: Guideline 3.1.1 (Stripe→IAP) + Guideline 4
+(Sign in with Apple asking for name).
+
+## Current State: BUILD 6 SUBMITTED — WAITING APPLE REVIEW
+
+All code + config done and deployed. Build 6 uploaded to App Store Connect with
+the subscription attached. **Waiting on Apple review of build 6.**
+
+The June-13 rejection email the user received is for the OLD build 5 — both its
+issues are already fixed in build 6:
+- Guideline 4 (Apple name) → onboarding StepName auto-skips when name exists in user_metadata
+- Guideline 3.1.1 (IAP) → StoreKit subscription `lat.nva.app.sub.monthly`
+
+### Done this session (all committed + pushed to main, deployed to Vercel)
+- Subscription model: `src/lib/access.js` `hasAccess()` (free|active|expired + expiry/grace)
+- First-150-free: `supabase-free-grants.sql` (table + atomic `claim_free_slot` RPC) + `/api/access/claim` (POST claim, GET remaining count)
+- Onboarding + paywall: explicit "Comenzar gratis — quedan X de 150" button alongside "Suscribirme — $99/mes" (Apple can review IAP; scarcity counter for conversion)
+- Perfil: "Suscripción" section (status + subscribe + restore), always reachable
+- iOS StoreKit: `__nvaPurchase` / `__nvaRestorePurchases` + `Transaction.updates` listener in BOTH CustomBridgeViewController.swift; `/api/iap/verify` + `/api/iap/notifications` via `@apple/app-store-server-library`
+- Web Stripe: subscription mode + webhook (`customer.subscription.*`, `invoice.paid`); `src/lib/stripeSync.js`
+- Fixes: native onboarding completion uses `router.replace` (not window.location); onboarding gate is `user_metadata.onboarded` only (not device-global localStorage)
+- Build number 5 → 6
+
+### External config DONE
+- Supabase: ran `supabase-free-grants.sql` + subscriptions v2 columns ✅
+- Stripe: product "NVA Suscripcion" recurring monthly, `STRIPE_PRICE_ID=price_1TiQAuLqg8698BPu4OvnioAG` set in Vercel ✅ (webhook events: verify `customer.subscription.*` + `invoice.paid` are subscribed)
+- App Store Connect: subscription `lat.nva.app.sub.monthly` (Apple ID 6780532026) — price $99 MXN, Spanish localization, review screenshot. "Faltan metadatos" is expected for first sub until submitted with a version ✅
+- Apple IAP env vars in Vercel (Production): `APPLE_BUNDLE_ID=lat.nva.app`, `APPLE_APP_APPLE_ID=6772263360`, `APPLE_IAP_KEY_ID=727NLVDW9T`, `APPLE_IAP_ISSUER_ID=f41f7f8b-a0de-4345-b65e-9b9c9a6c5380`, `APPLE_IAP_PRIVATE_KEY` (.p8), `APPLE_ROOT_CAS` (base64 G3+G2) ✅
+- Apple root CAs committed to `apple-certs/` (fallback); primary path is `APPLE_ROOT_CAS` env
+
+## Next Steps (in order)
+
+1. **WAIT for Apple review of build 6.** Then:
+   - If approved → release. Monitor first real purchases + free-slot claims.
+   - If rejected → read reasons; likely sandbox test-account or metadata nits.
+
+2. **🔴 Rotate the .p8 key** — it was pasted in chat (exposed). App Store Connect → Users and Access → Integrations → In-App Purchase → revoke `727NLVDW9T`, generate new → update `APPLE_IAP_PRIVATE_KEY` + `APPLE_IAP_KEY_ID` in Vercel + redeploy. (Not used by current verify code, but do it.)
+
+3. **Verify Stripe webhook events** are subscribed: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid` at `https://www.nva.lat/api/stripe/webhook`.
+
+4. **Security hardening** (post-approval, see Session-4 security audit):
+   - 🔴 Native tokens → Keychain (Capacitor secure-storage plugin) instead of WKWebView localStorage
+   - 🟡 Mask account/CLABE/card numbers before storing transaction concepts
+   - 🟡 Enable GitHub Dependabot
+   - 🟢 Jailbreak detection, SAST/DAST, annual pentest (for investors / OWASP MASVS L2)
+
+5. **Optional product**: análisis cap (bound LLM cost), annual plan (~$899/yr), Apple Small Business Program (15% vs 30%).
+
+## How to test
+- Free flow: new account → onboarding → "Comenzar gratis — quedan X de 150" → /finanzas
+- IAP: device + sandbox account, or StoreKit config file in simulator
+- Re-test onboarding: just use a NEW account (gate is per-account now, no need to wipe device)
+
+## Plan file
+`/Users/leonardo/.claude/plans/si-pero-aqui-esta-staged-wand.md`
+
+---
+
 # Session Handoff — 2026-06-13 (Session 3)
 
 ## Goal
