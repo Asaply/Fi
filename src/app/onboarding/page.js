@@ -231,7 +231,23 @@ function StepName({ onNext }) {
         let cancelled = false;
         supabase.auth.getUser().then(({ data }) => {
             if (cancelled) return;
-            const meta = data?.user?.user_metadata || {};
+            const user = data?.user;
+            const meta = user?.user_metadata || {};
+
+            // App Store Guideline 4: never ask Sign in with Apple users for their
+            // name. Apple provides it via the framework; re-asking is a rejection.
+            // The identity token doesn't carry the name into user_metadata, so we
+            // must skip based on the auth provider, not on whether a name exists.
+            const providers = [
+                user?.app_metadata?.provider,
+                ...(user?.app_metadata?.providers || []),
+                ...((user?.identities || []).map((i) => i.provider)),
+            ];
+            if (providers.includes('apple')) {
+                onNext();
+                return;
+            }
+
             const existing = (meta.display_name || meta.full_name || meta.name || '').trim();
             if (existing) {
                 // Persist as display_name if not already set, then skip the step.
