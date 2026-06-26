@@ -47,6 +47,16 @@ export async function GET() { return NextResponse.json({}, { status: 503 }); }
 `,
     },
     {
+        // Free-tier slot claim. GET (remaining count) is dynamic and breaks
+        // static export; native calls the live route on Vercel via API_BASE.
+        file: 'src/app/api/access/claim/route.js',
+        stub: `import { NextResponse } from 'next/server';
+export const dynamic = 'force-static';
+export async function GET() { return NextResponse.json({}, { status: 503 }); }
+export async function POST() { return NextResponse.json({}, { status: 503 }); }
+`,
+    },
+    {
         file: 'src/app/sitemap.js',
         stub: `export const dynamic = 'force-static';
 export default function sitemap() { return []; }

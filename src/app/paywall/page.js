@@ -24,7 +24,7 @@ function PaywallInner() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [userEmail, setUserEmail] = useState('');
-    const [native, setNative] = useState(false);
+    const [native, setNative] = useState(() => isNativeApp());
     const [remaining, setRemaining] = useState(null);
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -70,6 +70,8 @@ function PaywallInner() {
     }
 
     async function handlePay() {
+        // Native must use StoreKit IAP only — never Stripe (App Store 3.1.1).
+        if (isNativeApp()) return handleNativePurchase();
         setLoading(true);
         setError('');
         try {
@@ -162,6 +164,11 @@ function PaywallInner() {
                     <p className={styles.note}>
                         Se renueva automáticamente · Gestiona en Ajustes de tu Apple ID
                     </p>
+                    <p className={styles.legalLinks}>
+                        <a href="https://www.nva.lat/terms" target="_blank" rel="noopener noreferrer">Términos de uso (EULA)</a>
+                        {' · '}
+                        <a href="https://www.nva.lat/privacy" target="_blank" rel="noopener noreferrer">Política de privacidad</a>
+                    </p>
                     {userEmail && (
                         <p className={styles.emailNote}>Cuenta: {userEmail}</p>
                     )}
@@ -231,6 +238,11 @@ function PaywallInner() {
 
                 <p className={styles.note}>
                     Pago seguro vía Stripe · Cancela cuando quieras
+                </p>
+                <p className={styles.legalLinks}>
+                    <a href="https://www.nva.lat/terms" target="_blank" rel="noopener noreferrer">Términos de uso (EULA)</a>
+                    {' · '}
+                    <a href="https://www.nva.lat/privacy" target="_blank" rel="noopener noreferrer">Política de privacidad</a>
                 </p>
 
                 {userEmail && (

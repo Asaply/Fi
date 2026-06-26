@@ -525,6 +525,18 @@
     margin: 0;
 }
 
+.ob-legal-links {
+    font-size: 12px;
+    color: #888;
+    margin: 0.75rem 0 0;
+    text-align: center;
+}
+
+.ob-legal-links a {
+    color: #aaa;
+    text-decoration: underline;
+}
+
 .ob-btn-pay {
     width: 100%;
     background: #ff6600;

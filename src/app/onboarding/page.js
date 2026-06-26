@@ -585,7 +585,7 @@ const PLAN_FEATURES = [
 function StepPlans({ selectedGoal, onDone }) {
     // phase: 'checking' | 'plans'
     const [phase, setPhase]         = useState('checking');
-    const [native, setNative]       = useState(false);
+    const [native, setNative]       = useState(() => isNativeApp());
     const [loading, setLoading]     = useState(false);
     const [error, setError]         = useState('');
     const [remaining, setRemaining] = useState(null); // free slots left (null = unknown)
@@ -633,6 +633,8 @@ function StepPlans({ selectedGoal, onDone }) {
     }
 
     async function handleWebPay() {
+        // Native must use StoreKit IAP only — never Stripe (App Store 3.1.1).
+        if (isNativeApp()) return handleNativePurchase();
         setLoading(true);
         setError('');
         try {
@@ -724,6 +726,11 @@ function StepPlans({ selectedGoal, onDone }) {
                 )}
                 <p className="ob-plan-required-note">
                     Activa tu cuenta para acceder al dashboard
+                </p>
+                <p className="ob-legal-links">
+                    <a href="https://www.nva.lat/terms" target="_blank" rel="noopener noreferrer">Términos de uso (EULA)</a>
+                    {' · '}
+                    <a href="https://www.nva.lat/privacy" target="_blank" rel="noopener noreferrer">Política de privacidad</a>
                 </p>
             </div>
         </div>

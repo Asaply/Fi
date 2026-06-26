@@ -9,10 +9,11 @@
     "lint": "eslint",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "build:native": "CAPACITOR=1 next build",
+    "build:native": "node scripts/build-capacitor.js",
     "cap:ios": "npm run build:native && npx cap sync ios && npx cap open ios",
     "cap:sync": "npx cap sync ios",
-    "open:ios": "npx cap open ios"
+    "open:ios": "npx cap open ios",
+    "postinstall": "node scripts/patch-apple-signin.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
