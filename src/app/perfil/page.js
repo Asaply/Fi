@@ -29,7 +29,7 @@ export default function PerfilPage() {
     const [mfaCode, setMfaCode] = useState('');
     const [mfaLoading, setMfaLoading] = useState(false);
     const [mfaError, setMfaError] = useState('');
-    const [native, setNative] = useState(false);
+    const [native, setNative] = useState(() => isNativeApp());
     const [subBusy, setSubBusy] = useState(false);
     const [sub, setSub] = useState({ status: null, source: null, expiresAt: null });
     const [formData, setFormData] = useState({

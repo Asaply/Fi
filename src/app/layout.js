@@ -1,5 +1,6 @@
 import { Inter, Geist_Mono } from "next/font/google";
 import ConditionalShell from "@/components/ConditionalShell";
+import NativeAuthDeepLink from "@/components/NativeAuthDeepLink";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -66,6 +67,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body className={`${inter.variable} ${geistMono.variable}`}>
+        <NativeAuthDeepLink />
         <ConditionalShell>{children}</ConditionalShell>
         <Toaster position="bottom-right" theme="dark" richColors />
         <Analytics />

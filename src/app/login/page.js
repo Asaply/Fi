@@ -152,9 +152,15 @@ function LoginPageInner() {
                 setIsLoading(false);
                 return;
             }
+            // Native must deep-link back into the app via the nvaapp:// scheme;
+            // window.location.origin is capacitor://localhost which Supabase
+            // rejects, so the email link would fall back to the web Site URL.
+            const emailRedirectTo = isNativeApp()
+                ? 'nvaapp://auth/callback'
+                : `${window.location.origin}/auth/callback`;
             const { error: err } = await supabase.auth.signUp({
                 email, password,
-                options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+                options: { emailRedirectTo },
             });
             if (err) setError(translateError(err.message));
             else transition('registered');
@@ -649,10 +655,15 @@ function VerifyEmailScreen({ email, onBack }) {
 
     async function handleResend() {
         setSending(true);
+        const native = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
         await supabase.auth.resend({
             type: 'signup',
             email,
-            options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+            options: {
+                emailRedirectTo: native
+                    ? 'nvaapp://auth/callback'
+                    : `${window.location.origin}/auth/callback`,
+            },
         });
         setSending(false);
         setResent(true);
