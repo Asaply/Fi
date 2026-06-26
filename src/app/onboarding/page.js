@@ -598,17 +598,20 @@ function StepPlans({ selectedGoal, onDone }) {
         (async () => {
             setNative(isNativeApp());
             const { data } = await supabase.auth.getUser();
-            if (hasAccess(data?.user?.user_metadata)) { if (!cancelled) onDone(); return; }
+            if (cancelled) return;
+            if (hasAccess(data?.user?.user_metadata)) { onDone(); return; }
+
+            // Show the plans screen immediately; persisting `onboarded` and
+            // loading the free-slot count are non-blocking so we don't sit on a
+            // black screen for ~3s waiting on sequential network calls.
+            setPhase('plans');
 
             if (selectedGoal) localStorage.setItem('fnce_primary_use', selectedGoal);
             localStorage.setItem(ONBOARDING_KEY, '1');
-            try { await supabase.auth.updateUser({ data: { onboarded: true } }); } catch (_) {}
-
-            const slots = await getRemainingSlots();
-            if (!cancelled) {
-                setRemaining(slots?.remaining ?? 0);
-                setPhase('plans');
-            }
+            supabase.auth.updateUser({ data: { onboarded: true } }).catch(() => {});
+            getRemainingSlots().then((slots) => {
+                if (!cancelled) setRemaining(slots?.remaining ?? 0);
+            });
         })();
         return () => { cancelled = true; };
     }, [onDone, selectedGoal]);
@@ -672,7 +675,17 @@ function StepPlans({ selectedGoal, onDone }) {
         }
     }
 
-    if (phase !== 'plans') return null;
+    if (phase !== 'plans') {
+        return (
+            <div className="ob-step">
+                <div className="ob-done-logo-wrap">
+                    <img src="/nva-icon.svg" alt="NVA" className="ob-done-logo" />
+                </div>
+                <h1 className="ob-title">Configurando tu cuenta</h1>
+                <p className="ob-subtitle">Un momento, preparamos todo para ti.</p>
+            </div>
+        );
+    }
 
     const freeAvailable = remaining > 0;
 
