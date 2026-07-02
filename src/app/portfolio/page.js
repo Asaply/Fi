@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import useSWR from "swr";
-import { Activity, TrendingUp, TrendingDown, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, Info, ArrowUpRight, ArrowDownRight, Wallet, LayoutGrid } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, ChevronRight, Info, ArrowUpRight, ArrowDownRight, Wallet, LayoutGrid } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Modal from "@/components/Modal";
 import CurrencyInput from "@/components/CurrencyInput";
