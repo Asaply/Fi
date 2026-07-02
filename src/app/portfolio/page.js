@@ -137,7 +137,8 @@ function Tooltip({ text }) {
 
     return (
         <span ref={iconRef} style={{ display: 'inline-flex' }}
-            onMouseEnter={open} onMouseLeave={() => setShow(false)}
+            onPointerEnter={(e) => { if (e.pointerType === 'mouse') open(); }}
+            onPointerLeave={(e) => { if (e.pointerType === 'mouse') setShow(false); }}
             onClick={(e) => { e.stopPropagation(); show ? setShow(false) : open(); }}>
             <Info size={13} style={{ color: 'var(--text-tertiary)', cursor: 'help', marginLeft: '4px' }} />
             {show && pos && createPortal(
