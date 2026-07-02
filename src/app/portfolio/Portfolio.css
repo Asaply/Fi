@@ -962,9 +962,9 @@
 
 .pf-donut {
     position: relative;
-    width: 100%;
-    aspect-ratio: 1;
-    max-width: 200px;
+    width: 180px;
+    height: 180px;
+    max-width: 100%;
     margin: 0 auto;
 }
 
