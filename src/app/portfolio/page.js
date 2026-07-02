@@ -233,14 +233,16 @@ export default function PortfolioHealth() {
         const catAssets = enrichedAssets.filter(a => a.category === cat);
         const value = distributionMap[cat];
         const share = totalValue > 0 ? (value / totalValue) * 100 : 0;
-        const len = Math.max(0, ...catAssets.map(a => a.sparkline.length));
-        const spark = Array.from({ length: len }, (_, i) => ({
+        const len = Math.max(0, ...catAssets.map(a => (a.sparkline?.length || 0)));
+        let spark = Array.from({ length: len }, (_, i) => ({
             i,
             v: catAssets.reduce((s, a) => {
-                const px = a.sparkline[i] ?? a.sparkline[a.sparkline.length - 1] ?? 0;
+                const sp = a.sparkline || [];
+                const px = sp[i] ?? sp[sp.length - 1] ?? 0;
                 return s + px * a.quantity;
             }, 0),
         }));
+        if (spark.length < 2) spark = [{ i: 0, v: value }, { i: 1, v: value }];
         const style = CATEGORY_COLORS[cat] || CATEGORY_COLORS['Otro'];
         const up = spark.length >= 2 ? spark[spark.length - 1].v >= spark[0].v : true;
         return { cat, value, share, spark, style, up };
