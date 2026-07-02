@@ -16,7 +16,6 @@ import GastosHormiga from "@/components/GastosHormiga";
 import NvaIntelligencePanel from "@/components/NvaIntelligencePanel";
 import { openTutorial } from "@/components/AppTutorial";
 import { toast } from "sonner";
-import BankConnectWidget from "@/components/BankConnectWidget";
 import "./Finanzas.css";
 import { API_BASE } from "@/lib/apiBase";
 
@@ -326,41 +325,10 @@ export default function FinanzasPage() {
     }, []);
 
     // ── Import handlers ──────────────────────────────────────────────────────
-    const handleBankConnected = async (link, institution) => {
-        setIsLoading(true);
-        try {
-            const res = await fetch(`${API_BASE}/api/belvo/transactions`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ link_id: link })
-            });
-            const data = await res.json();
-            
-            if (data.success && data.transactions && data.transactions.length > 0) {
-                const { data: { user } } = await supabase.auth.getUser();
-                const toInsert = data.transactions.map(tx => ({
-                    ...tx,
-                    user_id: user.id
-                }));
-                // Usamos upsert o insert para evitar duplicados en schema (requiere UNIQUE constraint external_id)
-                const { error } = await supabase.from('transactions').insert(toInsert);
-                if (error) {
-                    console.error("DB Error:", error);
-                    toast.error("Las transacciones fueron bajadas pero hubo un problema guardándolas.");
-                } else {
-                    toast.success(`Se importaron ${data.count} transacciones de ${institution.name}.`);
-                    fetchData();
-                }
-            } else {
-                toast.info("No se encontraron transacciones nuevas en esta cuenta.");
-            }
-        } catch (error) {
-            console.error("Belvo logic error:", error);
-            toast.error("Ocurrió un error sincronizando con el banco.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // NOTE: La conexión bancaria vía Belvo está INACTIVA. El código de la
+    // integración se conserva en src/components/BankConnectWidget.jsx y en
+    // src/app/api/belvo/* (dormido, no cableado a la UI). Ver BELVO_INTEGRATION.md
+    // para reactivarla. Se retiró el handler de aquí para no dejar código colgante.
 
     const parsePdfFile = async (file, password = '') => {
         setIsParsing(true);
