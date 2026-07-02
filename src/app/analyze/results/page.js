@@ -153,6 +153,10 @@ export default function ResultsPage() {
           </button>
           <p className={styles.ctaSecondary}>Sin tarjeta · Sin suscripción</p>
         </div>
+
+        <p className={styles.aiDisclaimer}>
+          Análisis y categorías generados por inteligencia artificial — pueden contener errores y no constituyen asesoría financiera.
+        </p>
       </div>
     </div>
   )

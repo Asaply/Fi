@@ -1,4 +1,7 @@
 "use client";
+// ⚠️ INACTIVO / DORMIDO — La conexión bancaria (Belvo) NO está habilitada en la
+// app. Este componente no se renderiza en ninguna pantalla. Se conserva junto con
+// las rutas src/app/api/belvo/* para una futura activación. Ver BELVO_INTEGRATION.md.
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Landmark } from "lucide-react";

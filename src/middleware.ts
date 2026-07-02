@@ -74,7 +74,6 @@ export async function middleware(request: NextRequest) {
   const isPaywallRoute = pathname.startsWith('/paywall')
   const isOnboardingRoute = pathname.startsWith('/onboarding')
   const isApiRoute = pathname.startsWith('/api/')
-  const isDevRoute = pathname.startsWith('/dev/')
 
   // Smart destination for this user
   // Order: onboarding first → paywall → app
@@ -89,8 +88,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(getSmartDest(), request.url))
   }
 
-  // API + dev routes pass through
-  if (isApiRoute || isDevRoute) return response
+  // API routes pass through
+  if (isApiRoute) return response
 
   // Not onboarded → must complete onboarding first (paywall is inside onboarding)
   if (!isOnboarded && !isOnboardingRoute) {
@@ -121,7 +120,6 @@ export const config = {
     '/login',
     '/onboarding',
     '/paywall/:path*',
-    '/dev/:path*',
     '/dashboard/:path*',
     '/finanzas/:path*',
     '/trading/:path*',

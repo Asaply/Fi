@@ -95,6 +95,10 @@ export default function NvaIntelligencePanel({ intelligence }) {
             </div>
           </div>
         )}
+
+        <p className="text-xs text-gray-500 mt-2">
+          Análisis y categorías generados por inteligencia artificial — pueden contener errores y no constituyen asesoría financiera.
+        </p>
       </div>
     </div>
   );

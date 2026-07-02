@@ -175,27 +175,21 @@ export default function ConfiguracionPage() {
     const confirmDeleteAccount = async () => {
         setIsDeleting(true);
         try {
-            const isNative = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
-            if (isNative) {
-                // Native app: call Supabase directly (no server route available)
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) throw new Error('No session');
-
-                const tables = ['transactions', 'trading_operations', 'portfolio_assets', 'clients', 'prospects', 'budgets', 'reminders'];
-                for (const table of tables) {
-                    await supabase.from(table).delete().eq('user_id', session.user.id);
-                }
-                // Sign out — user data deleted, auth user remains but is empty
-                await supabase.auth.signOut();
-            } else {
-                // Web: use server route with service role for full deletion
-                const res = await fetch(`${API_BASE}/api/account`, { method: 'DELETE' });
-                if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.error || 'Failed');
-                }
-                await supabase.auth.signOut();
+            // Both web and native hit the server route, which deletes all user
+            // data AND the auth user (service role). Native has no session cookie,
+            // so we pass the access token as a Bearer header; getAuthUser accepts
+            // either. This guarantees a complete deletion on both platforms
+            // (App Store Guideline 5.1.1(v)).
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`${API_BASE}/api/account`, {
+                method: 'DELETE',
+                headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed');
             }
+            await supabase.auth.signOut();
             router.push('/login');
         } catch (err) {
             toast.error('Error al eliminar: ' + err.message);
