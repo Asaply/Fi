@@ -64,6 +64,7 @@ function LoginPageInner() {
     const [mfaFactorId, setMfaFactorId] = useState('');
     const [mfaCode, setMfaCode]         = useState('');
     const [visible, setVisible]         = useState(false);
+    const [remember, setRemember]       = useState(true);
     const router = useRouter();
     const searchParams = useSearchParams();
     const reason = searchParams.get('reason');
@@ -77,6 +78,26 @@ function LoginPageInner() {
             setTimeout(() => { setMode('login'); setVisible(true); }, 60);
         }
         return () => clearTimeout(t);
+    }, []);
+
+    // Auto-forward if a session already exists (session persists across app
+    // launches via Capacitor Preferences). Respects the "Recuérdame" choice:
+    // if the user opted out, sign them out on next launch.
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (cancelled || !session) return;
+            const remembered = await getRemember();
+            if (!remembered) { await supabase.auth.signOut(); return; }
+            const { data: { user } } = await supabase.auth.getUser();
+            if (cancelled || !user) return;
+            const m = user.user_metadata || {};
+            if (!m.onboarded) router.replace('/onboarding');
+            else if (!hasAccess(m)) router.replace('/paywall');
+            else router.replace('/finanzas');
+        })();
+        return () => { cancelled = true; };
     }, []);
 
 
@@ -136,6 +157,7 @@ function LoginPageInner() {
                     localStorage.removeItem('fnce_biometric_enabled');
                     localStorage.removeItem('fnce_pin_attempts');
                 }
+                await persistRemember(remember);
                 const isOnboarded = !!loginData?.user?.user_metadata?.onboarded;
                 if (redirectTo) router.push(redirectTo);
                 else if (!isOnboarded) router.push('/onboarding');
@@ -185,6 +207,30 @@ function LoginPageInner() {
 
     function isNativeApp() {
         return typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+    }
+
+    // "Recuérdame" flag — persisted in native Preferences / web localStorage.
+    // Default true (stay logged in). If false, the mount effect signs the user
+    // out on the next app launch.
+    async function persistRemember(val) {
+        try {
+            if (isNativeApp()) {
+                const { Preferences } = await import('@capacitor/preferences');
+                await Preferences.set({ key: 'nva_remember', value: val ? '1' : '0' });
+            } else {
+                localStorage.setItem('nva_remember', val ? '1' : '0');
+            }
+        } catch (_) {}
+    }
+    async function getRemember() {
+        try {
+            if (isNativeApp()) {
+                const { Preferences } = await import('@capacitor/preferences');
+                const { value } = await Preferences.get({ key: 'nva_remember' });
+                return value !== '0';
+            }
+            return localStorage.getItem('nva_remember') !== '0';
+        } catch (_) { return true; }
     }
 
     async function handleApple() {
@@ -438,6 +484,17 @@ function LoginPageInner() {
                                         {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                                     </button>
                                 </div>
+                            )}
+
+                            {mode === 'login' && (
+                                <label className="auth-remember">
+                                    <input
+                                        type="checkbox"
+                                        checked={remember}
+                                        onChange={e => setRemember(e.target.checked)}
+                                    />
+                                    <span>Recuérdame</span>
+                                </label>
                             )}
 
                             {error && <p className="auth-error">{error}</p>}
