@@ -1,11 +1,12 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import useSWR from "swr";
 import { Activity, TrendingUp, TrendingDown, Plus, Edit2, Trash2, DollarSign, Target, Briefcase, Search, ChevronUp, ChevronDown, Info, ArrowUpRight, ArrowDownRight, Wallet, LayoutGrid } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Modal from "@/components/Modal";
 import CurrencyInput from "@/components/CurrencyInput";
-import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
 import "./Portfolio.css";
 import { getFilter, setFilter } from '@/lib/filterMemory';
 import { API_BASE } from '@/lib/apiBase';
@@ -109,18 +110,44 @@ const fetchPortfolioData = async () => {
 
 function Tooltip({ text }) {
     const [show, setShow] = useState(false);
+    const [pos, setPos] = useState(null);
+    const iconRef = useRef(null);
+
+    // Anchor the bubble to the icon but clamp it inside the viewport so it never
+    // bleeds off the left/right edge (cards near the screen edges used to push a
+    // fixed-width centered tooltip off-screen). Rendered via portal to escape any
+    // parent overflow clipping. Tap-toggle because iOS has no hover.
+    const open = () => {
+        const el = iconRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const width = Math.min(240, window.innerWidth - 24);
+        let left = r.left + r.width / 2 - width / 2;
+        left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+        setPos({ left, top: r.top - 6, width });
+        setShow(true);
+    };
+
+    useEffect(() => {
+        if (!show) return;
+        const close = () => setShow(false);
+        window.addEventListener('scroll', close, true);
+        return () => window.removeEventListener('scroll', close, true);
+    }, [show]);
+
     return (
-        <span style={{ position: 'relative', display: 'inline-flex' }}
-            onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+        <span ref={iconRef} style={{ display: 'inline-flex' }}
+            onMouseEnter={open} onMouseLeave={() => setShow(false)}
+            onClick={(e) => { e.stopPropagation(); show ? setShow(false) : open(); }}>
             <Info size={13} style={{ color: 'var(--text-tertiary)', cursor: 'help', marginLeft: '4px' }} />
-            {show && (
+            {show && pos && createPortal(
                 <span style={{
-                    position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                    position: 'fixed', left: pos.left, top: pos.top, transform: 'translateY(-100%)',
                     background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                     borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: 'var(--text-secondary)',
-                    width: '220px', zIndex: 100, lineHeight: 1.5, whiteSpace: 'normal', marginBottom: '6px',
-                    boxShadow: 'var(--shadow-md)'
-                }}>{text}</span>
+                    width: pos.width, zIndex: 1000, lineHeight: 1.5, whiteSpace: 'normal',
+                    boxShadow: 'var(--shadow-md)', pointerEvents: 'none'
+                }}>{text}</span>, document.body
             )}
         </span>
     );
@@ -200,6 +227,33 @@ export default function PortfolioHealth() {
     enrichedAssets.forEach(a => { distributionMap[a.category] = (distributionMap[a.category] || 0) + a.value; });
     const pieData = Object.keys(distributionMap).map(k => ({ name: k, value: distributionMap[k] }));
     const barData = enrichedAssets.map(a => ({ name: a.ticker, PnL: a.pnl }));
+
+    // Category distribution: share % + element-wise aggregate value sparkline.
+    const categoryStats = Object.keys(distributionMap).map(cat => {
+        const catAssets = enrichedAssets.filter(a => a.category === cat);
+        const value = distributionMap[cat];
+        const share = totalValue > 0 ? (value / totalValue) * 100 : 0;
+        const len = Math.max(0, ...catAssets.map(a => a.sparkline.length));
+        const spark = Array.from({ length: len }, (_, i) => ({
+            i,
+            v: catAssets.reduce((s, a) => {
+                const px = a.sparkline[i] ?? a.sparkline[a.sparkline.length - 1] ?? 0;
+                return s + px * a.quantity;
+            }, 0),
+        }));
+        const style = CATEGORY_COLORS[cat] || CATEGORY_COLORS['Otro'];
+        const up = spark.length >= 2 ? spark[spark.length - 1].v >= spark[0].v : true;
+        return { cat, value, share, spark, style, up };
+    }).sort((a, b) => b.value - a.value);
+    const dominantCat = categoryStats[0];
+
+    // P&L per asset, sorted best→worst, with diverging-bar scale.
+    const pnlRows = [...enrichedAssets].sort((a, b) => b.pnl - a.pnl);
+    const maxAbsPnl = Math.max(1, ...pnlRows.map(a => Math.abs(a.pnl)));
+
+    const scrollToAssets = () => {
+        document.getElementById('portfolio-assets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     const historyChartData = useMemo(() => {
         if (!totalValue || !totalCost) return [];
@@ -486,7 +540,7 @@ export default function PortfolioHealth() {
                     </div>
 
                     {/* 3. TABLA DE ACTIVOS */}
-                    <div className="table-section fnce-dynamic-panel" data-tour="tabla-activos">
+                    <div id="portfolio-assets" className="table-section fnce-dynamic-panel" data-tour="tabla-activos">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>Mis Activos</h3>
                             <div className="search-input-wrapper">
@@ -587,38 +641,121 @@ export default function PortfolioHealth() {
                         </div>
                     )}
 
-                    {/* 5. CHARTS ROW */}
-                    <div className="charts-row">
-                        <div className="chart-card">
-                            <h3>Distribución por Categoría</h3>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <PieChart>
-                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value"
-                                        label={false} labelLine={false}>
-                                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                                    </Pie>
-                                    <RechartsTooltip formatter={(value, name) => [formatCurrency(value), name]} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }} labelStyle={{ color: 'var(--text-secondary)' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                                    <Legend iconType="circle" />
-                                </PieChart>
-                            </ResponsiveContainer>
+                    {/* 5. DISTRIBUCIÓN POR CATEGORÍA — donut + lista con sparkline */}
+                    <div className="pf-dist-card card">
+                        <div className="pf-section-head">
+                            <h3>Distribución por categoría</h3>
+                            <button className="pf-ver-detalles" onClick={scrollToAssets}>
+                                Ver detalles <ChevronRight size={15} />
+                            </button>
                         </div>
-                        <div className="chart-card">
-                            <h3>Ganancia / Pérdida por Activo</h3>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={barData}>
-                                    <XAxis dataKey="name" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#666" fontSize={12} tickFormatter={(val) => `$${val}`} width={60} tickLine={false} axisLine={false} />
-                                    <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }} labelStyle={{ color: 'var(--text-secondary)' }} />
-                                    <ReferenceLine y={0} stroke="var(--border-color)" />
-                                    <Bar dataKey="PnL" radius={[4, 4, 0, 0]}>
-                                        {barData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.PnL >= 0 ? '#10b981' : '#ef4444'} />)}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                        <div className="pf-dist-body">
+                            <div className="pf-donut">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={categoryStats} cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" paddingAngle={categoryStats.length > 1 ? 3 : 0} dataKey="value" stroke="none" startAngle={90} endAngle={-270}>
+                                            {categoryStats.map((c, i) => <Cell key={i} fill={c.style.color} />)}
+                                        </Pie>
+                                        <RechartsTooltip formatter={(value, name, p) => [formatCurrency(value), p?.payload?.cat]} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                {dominantCat && (
+                                    <div className="pf-donut-center">
+                                        <span className="pf-donut-pct">{dominantCat.share.toFixed(0)}%</span>
+                                        <span className="pf-donut-cat" style={{ color: dominantCat.style.color }}>{dominantCat.cat}</span>
+                                        <span className="pf-donut-sub">de tu portafolio</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="pf-cat-list">
+                                {categoryStats.map(c => (
+                                    <div key={c.cat} className="pf-cat-row">
+                                        <span className="pf-cat-dot" style={{ background: c.style.color }} />
+                                        <div className="pf-cat-info">
+                                            <span className="pf-cat-name">{c.cat}</span>
+                                            <span className="pf-cat-val">{formatCurrency(c.value)}</span>
+                                        </div>
+                                        <div className="pf-cat-spark">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={c.spark}>
+                                                    <Line type="monotone" dataKey="v" stroke={c.style.color} strokeWidth={2} dot={false} isAnimationActive={false} />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <span className="pf-cat-pct">{c.share.toFixed(0)}%</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        {dominantCat && (
+                            <div className="pf-dist-footer">
+                                <span className="pf-dist-footer-icon" style={{ color: dominantCat.up ? 'var(--success)' : 'var(--danger)' }}>
+                                    {dominantCat.up ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                                </span>
+                                <span>Tu mayor exposición es <strong style={{ color: dominantCat.style.color }}>{dominantCat.cat}</strong> con el <strong>{dominantCat.share.toFixed(0)}%</strong> del portafolio.</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 6. GANANCIA / PÉRDIDA POR ACTIVO — barras divergentes */}
+                    <div className="pf-pnl-card card">
+                        <div className="pf-section-head">
+                            <h3>Ganancia / Pérdida por activo</h3>
+                            <select className="pf-pnl-select" value={activeRange} onChange={e => { setFilter('portfolio', e.target.value); setActiveRange(e.target.value); }}>
+                                <option value="1M">Este mes</option>
+                                <option value="3M">3 meses</option>
+                                <option value="6M">6 meses</option>
+                                <option value="1A">Este año</option>
+                            </select>
+                        </div>
+                        <div className="pf-pnl-list">
+                            {pnlRows.map(a => {
+                                const st = CATEGORY_COLORS[a.category] || CATEGORY_COLORS['Otro'];
+                                const pct = (Math.abs(a.pnl) / maxAbsPnl) * 50; // half-width max
+                                const pos = a.pnl >= 0;
+                                return (
+                                    <div key={a.id} className="pf-pnl-row">
+                                        <span className="pf-pnl-icon" style={{ background: st.bg, color: st.color }}>{a.ticker.slice(0, 3)}</span>
+                                        <div className="pf-pnl-labels">
+                                            <span className="pf-pnl-ticker">{a.ticker}</span>
+                                            <span className="pf-pnl-cat">{a.category}</span>
+                                        </div>
+                                        <div className="pf-pnl-bar-track">
+                                            <span className="pf-pnl-axis" />
+                                            <span
+                                                className={`pf-pnl-bar ${pos ? 'pos' : 'neg'}`}
+                                                style={pos ? { left: '50%', width: `${pct}%` } : { right: '50%', width: `${pct}%` }}
+                                            />
+                                        </div>
+                                        <div className="pf-pnl-vals">
+                                            <span className={pos ? 'amount-positive' : 'amount-negative'}>{pos ? '+' : ''}{formatCurrency(a.pnl)}</span>
+                                            <span className={`pf-pnl-pct ${pos ? 'amount-positive' : 'amount-negative'}`}>{pos ? '+' : ''}{a.pnlPerc.toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="pf-pnl-footer">
+                            <div className="pf-pnl-foot-card">
+                                <span className="pf-pnl-foot-icon up"><ArrowUpRight size={16} /></span>
+                                <div>
+                                    <span className="pf-pnl-foot-label">Mejor rendimiento</span>
+                                    <span className="pf-pnl-foot-ticker">{bestAsset.ticker}</span>
+                                </div>
+                                <span className="pf-pnl-foot-val amount-positive">{bestAsset.pnlPerc === -Infinity ? '-' : `+${bestAsset.pnlPerc.toFixed(1)}%`}</span>
+                            </div>
+                            <div className="pf-pnl-foot-card">
+                                <span className="pf-pnl-foot-icon down"><ArrowDownRight size={16} /></span>
+                                <div>
+                                    <span className="pf-pnl-foot-label">Peor rendimiento</span>
+                                    <span className="pf-pnl-foot-ticker">{worstAsset.ticker}</span>
+                                </div>
+                                <span className="pf-pnl-foot-val amount-negative">{worstAsset.pnlPerc === Infinity ? '-' : `${worstAsset.pnlPerc.toFixed(1)}%`}</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* 6. MÉTRICAS DE RIESGO */}
+                    {/* 7. MÉTRICAS DE RIESGO */}
                     <div className="card">
                         <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: 'var(--text-primary)' }}>Métricas de Riesgo</h3>
                         <div className="risk-metrics-row">
@@ -645,7 +782,7 @@ export default function PortfolioHealth() {
                         </div>
                     </div>
 
-                    {/* 7. SALUD DEL PORTAFOLIO */}
+                    {/* 8. SALUD DEL PORTAFOLIO */}
                     <div className="health-card">
                         <div className="health-header">
                             <div>

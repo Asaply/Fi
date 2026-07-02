@@ -19,6 +19,7 @@
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     color: var(--text-primary);

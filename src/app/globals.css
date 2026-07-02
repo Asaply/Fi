@@ -132,6 +132,8 @@ html,
 body {
   padding: 0;
   margin: 0;
+  overflow-x: hidden;
+  max-width: 100%;
   background-color: var(--bg-base);
   background-image: var(--bg-image);
   background-attachment: fixed;
@@ -880,6 +882,9 @@ button {
   .app-layout {
     flex-direction: column;
     height: 100dvh;
+    /* JS-measured innerHeight (set in ConditionalShell) — survives the iOS
+       resume-from-background viewport collapse; falls back to dvh. */
+    height: var(--app-vh, 100dvh);
   }
 
   .sidebar { display: none !important; }

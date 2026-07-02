@@ -106,7 +106,10 @@ function LoginPageInner() {
         if (!email) { setError('Ingresa tu email.'); return; }
         setIsLoading(true);
         setError('');
-        const redirectTo = `${window.location.origin}/auth/callback?next=/auth/reset-password`;
+        // Native must deep-link back via nvaapp://; capacitor://localhost is
+        // rejected by Supabase and the link would fall back to the web Site URL.
+        const base = isNativeApp() ? 'nvaapp://auth/callback' : `${window.location.origin}/auth/callback`;
+        const redirectTo = `${base}?next=/auth/reset-password`;
         const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
         if (err) setError(translateError(err.message));
         else transition('forgot-sent');

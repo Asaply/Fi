@@ -30,24 +30,32 @@ export default function NativeAuthDeepLink() {
             const handle = await App.addListener('appUrlOpen', async ({ url }) => {
                 if (!url || !url.includes('auth/callback')) return;
                 try {
-                    // Implicit flow (native localStorage client): tokens in the hash.
+                    const query = url.split('?')[1]?.split('#')[0];
+                    const qp = query ? new URLSearchParams(query) : null;
                     const hash = url.split('#')[1];
-                    if (hash) {
-                        const p = new URLSearchParams(hash);
-                        const access_token = p.get('access_token');
-                        const refresh_token = p.get('refresh_token');
-                        if (access_token && refresh_token) {
-                            const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
-                            if (!error) { routeAfterAuth(router, data?.user); return; }
+                    const hp = hash ? new URLSearchParams(hash) : null;
+                    // Password recovery must land on the reset screen, not the app.
+                    const isRecovery = hp?.get('type') === 'recovery' || qp?.get('next') === '/auth/reset-password';
+
+                    // Implicit flow (native localStorage client): tokens in the hash.
+                    const access_token = hp?.get('access_token');
+                    const refresh_token = hp?.get('refresh_token');
+                    if (access_token && refresh_token) {
+                        const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+                        if (!error) {
+                            if (isRecovery) router.replace('/auth/reset-password');
+                            else routeAfterAuth(router, data?.user);
+                            return;
                         }
                     }
                     // PKCE flow fallback: code in the query string.
-                    const query = url.split('?')[1]?.split('#')[0];
-                    if (query) {
-                        const code = new URLSearchParams(query).get('code');
-                        if (code) {
-                            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-                            if (!error) { routeAfterAuth(router, data?.user); return; }
+                    const code = qp?.get('code');
+                    if (code) {
+                        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+                        if (!error) {
+                            if (isRecovery) router.replace('/auth/reset-password');
+                            else routeAfterAuth(router, data?.user);
+                            return;
                         }
                     }
                 } catch (_) {
