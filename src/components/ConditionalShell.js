@@ -36,6 +36,47 @@ export default function ConditionalShell({ children }) {
         setAuthChecked(true);
     }, []);
 
+    // iOS WKWebView collapses the viewport height when the app returns from the
+    // background — 100dvh stays stale, so the layout and the fixed bottom-nav end
+    // up sized to a short viewport (nav floats mid-screen). Drive the height from
+    // window.innerHeight and re-measure on every resume/resize to force a reflow.
+    useEffect(() => {
+        const setVH = () => {
+            document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
+        };
+        setVH();
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') { setVH(); requestAnimationFrame(setVH); }
+        };
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', setVH);
+        window.addEventListener('pageshow', setVH);
+        window.addEventListener('focus', setVH);
+        document.addEventListener('visibilitychange', onVisible);
+
+        let removeResume;
+        (async () => {
+            if (window.Capacitor?.isNativePlatform?.()) {
+                const { App } = await import('@capacitor/app');
+                const h = await App.addListener('resume', () => {
+                    setVH();
+                    requestAnimationFrame(setVH);
+                    setTimeout(setVH, 120); // catch the delayed viewport settle
+                });
+                removeResume = () => h.remove();
+            }
+        })();
+
+        return () => {
+            window.removeEventListener('resize', setVH);
+            window.removeEventListener('orientationchange', setVH);
+            window.removeEventListener('pageshow', setVH);
+            window.removeEventListener('focus', setVH);
+            document.removeEventListener('visibilitychange', onVisible);
+            if (removeResume) removeResume();
+        };
+    }, []);
+
     // Inactivity tracking — only when PIN is enabled and app is unlocked
     useEffect(() => {
         if (!authChecked || locked || !isPinEnabled()) return;

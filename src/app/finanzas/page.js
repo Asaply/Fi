@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, Lightbulb, AlertTriangle, Lock, ShoppingBag, RefreshCw, TrendingDown, Calendar as CalendarIcon, Target, Zap, BarChart2, Info } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, Lightbulb, AlertTriangle, Lock, ShoppingBag, RefreshCw, TrendingDown, Calendar as CalendarIcon, Target, Zap, BarChart2, Info, Check } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Modal from "@/components/Modal";
 import CurrencyInput from "@/components/CurrencyInput";
@@ -171,6 +172,7 @@ function getFechaInicioFin(periodo) {
 }
 
 export default function FinanzasPage() {
+    const router = useRouter();
     const [transactions, setTransactions] = useState([]);
     const [tradingOps, setTradingOps] = useState([]);
     const [portfolioAssets, setPortfolioAssets] = useState([]);
@@ -183,6 +185,11 @@ export default function FinanzasPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditingCustomCard, setIsEditingCustomCard] = useState(false);
     const [customCardForm, setCustomCardForm] = useState({ label: '', monto: '' });
+
+    // Meta (budget) linkable to the custom card — shows a selected goal's progress.
+    const [budgets, setBudgets] = useState([]);
+    const [budgetPaid, setBudgetPaid] = useState({}); // { budget_id: paidAmount }
+    const [featuredMetaId, setFeaturedMetaId] = useState(null);
 
     // CSV import state
     const [isImportOpen, setIsImportOpen] = useState(false);
@@ -229,12 +236,20 @@ export default function FinanzasPage() {
         setIsLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            const [txRes, tradingRes, portfolioRes, configRes] = await Promise.all([
+            const [txRes, tradingRes, portfolioRes, configRes, budgetsRes, paymentsRes] = await Promise.all([
                 supabase.from('transactions').select('*').eq('user_id', user?.id).order('date', { ascending: false }),
                 supabase.from('trading_operations').select('date, pnl, status').eq('user_id', user?.id),
                 supabase.from('portfolio_assets').select('quantity, avg_buy_price').eq('user_id', user?.id),
                 supabase.from('user_config').select('concepto_custom_label, concepto_custom_total').eq('user_id', user?.id).maybeSingle(),
+                supabase.from('budgets').select('*').eq('user_id', user?.id).order('created_at', { ascending: false }),
+                supabase.from('budget_payments').select('budget_id, amount').eq('user_id', user?.id),
             ]);
+
+            const bRows = budgetsRes.data || [];
+            setBudgets(bRows);
+            const paidMap = {};
+            (paymentsRes.data || []).forEach(p => { paidMap[p.budget_id] = (paidMap[p.budget_id] || 0) + Number(p.amount); });
+            setBudgetPaid(paidMap);
 
             if (txRes.error) console.error("Error fetching transactions:", txRes.error);
             else {
@@ -273,6 +288,10 @@ export default function FinanzasPage() {
             try {
                 const rawCC = localStorage.getItem(`fnce_credit_config_${user.id}`);
                 if (rawCC) setCreditConfig(JSON.parse(rawCC));
+            } catch (_) {}
+            try {
+                const meta = localStorage.getItem(`nva_featured_meta_${user.id}`);
+                if (meta) setFeaturedMetaId(meta);
             } catch (_) {}
         });
     }, []);
@@ -644,6 +663,27 @@ export default function FinanzasPage() {
         return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
     };
 
+    // Meta linked to the custom card (if any). Falls back to concept card when null.
+    const featuredMeta = useMemo(() => {
+        const b = budgets.find(x => String(x.id) === String(featuredMetaId));
+        if (!b) return null;
+        const paid = budgetPaid[b.id] || 0;
+        const target = Number(b.target_amount) || 0;
+        const pct = target > 0 ? Math.min(100, (paid / target) * 100) : 0;
+        return { ...b, paid, target, pct };
+    }, [budgets, budgetPaid, featuredMetaId]);
+
+    const linkMeta = async (id) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        setFeaturedMetaId(id);
+        try {
+            if (user?.id) {
+                if (id) localStorage.setItem(`nva_featured_meta_${user.id}`, String(id));
+                else localStorage.removeItem(`nva_featured_meta_${user.id}`);
+            }
+        } catch (_) {}
+    };
+
     const openModal = (type, transactionToEdit = null) => {
         setModalType(type);
         if (transactionToEdit) {
@@ -670,28 +710,12 @@ export default function FinanzasPage() {
 
     const [itemToDelete, setItemToDelete] = useState(null);
     const [showClearAll, setShowClearAll] = useState(false);
-    const [showClearMemory, setShowClearMemory] = useState(false);
     const [multiCardHintDismissed, setMultiCardHintDismissed] = useState(
         typeof window !== 'undefined' && !!localStorage.getItem('fnce_multi_card_hint')
     );
 
     const handleDelete = (id) => {
         setItemToDelete(id);
-    };
-
-    const confirmClearMemory = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.id) return;
-        // Remove all per-user localStorage keys
-        const keysToRemove = Object.keys(localStorage).filter(k =>
-            k.includes(user.id) || k.startsWith('fnce_') || k.startsWith('nva_')
-        );
-        keysToRemove.forEach(k => localStorage.removeItem(k));
-        // Reset state
-        setBankBalance(null);
-        setCreditConfig({ limit: 50000, statementBalance: '', noInterestPayment: '', cutoffDate: '', paymentDate: '' });
-        setShowClearMemory(false);
-        toast.success(`Memoria limpiada (${keysToRemove.length} entradas eliminadas).`);
     };
 
     const confirmClearAll = async () => {
@@ -708,8 +732,14 @@ export default function FinanzasPage() {
             if (isGlobal) {
                 setTransactions([]);
                 setBankBalance(null);
-                localStorage.removeItem(`nva_bank_balance_${user.id}`);
-                localStorage.removeItem(`fnce_credit_config_${user.id}`);
+                // Global delete also wipes local memory (merged from the old
+                // "Limpiar memoria" action): all per-user keys plus fnce_/nva_
+                // prefixed saldos, card config, filters and preferences. Leftover
+                // per-bank keys otherwise resurface as stale limits/balances when a
+                // statement for a same-named bank is re-imported ("residuo" en crédito).
+                Object.keys(localStorage)
+                    .filter(k => (user?.id && k.includes(user.id)) || k.startsWith('fnce_') || k.startsWith('nva_'))
+                    .forEach(k => localStorage.removeItem(k));
                 setCreditConfig({ limit: 50000, statementBalance: '', noInterestPayment: '', cutoffDate: '', paymentDate: '' });
             } else {
                 setTransactions(prev => prev.filter(t => t.bank !== selectedCard));
@@ -718,7 +748,7 @@ export default function FinanzasPage() {
                 localStorage.removeItem(bankKey);
                 localStorage.removeItem(`fnce_credit_config_${user.id}_${selectedCard}`);
             }
-            toast.success("Transacciones eliminadas.");
+            toast.success(isGlobal ? "Transacciones y memoria local eliminadas." : "Transacciones eliminadas.");
         }
         setShowClearAll(false);
     };
@@ -734,7 +764,19 @@ export default function FinanzasPage() {
                 console.error("Error deleting transaction:", error);
                 toast.error("Error al eliminar la transacción.");
             } else {
-                setTransactions(transactions.filter(t => t.id !== itemToDelete));
+                const deleted = transactions.find(t => t.id === itemToDelete);
+                const remaining = transactions.filter(t => t.id !== itemToDelete);
+                setTransactions(remaining);
+                // If that was the last tx of its bank, drop the bank's stale
+                // localStorage keys so it doesn't resurface on re-import.
+                const bank = deleted?.bank;
+                if (bank && bank !== 'Desconocido' && !remaining.some(t => t.bank === bank)) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user?.id) {
+                        localStorage.removeItem(`nva_bank_balance_${user.id}_${bank.toLowerCase().replace(/\s+/g, '_')}`);
+                        localStorage.removeItem(`fnce_credit_config_${user.id}_${bank}`);
+                    }
+                }
             }
             setItemToDelete(null);
         }
@@ -1334,19 +1376,37 @@ export default function FinanzasPage() {
                         <span className="fin-metric-label amount-negative">Egresos</span>
                         <span className="fin-metric-value amount-negative">{formatCurrency(totalEgresos)}</span>
                     </div>
-                    <div className="fin-metric-card" style={{ position: 'relative' }}>
+                    <div
+                        className="fin-metric-card"
+                        style={{ position: 'relative', cursor: featuredMeta ? 'pointer' : 'default' }}
+                        onClick={featuredMeta ? () => router.push('/budgets') : undefined}
+                    >
                         <button
                             className="fin-metric-edit"
-                            onClick={() => { setCustomCardForm({ label: userConfig.concepto_custom_label, monto: String(userConfig.concepto_custom_total) }); setIsEditingCustomCard(true); }}
+                            onClick={(e) => { e.stopPropagation(); setCustomCardForm({ label: userConfig.concepto_custom_label, monto: String(userConfig.concepto_custom_total) }); setIsEditingCustomCard(true); }}
                             title="Editar"
                         >
                             <Edit2 size={12} />
                         </button>
-                        <div className="fin-metric-icon" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
-                            <Wallet size={14} />
-                        </div>
-                        <span className="fin-metric-label">{userConfig.concepto_custom_label}</span>
-                        <span className="fin-metric-value">{formatCurrency(userConfig.concepto_custom_total)}</span>
+                        {featuredMeta ? (
+                            <>
+                                <div className="fin-metric-icon" style={{ background: `${featuredMeta.color || '#fbbf24'}20`, color: featuredMeta.color || '#fbbf24' }}>
+                                    {featuredMeta.icon ? <span style={{ fontSize: '14px', lineHeight: 1 }}>{featuredMeta.icon}</span> : <Target size={14} />}
+                                </div>
+                                <span className="fin-metric-label">{featuredMeta.name}</span>
+                                <span className="fin-metric-value">{formatCurrency(featuredMeta.paid)}</span>
+                                <div className="fin-meta-bar"><div className="fin-meta-bar-fill" style={{ width: `${featuredMeta.pct}%`, background: featuredMeta.color || '#fbbf24' }} /></div>
+                                <span className="fin-metric-hint">{featuredMeta.pct.toFixed(0)}% de {formatCurrency(featuredMeta.target)}</span>
+                            </>
+                        ) : (
+                            <>
+                                <div className="fin-metric-icon" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
+                                    <Wallet size={14} />
+                                </div>
+                                <span className="fin-metric-label">{userConfig.concepto_custom_label}</span>
+                                <span className="fin-metric-value">{formatCurrency(userConfig.concepto_custom_total)}</span>
+                            </>
+                        )}
                     </div>
                     <div className="fin-metric-card">
                         <div className="fin-metric-icon" style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}>
@@ -1551,13 +1611,8 @@ export default function FinanzasPage() {
                     <Upload size={13} /> Importar
                 </button>
                 <div style={{ flex: 1 }} />
-                {transactions.length > 0 && (
-                    <button className="btn-fin-ghost" onClick={() => setShowClearAll(true)} title="Eliminar todas las transacciones">
-                        <Trash2 size={13} />
-                    </button>
-                )}
-                <button className="btn-fin-ghost" onClick={() => setShowClearMemory(true)} title="Limpiar memoria local de la app">
-                    <RefreshCw size={13} />
+                <button className="btn-fin-ghost" onClick={() => setShowClearAll(true)} title="Eliminar transacciones y memoria local">
+                    <Trash2 size={13} />
                 </button>
                 <button className="btn-fin-ghost" onClick={openTutorial} title="Tutorial de la app">
                     <Info size={13} />
@@ -1858,34 +1913,22 @@ export default function FinanzasPage() {
                 </div>
             </Modal>
 
-            <Modal isOpen={showClearAll} onClose={() => setShowClearAll(false)} title={selectedCard === 'global' ? 'Limpiar todas las transacciones' : `Limpiar transacciones de ${selectedCard}`}>
+            <Modal isOpen={showClearAll} onClose={() => setShowClearAll(false)} title={selectedCard === 'global' ? 'Eliminar todo' : `Eliminar ${selectedCard}`}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                        Se eliminarán <strong>{selectedCard === 'global' ? transactions.length : transactions.filter(t => t.bank === selectedCard).length}</strong> transacciones. Esta acción no se puede deshacer.
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
+                        Se eliminarán <strong style={{ color: 'var(--text-primary)' }}>{selectedCard === 'global' ? transactions.length : transactions.filter(t => t.bank === selectedCard).length}</strong> transacciones{selectedCard === 'global' ? '' : ` de ${selectedCard}`} de la base de datos <strong style={{ color: 'var(--text-primary)' }}>de forma permanente</strong>.
+                        <br /><br />
+                        También se borrará la <strong style={{ color: 'var(--text-primary)' }}>memoria local</strong> asociada: saldos guardados, configuración de tarjetas de crédito (límite, fecha de corte, pago) y balances importados.
+                        {selectedCard === 'global' && <> También se restablecen filtros y preferencias de la app.</>}
+                        <br /><br />
+                        Tu portafolio y operaciones de trading <strong style={{ color: 'var(--text-primary)' }}>no</strong> se ven afectados. Esta acción <strong style={{ color: 'var(--danger)' }}>no se puede deshacer</strong>.
                     </p>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                         <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setShowClearAll(false)}>
                             Cancelar
                         </button>
                         <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmClearAll}>
-                            Eliminar
-                        </button>
-                    </div>
-                </div>
-            </Modal>
-
-            <Modal isOpen={showClearMemory} onClose={() => setShowClearMemory(false)} title="Limpiar memoria local">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
-                        Se eliminará toda la memoria local de la app: saldos guardados, configuración de tarjeta, filtros y preferencias.<br /><br />
-                        <strong style={{ color: 'var(--text-primary)' }}>Las transacciones en la base de datos NO se eliminan.</strong>
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                        <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setShowClearMemory(false)}>
-                            Cancelar
-                        </button>
-                        <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--danger)', color: 'white' }} onClick={confirmClearMemory}>
-                            Limpiar memoria
+                            Eliminar todo
                         </button>
                     </div>
                 </div>
@@ -1910,7 +1953,48 @@ export default function FinanzasPage() {
                         console.error('Error saving user_config:', error?.message);
                     }
                 }}>
+                    {/* Vincular una meta de la sección Metas */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Vincular una meta</label>
+                            <button type="button" className="btn-icon-sm glass" style={{ padding: '4px 10px', fontSize: '12px', color: 'var(--text-primary)' }} onClick={() => router.push('/budgets')}>
+                                Administrar metas
+                            </button>
+                        </div>
+                        {budgets.length === 0 ? (
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                                No tienes metas aún. Créalas en la sección Metas y aparecerán aquí para mostrarlas en esta tarjeta.
+                            </p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <button type="button" onClick={() => linkMeta(null)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', background: !featuredMetaId ? 'rgba(255,255,255,0.08)' : 'transparent', border: `1px solid ${!featuredMetaId ? 'rgba(255,255,255,0.25)' : 'var(--border-color)'}`, color: 'var(--text-primary)', fontSize: '13px' }}>
+                                    <Wallet size={15} /> Concepto manual (sin meta)
+                                </button>
+                                {budgets.map(b => {
+                                    const sel = String(featuredMetaId) === String(b.id);
+                                    const paid = budgetPaid[b.id] || 0;
+                                    const tgt = Number(b.target_amount) || 0;
+                                    const pct = tgt > 0 ? Math.min(100, (paid / tgt) * 100) : 0;
+                                    return (
+                                        <button key={b.id} type="button" onClick={() => linkMeta(b.id)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', background: sel ? `${b.color || '#fbbf24'}22` : 'transparent', border: `1px solid ${sel ? (b.color || '#fbbf24') : 'var(--border-color)'}`, color: 'var(--text-primary)' }}>
+                                            <span style={{ fontSize: '16px', lineHeight: 1 }}>{b.icon || '🎯'}</span>
+                                            <span style={{ flex: 1, minWidth: 0 }}>
+                                                <span style={{ display: 'block', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
+                                                <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)' }}>{pct.toFixed(0)}% · {formatCurrency(paid)} de {formatCurrency(tgt)}</span>
+                                            </span>
+                                            {sel && <Check size={15} style={{ color: b.color || '#fbbf24' }} />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ height: '1px', background: 'var(--border-color)' }} />
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: featuredMetaId ? 0.5 : 1 }}>
                         <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Nombre del concepto</label>
                         <input type="text" className="select-filter" style={{ width: '100%' }} placeholder="Ej: Ahorro, Por Cobrar, Meta..." value={customCardForm.label} onChange={e => setCustomCardForm(p => ({ ...p, label: e.target.value }))} />
                     </div>
