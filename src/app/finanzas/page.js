@@ -15,6 +15,7 @@ import GastosPorCategoria from "@/components/GastosPorCategoria";
 import IngresosPorCategoria from "@/components/IngresosPorCategoria";
 import GastosHormiga from "@/components/GastosHormiga";
 import NvaIntelligencePanel from "@/components/NvaIntelligencePanel";
+import InfoTip from "@/components/InfoTip";
 import { openTutorial } from "@/components/AppTutorial";
 import { toast } from "sonner";
 import "./Finanzas.css";
@@ -1228,7 +1229,10 @@ export default function FinanzasPage() {
                     {/* HEALTH SCORE */}
                     <div style={{ marginBottom: '12px', padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Score de Salud Financiera</span>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'inline-flex', alignItems: 'center' }}>
+                                Score de Salud Financiera
+                                <InfoTip title="Score de Salud Financiera (0–100)" text="Qué tan sana está tu tarjeta. Combina qué tanto de tu línea usas (utilización), si pagas de contado o solo el mínimo, el crédito que te queda disponible, los intereses que generas y cuánto ya comprometiste del próximo mes (MSI + suscripciones). Más alto = más sano: 75+ saludable, 50–74 moderado, menos = presión o riesgo." />
+                            </span>
                             <span style={{ fontSize: '20px', fontWeight: 800, color: risk.color }}>{healthScore}<span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>/100</span></span>
                         </div>
                         <div style={{ height: '6px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
