@@ -1,4 +1,63 @@
-# Session Handoff — 2026-07-01 (Session 6) ← CURRENT
+# Session Handoff — 2026-07-02 (Session 7) ← CURRENT
+
+## Estado: APP APROBADA (build 10 live). Armando BATCH para BUILD 13 (v1.0.1).
+
+Continúa la sesión 6. Todo pusheado a `origin/main` (último `2be5939`). Los fixes
+de **servidor ya están en producción** (Vercel = nva.lat). Los fixes de **UI**
+esperan un **Archive de build 13** en Xcode para llegar a TestFlight.
+
+### Números de versión (ya en pbxproj / Info.plist)
+- `CURRENT_PROJECT_VERSION = 13`, `MARKETING_VERSION = 1.0.1`.
+- `ITSAppUsesNonExemptEncryption = false` en `ios/App/App/Info.plist` (export compliance).
+- App Store Connect: versión **1.0.1** ya creada por el usuario (falta adjuntar build + enviar).
+
+### YA DESPLEGADO (server, activo en la app nativa sin build) — /api/analyze
+Lectura de estados de cuenta MX robusta y **bank-agnostic**:
+- Reglas de tabla: el monto es SOLO la columna cargo/abono, NUNCA columnas de SALDO;
+  moneda extranjera → importe en pesos, ignorar FX + tipo de cambio.
+- Patrones por-banco codificados (BBVA déb/créd, Citibanamex, Santander déb/créd,
+  HSBC, Inbursa, Nu, Scotiabank) + anti-duplicado (calendarios MSI, puntos, cajitas Nu).
+- **Reconciliación**: suma egresos≈TOTAL CARGOS, ingresos≈TOTAL ABONOS, y
+  saldo_anterior+ingresos−egresos≈saldo_final. Si no cuadra → **auto-reintento**
+  con el error como feedback.
+- **max_tokens 16384** + **reparador de JSON truncado** (créditos con 150-250+ movs
+  ya no fallan con "El archivo no pudo ser analizado").
+- Ground truth: `src/app/api/analyze/__fixtures__/golden.md` (10 estados reales, totales
+  declarados). Falta subir los PDFs anonimizados para test automatizado (necesita
+  ANTHROPIC_API_KEY — solo está en Vercel, NO en .env.local).
+
+### UI hecha esta sesión (en `main`, PENDIENTE de build 13 para TestFlight)
+- **Rediseño gráficas categoría** (`GastosPorCategoria.jsx`, `IngresosPorCategoria.jsx`,
+  `CategoryChart.css`, `categoryIcons.jsx`): donut con total al centro, leyenda con
+  monto+% coloreado, insight, "Ver detalles" → desglose con íconos+barras+chevron→modal.
+- **InfoTip** (`src/components/InfoTip.jsx`): tooltip reutilizable (portal, clamp a
+  viewport, tap iOS/hover desktop). Puesto en "Score de Salud Financiera" (finanzas crédito).
+- (de sesión 6, también pendiente en build 13): rediseño portfolio, card AHORRO↔Metas,
+  fix layout import (overflow), fix crash portfolio (ChevronRight faltante), tooltip
+  portfolio, fix resume-from-background (--app-vh), reset-password deep link, residuo
+  crédito, merge botón eliminar+memoria con disclaimer.
+
+### PENDIENTE (próximos pasos)
+1. **Más InfoTips** — el usuario quiere botones de info en más funciones (crédito/finanzas):
+   utilización, deuda revolvente, comprometido próx. mes, pago para no generar intereses,
+   score de portfolio (beta/sharpe/drawdown), etc. Patrón: `<InfoTip title="…" text="…" />`.
+2. **Verificar lectura de crédito** post-deploy (al usuario le falló 3 veces; ya debería
+   leer). Si falla en PDF enorme, revisar timeout (`maxDuration = 120`).
+3. Seguir con más fixes de UI que pida el usuario (van al batch build 13).
+4. **Cuando el usuario diga**: `npm run build:native && npx cap sync ios` (re-sync assets
+   web más recientes) → Xcode: Any iOS Device → Clean → Archive (build 13) → Distribute →
+   subir → en ASC adjuntar build 13 a la versión **1.0.1** + "Novedades" + enviar a revisión.
+
+### Cómo trabaja el repo
+- Commits directos a `main`; push deploya a Vercel (prod nva.lat). Fixes de servidor
+  (`/api/*`) se activan con push; fixes de UI necesitan build nativo.
+- Siempre `npm run build` antes de commitear (verifica TypeScript). Build nativo:
+  `npm run build:native` (usa `scripts/build-capacitor.js`, NO `next build` directo).
+- No hay `ANTHROPIC_API_KEY` en local → no se puede probar /api/analyze localmente.
+
+---
+
+# Session Handoff — 2026-07-01 (Session 6)
 
 ## Current State: APP APPROVED (build 10) — BUILD 11 batch of fixes ready
 
