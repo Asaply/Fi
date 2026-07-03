@@ -1,8 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { ChevronRight, Lightbulb } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Modal from '@/components/Modal';
+import { getCategoryIcon } from '@/components/categoryIcons';
+import './CategoryChart.css';
 
 const CATEGORY_COLORS = {
     'Nómina': '#22C55E',
@@ -26,14 +29,7 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
     const [activeIndex, setActiveIndex] = useState(null);
     const [allTransactions, setAllTransactions] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const [showAll, setShowAll] = useState(false);
-
-    const VISIBLE = 3;
-
-    const handlePieClick = (categoryName) => {
-        setShowAll(true);
-        setSelectedCategory(categoryName);
-    };
+    const [showBreakdown, setShowBreakdown] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -55,10 +51,7 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
                 if (bank && bank !== 'global') query = query.eq('bank', bank);
                 const { data: rows } = await query;
 
-                const ingresos = (rows || []).map(t => ({
-                    ...t,
-                    categoria: t.categoria || 'Otros',
-                }));
+                const ingresos = (rows || []).map(t => ({ ...t, categoria: t.categoria || 'Otros' }));
 
                 setAllTransactions(ingresos);
                 const totalAmt = ingresos.reduce((s, t) => s + (Number(t.amount) || 0), 0);
@@ -84,122 +77,139 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
         );
     }
 
+    const dominant = data[0];
+    const domPct = dominant && total > 0 ? (dominant.value / total) * 100 : 0;
+    const LEG = 5;
+    const legend = data.slice(0, LEG);
+    const restVal = data.slice(LEG).reduce((s, d) => s + d.value, 0);
+
     const categoryTx = allTransactions.filter(t => t.categoria === selectedCategory);
     const categoryTotal = categoryTx.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-    const pct = total > 0 ? ((categoryTotal / total) * 100).toFixed(1) : 0;
+    const catPct = total > 0 ? ((categoryTotal / total) * 100).toFixed(1) : 0;
 
     return (
-        <div className="card fnce-dynamic-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
-                    Ingresos por Categoría
-                </h2>
-                {total > 0 && (
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#22c55e', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatMXN(total)}
-                    </span>
+        <div className="card fnce-dynamic-panel cat-card">
+            <div className="cat-head">
+                <div className="cat-head-titles">
+                    <h2 className="cat-title">Ingresos por categoría</h2>
+                    {total > 0 && <span className="cat-sub" style={{ color: '#22c55e' }}>{formatMXN(total)} en total</span>}
+                </div>
+                {data.length > 0 && (
+                    <button className="cat-ver" onClick={() => setShowBreakdown(v => !v)}>
+                        {showBreakdown ? 'Ocultar' : 'Ver detalles'} <ChevronRight size={15} />
+                    </button>
                 )}
             </div>
 
             {data.length === 0 ? (
-                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>
-                    Sin ingresos en este período
-                </p>
+                <p className="cat-empty">Sin ingresos en este período</p>
             ) : (
-                <div className="donut-layout" style={{ display: 'grid', gridTemplateColumns: '40% 1fr', gap: '24px', alignItems: 'center' }}>
-                    <div className="donut-chart-wrapper" style={{ height: '200px', position: 'relative' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={data}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={56}
-                                    outerRadius={86}
-                                    paddingAngle={2}
-                                    dataKey="value"
-                                    strokeWidth={0}
-                                    onMouseEnter={(_, idx) => setActiveIndex(idx)}
-                                    onMouseLeave={() => setActiveIndex(null)}
-                                    cursor={{ fill: 'transparent' }}
-                                >
-                                    {data.map((entry, idx) => (
-                                        <Cell
-                                            key={entry.name}
-                                            fill={getColor(entry.name, idx)}
-                                            opacity={activeIndex === null || activeIndex === idx ? 1 : 0.4}
-                                            onClick={() => handlePieClick(entry.name)}
-                                            style={{ cursor: 'pointer' }}
-                                        />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    content={({ active, payload }) => {
+                <>
+                    <div className="cat-donut-row">
+                        <div className="cat-donut">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={data} cx="50%" cy="50%" innerRadius={52} outerRadius={72} paddingAngle={2} dataKey="value" strokeWidth={0}
+                                        onMouseEnter={(_, idx) => setActiveIndex(idx)} onMouseLeave={() => setActiveIndex(null)}>
+                                        {data.map((entry, idx) => (
+                                            <Cell key={entry.name} fill={getColor(entry.name, idx)}
+                                                opacity={activeIndex === null || activeIndex === idx ? 1 : 0.4}
+                                                onClick={() => setSelectedCategory(entry.name)} style={{ cursor: 'pointer' }} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip content={({ active, payload }) => {
                                         if (!active || !payload?.length) return null;
                                         const { name, value } = payload[0].payload;
                                         const p = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-                                        const bg = dark ? '#1c1c1e' : '#ffffff';
-                                        const border = dark ? '#333' : '#e5e5e5';
-                                        const text = dark ? '#ffffff' : '#111111';
-                                        const muted = dark ? '#999999' : '#888888';
                                         return (
-                                            <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                                                <p style={{ color: text, margin: 0, fontSize: '12px', fontWeight: 600 }}>{name}</p>
-                                                <p style={{ color: text, margin: 0, fontSize: '12px' }}>{formatMXN(value)}</p>
-                                                <p style={{ color: muted, margin: 0, fontSize: '11px' }}>{p}%</p>
+                                            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', boxShadow: 'var(--shadow-md)' }}>
+                                                <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '12px', fontWeight: 600 }}>{name}</p>
+                                                <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '12px' }}>{formatMXN(value)} · {p}%</p>
                                             </div>
                                         );
-                                    }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        {activeIndex === null && total > 0 && (
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{formatMXN(total)}</p>
-                                <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>100%</p>
+                                    }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="cat-donut-center">
+                                <span className="cat-donut-total-label">Total</span>
+                                <span className="cat-donut-total" style={{ color: '#22c55e' }}>{formatMXN(total)}</span>
+                                <span className="cat-donut-pct">100%</span>
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    <div className="donut-legend" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {(showAll ? data : data.slice(0, VISIBLE)).map((entry, idx) => {
-                            const p = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
-                            return (
-                                <div key={entry.name} onClick={() => setSelectedCategory(entry.name)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', transition: 'background 0.15s' }}
-                                    className="legend-item"
-                                >
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: getColor(entry.name, idx), flexShrink: 0 }} />
-                                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', minWidth: '34px', textAlign: 'right' }}>{p}%</span>
-                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', minWidth: '72px', textAlign: 'right' }}>{formatMXN(entry.value)}</span>
-                                </div>
-                            );
-                        })}
-
-                        {data.length > VISIBLE && (
-                            <button onClick={() => setShowAll(v => !v)}
-                                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 500, padding: '7px 12px', touchAction: 'manipulation', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', marginTop: '2px' }}>
-                                {showAll ? '↑ Ver menos' : `↓ Ver ${data.length - VISIBLE} categorías más`}
-                            </button>
-                        )}
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid var(--bg-border)', paddingTop: '8px', marginTop: '2px' }}>
-                            <div style={{ width: '8px', height: '8px', flexShrink: 0 }} />
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Total</span>
-                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', minWidth: '34px', textAlign: 'right' }}>100%</span>
-                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e', fontVariantNumeric: 'tabular-nums', minWidth: '72px', textAlign: 'right' }}>{formatMXN(total)}</span>
+                        <div className="cat-legend">
+                            {legend.map((entry, idx) => {
+                                const p = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
+                                const color = getColor(entry.name, idx);
+                                return (
+                                    <button key={entry.name} className="cat-legend-row" onClick={() => setSelectedCategory(entry.name)}>
+                                        <span className="cat-legend-dot" style={{ background: color }} />
+                                        <span className="cat-legend-info">
+                                            <span className="cat-legend-name">{entry.name}</span>
+                                            <span className="cat-legend-amt">{formatMXN(entry.value)}</span>
+                                        </span>
+                                        <span className="cat-legend-pct" style={{ color }}>{p}%</span>
+                                    </button>
+                                );
+                            })}
+                            {restVal > 0 && (
+                                <button className="cat-legend-row" onClick={() => setShowBreakdown(true)}>
+                                    <span className="cat-legend-dot" style={{ background: 'var(--text-secondary)' }} />
+                                    <span className="cat-legend-info">
+                                        <span className="cat-legend-name">Más categorías</span>
+                                        <span className="cat-legend-amt">{formatMXN(restVal)}</span>
+                                    </span>
+                                    <span className="cat-legend-pct" style={{ color: 'var(--text-secondary)' }}>{((restVal / total) * 100).toFixed(1)}%</span>
+                                </button>
+                            )}
                         </div>
                     </div>
-                </div>
+
+                    {dominant && (
+                        <div className="cat-insight">
+                            <span className="cat-insight-icon"><Lightbulb size={16} style={{ color: '#22c55e' }} /></span>
+                            <span>
+                                <span className="cat-insight-title">Insight</span>
+                                <strong>{dominant.name}</strong> es tu mayor fuente de ingresos, con el <strong style={{ color: getColor(dominant.name, 0) }}>{domPct.toFixed(0)}%</strong> del total del período.
+                            </span>
+                        </div>
+                    )}
+
+                    {showBreakdown && (
+                        <div className="cat-breakdown">
+                            <div className="cat-breakdown-head">
+                                <h3>Desglose por categoría</h3>
+                                <span>% del total</span>
+                            </div>
+                            {data.map((entry, idx) => {
+                                const p = total > 0 ? (entry.value / total) * 100 : 0;
+                                const color = getColor(entry.name, idx);
+                                const Icon = getCategoryIcon(entry.name);
+                                return (
+                                    <button key={entry.name} className="cat-row" onClick={() => setSelectedCategory(entry.name)}>
+                                        <span className="cat-row-icon" style={{ background: `${color}22`, color }}><Icon size={18} /></span>
+                                        <span className="cat-row-mid">
+                                            <span className="cat-row-toprow">
+                                                <span className="cat-row-name">{entry.name}</span>
+                                                <span className="cat-row-pct" style={{ color }}>{p.toFixed(1)}%</span>
+                                            </span>
+                                            <span className="cat-bar"><span className="cat-bar-fill" style={{ width: `${p}%`, background: color }} /></span>
+                                        </span>
+                                        <span className="cat-row-amt">{formatMXN(entry.value)}</span>
+                                        <ChevronRight className="cat-row-chev" size={16} />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </>
             )}
 
             <Modal isOpen={!!selectedCategory} onClose={() => setSelectedCategory(null)} title={
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span>{selectedCategory}</span>
                     <span style={{ fontSize: '14px', color: '#22c55e', fontWeight: 400, marginTop: '4px' }}>
-                        {formatMXN(categoryTotal)} ({pct}% del total)
+                        {formatMXN(categoryTotal)} ({catPct}% del total)
                     </span>
                 </div>
             }>
