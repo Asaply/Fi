@@ -232,6 +232,24 @@ function reconciliationFeedback(r) {
     return lines.join('\n');
 }
 
+// Repair JSON truncated mid-output (long credit statements can hit the token
+// cap while still inside the "movimientos" array). Keep up to the last complete
+// movement object and close the array + object. "movimientos" is the last field
+// in the schema, so everything before it (banco, saldos, totals, credito_info)
+// is already present.
+function repairTruncatedJSON(raw) {
+    const s = raw.indexOf('{');
+    if (s === -1) return null;
+    const str = raw.slice(s);
+    const mi = str.indexOf('"movimientos"');
+    if (mi === -1) return null;
+    const arrStart = str.indexOf('[', mi);
+    if (arrStart === -1) return null;
+    const lastObj = str.lastIndexOf('}');
+    if (lastObj <= arrStart) return null;
+    try { return JSON.parse(str.slice(0, lastObj + 1) + ']}'); } catch { return null; }
+}
+
 function extractJSON(raw) {
     // 1. Try direct parse
     try { return JSON.parse(raw); } catch {}
@@ -244,7 +262,8 @@ function extractJSON(raw) {
     if (start !== -1 && end > start) {
         try { return JSON.parse(raw.slice(start, end + 1)); } catch {}
     }
-    return null;
+    // 4. Repair truncated output (recovers most of the movements)
+    return repairTruncatedJSON(raw);
 }
 
 async function callClaudeVision(fileBuffer, mediaType, feedback = '') {
@@ -259,7 +278,7 @@ async function callClaudeVision(fileBuffer, mediaType, feedback = '') {
 
     const response = await client.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 8096,
+        max_tokens: 16384,
         messages: [{
             role: 'user',
             content: [
@@ -297,7 +316,7 @@ async function callClaudeText(csvText) {
 
     const response = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 8096,
+        max_tokens: 16384,
         messages: [{
             role: 'user',
             content: `${PROMPT}\n\nCONTENIDO CSV:\n${csvText.slice(0, 20000)}`,
