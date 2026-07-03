@@ -482,6 +482,11 @@ export default function FinanzasPage() {
             }
             setImportStep(2);
             toast.success(`${rows.length} transacciones detectadas de ${data.bank || 'tu banco'}.`);
+            // Warn if the extracted amounts don't reconcile with the statement's
+            // declared totals — the numbers may be off, review before importing.
+            if (data.reconciliation && data.reconciliation.ok === false) {
+                toast.warning('Revisa los montos: no cuadran con los totales del estado de cuenta.', { duration: 6000 });
+            }
         } catch (err) {
             console.error('[parsePdfFile]', err);
             toast.error(`Error: ${err.message || 'Error al procesar el archivo PDF.'}`);
