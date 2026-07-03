@@ -75,6 +75,9 @@ Formato requerido:
   "periodo": "descripción del periodo",
   "saldo_anterior": 12345.67,
   "saldo_final": 9876.54,
+  "total_cargos": 97378.97,
+  "total_abonos": 101984.01,
+  "num_movimientos": 83,
   "credito_info": {
     "limite_credito": 50000,
     "pago_minimo": 500,
@@ -96,17 +99,32 @@ Formato requerido:
   ]
 }
 
+CÓMO LEER LA TABLA DE MOVIMIENTOS (CRÍTICO — la mayoría de los errores vienen de aquí):
+- Las tablas mexicanas suelen tener estas columnas en orden: FECHA (OPER/LIQ), DESCRIPCIÓN, REFERENCIA, CARGOS, ABONOS, y frecuentemente SALDO OPERACIÓN y SALDO LIQUIDACIÓN (o solo "SALDO").
+- El "monto" de un movimiento es SIEMPRE el número de la columna CARGOS (→ tipo egreso) o de la columna ABONOS (→ tipo ingreso). Cada movimiento tiene UN solo importe: o cargo o abono, nunca los dos.
+- PROHIBIDO usar las columnas de SALDO (SALDO, SALDO OPERACIÓN, SALDO LIQUIDACIÓN) como monto. Esas son el saldo acumulado de la cuenta después del movimiento, NO el importe del movimiento. Muchas filas repiten el mismo saldo (ej. 9,148.86) — nunca lo tomes como transacción. Confundir el saldo con el monto es el error más grave y más común: EVÍTALO.
+- Una fila puede tener 1, 2 o 3 números a la derecha (cargo/abono, y opcionalmente uno o dos saldos). Toma SOLO el primero (el de la columna cargo/abono) e ignora los saldos que le siguen.
+- MONEDA EXTRANJERA: si un movimiento fue en otra moneda, la fila muestra el importe EN PESOS (MXN) en la columna CARGOS/ABONOS, y en una línea secundaria el importe extranjero con su código de moneda (ej. "978" = EUR, "840" = USD) y el tipo de cambio (ej. "TC020.1709" o "TC 20.17"). USA SIEMPRE el importe en PESOS de la columna CARGOS/ABONOS. IGNORA por completo el importe en moneda extranjera y el tipo de cambio — NO los sumes ni los conviertas.
+- Líneas secundarias como "RFC: ...", "AUT: ...", "Referencia ...", números CLABE, nombres de beneficiario, códigos de moneda y tipos de cambio son parte del concepto/detalle, NUNCA son montos.
+
 REGLAS ESTRICTAS:
-- tipo "egreso": compra, cargo, comisión, interés cobrado
-- tipo "ingreso": pago recibido, abono, SPEI recibido, nómina, depósito
+- tipo "egreso": compra, cargo, comisión, interés cobrado, retiro, transferencia/SPEI enviado, pago a tercero, pago de tarjeta (columna CARGOS)
+- tipo "ingreso": pago recibido, abono, SPEI recibido, nómina, depósito, devolución en efectivo (columna ABONOS)
 - tipo "ajuste": devolución, reembolso, bonificación, ajuste
 - En tarjeta de DÉBITO: tipo "egreso" también aplica a retiros, transferencias enviadas, SPEI enviado
 - monto: número positivo sin signo, sin comas, con decimales
-- fecha: formato YYYY-MM-DD obligatorio
+- fecha: formato YYYY-MM-DD obligatorio (usa la fecha de OPERACIÓN si hay dos)
 - NO incluir totales, saldos, promedios, ni encabezados como movimientos
-- NO incluir "Saldo Anterior" como movimiento
-- Extraer TODOS los movimientos sin omitir ninguno
+- NO incluir "Saldo Anterior" ni "Saldo Final" como movimiento
+- Extraer TODOS los movimientos sin omitir ninguno, en todas las páginas
 - concepto: descripción limpia sin números de referencia largos ni claves de rastreo
+
+VERIFICACIÓN OBLIGATORIA ANTES DE RESPONDER (reconcilia o corrige):
+- El estado declara "TOTAL IMPORTE CARGOS", "TOTAL IMPORTE ABONOS" y el número de movimientos (ej. "TOTAL MOVIMIENTOS CARGOS 62", "TOTAL MOVIMIENTOS ABONOS 21"). Extrae esos valores a total_cargos, total_abonos y num_movimientos.
+- La SUMA de los montos de tus movimientos tipo egreso debe ser ≈ total_cargos, y la suma de tus ingresos ≈ total_abonos (diferencia máxima ~1 peso por redondeo). El número de movimientos que extraes debe coincidir con num_movimientos.
+- Además: saldo_anterior + (suma ingresos) − (suma egresos) debe ser ≈ saldo_final.
+- Si algo NO cuadra, es que tomaste un saldo como monto, contaste doble o usaste un importe en moneda extranjera. Revisa y corrige tus movimientos hasta que cuadre. NO respondas con cifras que no reconcilien.
+- Si el estado no declara totales, deja total_cargos/total_abonos/num_movimientos en 0.
 - tipo_cuenta: "debito" si es cuenta de ahorro/nómina/débito, "credito" si es tarjeta de crédito
 - saldo_anterior: saldo al inicio del periodo (número, 0 si no aplica)
 - saldo_final: saldo al corte/deuda actual/fin del periodo (número, 0 si no aplica)
@@ -300,6 +318,38 @@ export async function POST(request) {
             );
         }
 
+        // Reconciliation vs the statement's declared totals — catches the classic
+        // "read a running-balance number as a transaction" error before it reaches
+        // the user. We only flag/log; the extraction prompt is the primary guard.
+        const sumEgresos = transactions
+            .filter(t => ['egreso', 'cargo'].includes(t.tipo))
+            .reduce((s, t) => s + t.monto, 0);
+        const sumIngresos = transactions
+            .filter(t => ['ingreso', 'abono', 'ajuste'].includes(t.tipo))
+            .reduce((s, t) => s + t.monto, 0);
+        const declaredCargos = Number(parsed.total_cargos) || 0;
+        const declaredAbonos = Number(parsed.total_abonos) || 0;
+        const declaredNum = Number(parsed.num_movimientos) || 0;
+        const tol = (declared) => Math.max(1, declared * 0.01); // 1% or $1
+        const cargosOk = declaredCargos === 0 || Math.abs(sumEgresos - declaredCargos) <= tol(declaredCargos);
+        const abonosOk = declaredAbonos === 0 || Math.abs(sumIngresos - declaredAbonos) <= tol(declaredAbonos);
+        const countOk = declaredNum === 0 || transactions.length === declaredNum;
+        const reconciliation = {
+            ok: cargosOk && abonosOk,
+            declared_cargos: declaredCargos,
+            declared_abonos: declaredAbonos,
+            declared_num: declaredNum,
+            sum_egresos: Math.round(sumEgresos * 100) / 100,
+            sum_ingresos: Math.round(sumIngresos * 100) / 100,
+            count: transactions.length,
+            cargos_ok: cargosOk,
+            abonos_ok: abonosOk,
+            count_ok: countOk,
+        };
+        if (!reconciliation.ok || !countOk) {
+            console.warn('[api/analyze] reconciliation mismatch', reconciliation);
+        }
+
         const insights = buildInsights(transactions);
 
         // Normalize tipo_cuenta — AI may return "crédito" (accent) or "credit" etc.
@@ -336,6 +386,7 @@ export async function POST(request) {
             transactionCount: transactions.length,
             transactions,
             insights,
+            reconciliation,
         });
 
     } catch (err) {
