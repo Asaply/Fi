@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "scotia-debito",
+  "version": 1,
+  "supports": {
+    "debit": true, "credit": false, "runningBalance": true,
+    "declaredTotals": true, "movementCount": false,
+    "foreignCurrency": false, "multilineConcept": false
+  },
+  "maturity": "curated",
+  "validationCount": 1,
+  "bank": "Scotiabank",
+  "tipo_cuenta": "debito",
+  "detect": {
+    "keywords": ["Scotiabank", "Detalle de tus movimientos"],
+    "keywordsAll": true,
+    "excludeKeywords": []
+  },
+  "date": {
+    "colXMax": 60,
+    "format": "DAY_PLUS_MONTHCELL",
+    "yearFrom": "period",
+    "yearRegex": "\\d{1,2}-[A-Za-z]{3}-\\d{2}\\/(\\d{1,2})-[A-Za-z]{3}-(\\d{2})"
+  },
+  "concept": {
+    "xMin": 88,
+    "xMax": 250,
+    "source": "sameRow"
+  },
+  "strategy": "columnBands",
+  "amount": {
+    "strategy": "columnBands",
+    "edge": "right",
+    "bands": [
+      { "xMin": 380, "xMax": 440, "tipo": "ingreso" },
+      { "xMin": 440, "xMax": 540, "tipo": "egreso" }
+    ],
+    "ignoreBeyondX": 540
+  },
+  "totals": {
+    "cargos": "Retiros\\$([\\d,]+\\.\\d{2})",
+    "abonos": "Dep[oó]sitos\\$([\\d,]+\\.\\d{2})",
+    "numMovimientos": null,
+    "saldoAnterior": "Saldoinicial\\$([\\d,]+\\.\\d{2})",
+    "saldoFinal": "Saldofinaldelacuenta\\$([\\d,]+\\.\\d{2})"
+  },
+  "skipRows": [],
+  "flatHeaderForTotals": true,
+  "_verified": { "cargos": 49517.12, "abonos": 45695.77, "movimientos": 93 }
+}

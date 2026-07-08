@@ -4,9 +4,10 @@ import { getAuthUser, unauthorized, serverError, validateUpload } from '@/lib/ap
 import { checkRateLimit } from '@/lib/rateLimit';
 import { checkAnonRateLimit } from '@/lib/rateLimitAnon';
 import { auditLog, getIp } from '@/lib/auditLog';
+import { tryDeterministicParse } from '@/lib/statementParser';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 const CATEGORY_COLORS = ['#FF8700', '#FFB366', '#FFD9B3', '#555', '#444', '#333'];
 
@@ -392,6 +393,7 @@ export async function POST(request) {
         isCSV = /\.csv$/i.test(filename);
 
         let parsed;
+        let visionT0 = 0, visionMs = 0;
 
         if (isCSV) {
             const text = fileText || fileBuffer.toString('utf-8');
@@ -403,7 +405,29 @@ export async function POST(request) {
             if (!fileBuffer || fileBuffer.length === 0) {
                 return NextResponse.json({ error: 'El archivo PDF está vacío.' }, { status: 400 });
             }
-            parsed = await callClaudeVision(fileBuffer, 'application/pdf');
+            // 1) Try the deterministic, coordinate-based parser first. It reads
+            // the amount from its own column and never mistakes a running
+            // balance (SALDO) for a movement, so when it reconciles it is exact,
+            // instant and free. Only use it if it reconciles against the
+            // statement's declared totals; otherwise fall through to the AI.
+            const detParsed = await tryDeterministicParse(fileBuffer);
+            if (detParsed) {
+                const detTx = mapTransactions(detParsed);
+                const detRecon = computeReconciliation(detTx, detParsed);
+                if (detTx.length > 0 && detRecon.ok) {
+                    parsed = detParsed;
+                } else {
+                    console.warn('[api/analyze] deterministic parse did not reconcile, using AI', { bank: detParsed._bank, ...detRecon });
+                }
+            }
+
+            // 2) AI vision fallback (unknown bank, scanned/garbled PDF, or the
+            // deterministic parse didn't reconcile).
+            if (!parsed) {
+                visionT0 = Date.now();
+                parsed = await callClaudeVision(fileBuffer, 'application/pdf');
+                visionMs = Date.now() - visionT0;
+            }
         }
 
         let transactions = mapTransactions(parsed);
@@ -421,7 +445,14 @@ export async function POST(request) {
         // once feeding the model the exact mismatch so it self-corrects. Keep
         // whichever pass reconciles (or the one with the smaller error). PDF only.
         let reconciliation = computeReconciliation(transactions, parsed);
-        if (!isCSV && !reconciliation.ok && reconciliation.hasDeclared) {
+        // Time budget: a retry costs ~another vision call. Only retry if the first
+        // call plus an estimated second fit inside maxDuration (with buffer),
+        // otherwise the platform kills the function and the client gets a non-JSON
+        // gateway error ("An error occurred"). Better to return the first pass.
+        const BUDGET_MS = maxDuration * 1000;
+        const elapsedMs = visionT0 ? Date.now() - visionT0 : 0;
+        const retryFitsBudget = visionMs > 0 && (elapsedMs + visionMs * 1.15 + 8000) < BUDGET_MS;
+        if (!isCSV && !reconciliation.ok && reconciliation.hasDeclared && retryFitsBudget) {
             console.warn('[api/analyze] reconciliation mismatch, retrying', reconciliation);
             try {
                 const retryParsed = await callClaudeVision(fileBuffer, 'application/pdf', reconciliationFeedback(reconciliation));

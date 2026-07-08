@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "bbva-credito",
+  "version": 1,
+  "supports": {
+    "debit": false, "credit": true, "runningBalance": false,
+    "declaredTotals": true, "movementCount": false,
+    "foreignCurrency": true, "multilineConcept": false
+  },
+  "maturity": "curated",
+  "validationCount": 1,
+  "bank": "BBVA",
+  "tipo_cuenta": "credito",
+  "detect": {
+    "keywords": ["BBVA", "Pago para no generar intereses", "TOTAL CARGOS"],
+    "keywordsAll": true,
+    "excludeKeywords": []
+  },
+  "date": {
+    "colXMax": 55,
+    "format": "DD_DASH_MMM_YYYY",
+    "yearFrom": "self"
+  },
+  "concept": {
+    "xMin": 180,
+    "xMax": 470,
+    "source": "sameRow"
+  },
+  "strategy": "signedSingleColumn",
+  "amount": {
+    "strategy": "signedSingleColumn",
+    "colXMin": 470,
+    "signedRegex": "^[+\\-]\\s*\\$[\\d,]+\\.\\d{2}$",
+    "positiveTipo": "egreso",
+    "negativeTipo": "ingreso",
+    "exclude": [],
+    "stripInstallmentMarkerRegex": "^\\d{1,2}\\s+DE\\s+\\d{1,2}\\s+"
+  },
+  "totals": {
+    "cargos": "TOTAL CARGOS\\s+\\$?([\\d,]+\\.\\d{2})",
+    "abonos": "TOTAL ABONOS\\s+-?\\$?([\\d,]+\\.\\d{2})",
+    "numMovimientos": null,
+    "saldoAnterior": null,
+    "saldoFinal": null
+  },
+  "skipRows": [],
+  "note": "La tabla 'COMPRAS Y CARGOS DIFERIDOS A MESES' se excluye sola: no tiene monto con signo en la columna x>=470. Régimen 'declared' por TOTAL CARGOS/ABONOS; sin saldos → balance identity no aplica, validar por totales + unknownRows.",
+  "flatHeaderForTotals": false,
+  "_verified": { "cargos": 96632.08, "abonos": 116717.76, "movimientos": 161 }
+}

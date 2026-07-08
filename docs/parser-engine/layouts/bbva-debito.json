@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "bbva-debito",
+  "version": 1,
+  "supports": {
+    "debit": true, "credit": false, "runningBalance": true,
+    "declaredTotals": true, "movementCount": true,
+    "foreignCurrency": true, "multilineConcept": false
+  },
+  "maturity": "curated",
+  "validationCount": 1,
+  "bank": "BBVA",
+  "tipo_cuenta": "debito",
+  "detect": {
+    "keywords": ["BBVA", "Retiros / Cargos (-)", "Depósitos / Abonos (+)"],
+    "keywordsAll": true,
+    "excludeKeywords": []
+  },
+  "date": {
+    "colXMax": 40,
+    "format": "DD_SLASH_MMM",
+    "yearFrom": "period"
+  },
+  "concept": {
+    "xMin": 100,
+    "xMax": 360,
+    "source": "sameRow"
+  },
+  "strategy": "columnBands",
+  "amount": {
+    "strategy": "columnBands",
+    "edge": "right",
+    "bands": [
+      { "xMin": 360, "xMax": 410, "tipo": "egreso" },
+      { "xMin": 410, "xMax": 472, "tipo": "ingreso" }
+    ],
+    "ignoreBeyondX": 472
+  },
+  "totals": {
+    "cargos": "Retiros\\s*\\/\\s*Cargos\\s*\\(-\\)\\s+\\d+\\s+([\\d,]+\\.\\d{2})",
+    "abonos": "Dep[oó]sitos\\s*\\/\\s*Abonos\\s*\\(\\+\\)\\s+\\d+\\s+([\\d,]+\\.\\d{2})",
+    "numMovimientos": null,
+    "saldoAnterior": "Saldo Anterior\\s+([\\d,]+\\.\\d{2})",
+    "saldoFinal": "Saldo Final\\s+([\\d,]+\\.\\d{2})"
+  },
+  "skipRows": [],
+  "flatHeaderForTotals": false,
+  "_verified": { "cargos": 9611.84, "abonos": 9977.08, "movimientos": 23 }
+}
