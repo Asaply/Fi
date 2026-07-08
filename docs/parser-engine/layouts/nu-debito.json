@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "nu-debito",
+  "version": 1,
+  "supports": {
+    "debit": true, "credit": false, "runningBalance": false,
+    "declaredTotals": true, "movementCount": false,
+    "foreignCurrency": true, "multilineConcept": true
+  },
+  "maturity": "curated",
+  "validationCount": 1,
+  "bank": "Nu",
+  "tipo_cuenta": "debito",
+  "detect": {
+    "keywords": ["Nu México Financiera", "Saldo inicial"],
+    "keywordsAll": true,
+    "excludeKeywords": []
+  },
+  "date": {
+    "colXMax": 110,
+    "format": "DD_MMM_YYYY",
+    "yearFrom": "period"
+  },
+  "concept": {
+    "xMin": 120,
+    "xMax": 440,
+    "source": "lookback"
+  },
+  "strategy": "signedSingleColumn",
+  "amount": {
+    "strategy": "signedSingleColumn",
+    "colXMin": 440,
+    "signedRegex": "^[+\\-]\\$\\d",
+    "positiveTipo": "ingreso",
+    "negativeTipo": "egreso",
+    "exclude": ["Cajita"],
+    "skipDetailRegex": "^(Dep[oó]sito SPEI|Transferencia SPEI|Clave de rastreo|Hora:|Al cliente|Del cliente|A la cuenta|De la cuenta|por concepto)",
+    "stripTypeWordRegex": "\\s*(Compra|Dep[oó]sito|Transferencia(?:\\s+electr[oó]nica)?)\\s*$"
+  },
+  "totals": {
+    "cargos": "Gastos\\s*-\\$([\\d,]+\\.\\d{2})",
+    "abonos": "Dep[oó]sitos\\s*\\+\\$([\\d,]+\\.\\d{2})",
+    "numMovimientos": null,
+    "saldoAnterior": "Saldo inicial\\s*\\$([\\d,]+\\.\\d{2})",
+    "saldoFinal": "Saldo al generar este estado de cuenta\\s*\\$([\\d,]+\\.\\d{2})"
+  },
+  "skipRows": [],
+  "skipSections": ["Detalle de movimientos de tus cajitas"],
+  "flatHeaderForTotals": false,
+  "_verified": { "cargos": 12392.26, "abonos": 11690.00, "movimientos": 53 }
+}

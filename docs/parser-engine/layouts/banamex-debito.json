@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "banamex-debito",
+  "version": 1,
+  "supports": {
+    "debit": true, "credit": false, "runningBalance": true,
+    "declaredTotals": true, "movementCount": true,
+    "foreignCurrency": true, "multilineConcept": true
+  },
+  "maturity": "curated",
+  "validationCount": 1,
+  "bank": "Citibanamex",
+  "tipo_cuenta": "debito",
+  "detect": {
+    "keywords": ["Banamex", "Detalle de Operaciones"],
+    "keywordsAll": true,
+    "keywordsRegex": ["RETIROS\\s+DEP[OÓ]SITOS"],
+    "excludeKeywords": []
+  },
+  "date": {
+    "colXMax": 35,
+    "format": "DAY_PLUS_MONTHCELL",
+    "yearFrom": "period",
+    "yearRegex": "del\\s+(20\\d{2})"
+  },
+  "concept": {
+    "xMin": 78,
+    "xMax": 340,
+    "source": "dateRow"
+  },
+  "strategy": "multilineBuffer",
+  "amount": {
+    "strategy": "multilineBuffer",
+    "conceptSource": "dateRow",
+    "edge": "right",
+    "bands": [
+      { "xMin": 340, "xMax": 410, "tipo": "egreso" },
+      { "xMin": 410, "xMax": 500, "tipo": "ingreso" }
+    ],
+    "ignoreBeyondX": 500
+  },
+  "totals": {
+    "cargos": "\\(-\\)\\s*\\d*\\s*Retiros\\/Otros cargos\\s+([\\d,]+\\.\\d{2})",
+    "abonos": "\\(\\+\\)\\s*\\d*\\s*Dep[oó]sitos\\s+([\\d,]+\\.\\d{2})",
+    "numMovimientos": null,
+    "saldoAnterior": "Saldo anterior\\s+(?:En pesos M\\.N\\.\\s+)?([\\d,]+\\.\\d{2})",
+    "saldoFinal": "Saldo al Corte\\s+([\\d,]+\\.\\d{2})"
+  },
+  "skipRows": ["SALDO ANTERIOR"],
+  "flatHeaderForTotals": false,
+  "_verified": { "cargos": 34610.99, "abonos": 12340.00, "movimientos": 35 }
+}

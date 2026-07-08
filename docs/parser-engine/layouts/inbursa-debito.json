@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "inbursa-debito",
+  "version": 1,
+  "supports": {
+    "debit": true, "credit": false, "runningBalance": true,
+    "declaredTotals": true, "movementCount": false,
+    "foreignCurrency": false, "multilineConcept": false
+  },
+  "maturity": "curated",
+  "validationCount": 1,
+  "bank": "Inbursa",
+  "tipo_cuenta": "debito",
+  "detect": {
+    "keywords": ["INBURSA", "DETALLE DE MOVIMIENTOS", "SALDO ANTERIOR"],
+    "keywordsAll": true,
+    "excludeKeywords": []
+  },
+  "date": {
+    "colXMax": 40,
+    "format": "MMM_DD",
+    "yearFrom": "period",
+    "yearRegex": "al\\s+\\d{1,2}\\s+[A-Za-z]{3}\\s+(\\d{4})"
+  },
+  "concept": {
+    "xMin": 90,
+    "xMax": 360,
+    "stripSuffix": "MX",
+    "source": "sameRow"
+  },
+  "strategy": "columnBands",
+  "amount": {
+    "strategy": "columnBands",
+    "edge": "right",
+    "bands": [
+      { "xMin": 360, "xMax": 430, "tipo": "egreso" },
+      { "xMin": 430, "xMax": 500, "tipo": "ingreso" }
+    ],
+    "ignoreBeyondX": 500
+  },
+  "totals": {
+    "cargos": "CARGOS\\s+([\\d,]+\\.\\d{2})",
+    "abonos": "ABONOS\\s+([\\d,]+\\.\\d{2})",
+    "numMovimientos": null,
+    "saldoAnterior": "SALDO ANTERIOR\\s+([\\d,]+\\.\\d{2})",
+    "saldoFinal": "SALDO ACTUAL\\s+([\\d,]+\\.\\d{2})"
+  },
+  "skipRows": ["BALANCE INICIAL"],
+  "flatHeaderForTotals": false,
+  "_verified": { "cargos": 15482.59, "abonos": 9364.31, "movimientos": 40 }
+}

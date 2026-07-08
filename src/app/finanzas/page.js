@@ -408,7 +408,19 @@ export default function FinanzasPage() {
                 const headers = {};
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd, headers });
-                data = await res.json();
+                const raw = await res.text();
+                try {
+                    data = JSON.parse(raw);
+                } catch {
+                    // Non-JSON body = platform-level error (e.g. Vercel function
+                    // timeout returns plain "An error occurred"). Show a useful
+                    // message instead of a raw JSON parse error.
+                    const msg = res.status === 504 || /timed? ?out|An error occurred/i.test(raw)
+                        ? 'El análisis tardó demasiado. Intenta de nuevo o divide el estado de cuenta en periodos más cortos.'
+                        : `No se pudo analizar el archivo (${res.status}).`;
+                    toast.error(msg);
+                    return;
+                }
             }
 
             if (!data.success) {
@@ -490,7 +502,11 @@ export default function FinanzasPage() {
             }
         } catch (err) {
             console.error('[parsePdfFile]', err);
-            toast.error(`Error: ${err.message || 'Error al procesar el archivo PDF.'}`);
+            const m = String(err?.message || '');
+            const friendly = /timeout|Invalid server response|Unexpected token|not valid JSON|An error occurred/i.test(m)
+                ? 'El análisis tardó demasiado o falló. Intenta de nuevo o divide el estado de cuenta en periodos más cortos.'
+                : (m || 'Error al procesar el archivo PDF.');
+            toast.error(friendly);
         } finally {
             setShowPdfPassword(false);
             setPendingPdfFile(null);
