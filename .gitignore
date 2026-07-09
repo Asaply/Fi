@@ -49,3 +49,6 @@ __tests__/fixtures/*
 # Apple IAP secrets / helpers
 apple-certs/APPLE_ROOT_CAS.txt
 *.p8
+
+# Estados de cuenta reales (PII) — no versionar
+Estados de cuenta statement/
