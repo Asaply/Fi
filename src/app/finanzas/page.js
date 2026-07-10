@@ -1263,19 +1263,19 @@ export default function FinanzasPage() {
 
                     {/* DEUDA HERO */}
                     <div className="fin-hero" style={{ position: 'relative', background: 'radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent)', border: '1px solid var(--bg-border)', borderRadius: '16px', paddingBottom: '16px' }}>
-                        <p className="fin-hero-label" style={{ letterSpacing: '1.2px', opacity: 0.6, fontWeight: 500 }}>DEUDA REVOLVENTE</p>
+                        <p className="fin-hero-label" style={{ letterSpacing: '1.2px', opacity: 0.6, fontWeight: 500 }}>DEUDA REVOLVENTE<InfoTip title="Deuda revolvente" text="Lo que debes a la tarjeta y que genera intereses si no lo liquidas. Revolvente = se renueva mes a mes: pagas parte, el resto sigue cobrando interés. No incluye tus MSI (esos van aparte, sin interés)." color="rgba(255,255,255,0.55)" /></p>
                         <div className="fin-hero-amount" style={{ color: deudaActual === 0 ? '#34d399' : '#fff' }}>
                             <span className="fin-hero-int">{heroDeudaInt}</span>
                             <span className="fin-hero-dec">.{heroDeudaDec}</span>
                         </div>
                         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '10px' }}>
                             <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Crédito disponible</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Crédito disponible<InfoTip title="Crédito disponible" text="Lo que aún puedes gastar: tu línea total menos lo que ya debes. Si llega a $0, la tarjeta se rechaza hasta que pagues." color="rgba(255,255,255,0.45)" /></div>
                                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#34d399' }}>{formatCurrency(liquidezRestante)}</div>
                             </div>
                             {deudaComprometidaProxMes > 0 && (
                                 <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '16px' }}>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Comprometido próx. mes</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Comprometido próx. mes<InfoTip title="Comprometido próximo mes" text="Dinero que ya debes el mes que viene aunque no gastes nada más: las mensualidades de tus MSI + tus suscripciones recurrentes. Réstalo mentalmente de tu presupuesto." color="rgba(255,255,255,0.45)" /></div>
                                     <div style={{ fontSize: '14px', fontWeight: 700, color: '#a78bfa' }}>{formatCurrency(deudaComprometidaProxMes)}</div>
                                 </div>
                             )}
@@ -1320,7 +1320,7 @@ export default function FinanzasPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                             <div style={{ fontSize: '22px', fontWeight: 800, color: utilizationColor, letterSpacing: '-0.5px', lineHeight: 1 }}>
-                                {Math.round(creditUtilizacion)}%
+                                {Math.round(creditUtilizacion)}%<InfoTip title="Utilización" text="Qué porcentaje de tu línea de crédito estás usando. Debajo de 30% es saludable y cuida tu score de buró; arriba de 70% te marca como sobreapalancado. Se calcula: deuda ÷ límite." size={15} />
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '200px', lineHeight: 1.3 }}>
                                 {creditUtilizacion >= 70 ? 'Ya usaste más de la mitad de tu línea.' :
@@ -2063,7 +2063,7 @@ export default function FinanzasPage() {
                         <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.pagoMinimo || ''} onChange={e => setCreditConfig(p => ({ ...p, pagoMinimo: e.target.value }))} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago para no generar intereses</label>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago para no generar intereses<InfoTip title="Pago para no generar intereses" text="El monto exacto que debes pagar antes de la fecha límite para que la tarjeta NO te cobre intereses. Viene impreso en tu estado de cuenta. Pagar menos que esto activa intereses sobre todo el saldo." /></label>
                         <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.noInterestPayment} onChange={e => setCreditConfig(p => ({ ...p, noInterestPayment: e.target.value }))} />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
