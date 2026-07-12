@@ -706,9 +706,20 @@
     display: flex;
     gap: 8px;
     margin-top: 2px;
+    min-width: 0;
 }
 
 .import-row-controls .select-filter {
-    flex: 1;
+    /* WebKit (iOS) gives a <select> an intrinsic width based on its widest
+       <option>, and won't shrink below it with flex:1/min-width:0 alone — that
+       overflowed the modal sideways. `flex: 1 1 0` + `width: 0` forces the
+       select to be sized purely by flex-grow, so both columns split the row
+       evenly and never push past the container. */
+    flex: 1 1 0;
+    width: 0;
     min-width: 0;
+    max-width: 100%;
+    padding: 6px 8px;
+    font-size: 12px;
+    text-overflow: ellipsis;
 }
