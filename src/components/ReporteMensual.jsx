@@ -19,6 +19,13 @@ const formatMXNShort = (n) => {
     return `$${n.toFixed(0)}`;
 };
 
+// Whole-peso currency for the narrow stat cards (no cents → fits 3-up on mobile
+// without truncating). Big amounts collapse to $K/$M so they never overflow.
+const formatMXNStat = (n) => {
+    if (Math.abs(n) >= 100_000) return formatMXNShort(n);
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+};
+
 // Percent change vs a previous value; null when there's no comparable base.
 const pctChange = (cur, prev) => {
     if (!prev || prev === 0) return null;
@@ -128,9 +135,15 @@ export default function ReporteMensual({ startDate, endDate }) {
         );
     }
 
-    const idx = selectedIdx ?? chartData.length - 1;
-    const sel = chartData[idx] || chartData[chartData.length - 1];
-    const prev = idx > 0 ? chartData[idx - 1] : null;
+    // selectedIdx can be a month index or the string 'all' (global view).
+    const isAll = selectedIdx === 'all';
+    const idx = isAll ? chartData.length - 1 : (selectedIdx ?? chartData.length - 1);
+
+    // In 'all' mode the "selected" figures are the whole-period aggregates.
+    const sel = isAll
+        ? { ingresos: totals.ingresos, egresos: totals.egresos, mesLargo: 'todo el periodo' }
+        : (chartData[idx] || chartData[chartData.length - 1]);
+    const prev = !isAll && idx > 0 ? chartData[idx - 1] : null;
     const selBalance = sel.ingresos - sel.egresos;
 
     const balPct = prev ? pctChange(selBalance, prev.ingresos - prev.egresos) : null;
@@ -159,10 +172,11 @@ export default function ReporteMensual({ startDate, endDate }) {
                 <h2 className="rm-eyebrow">Reporte Mensual</h2>
                 <select
                     className="rm-select"
-                    value={idx}
-                    onChange={(e) => setSelectedIdx(Number(e.target.value))}
-                    aria-label="Seleccionar mes"
+                    value={isAll ? 'all' : idx}
+                    onChange={(e) => setSelectedIdx(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                    aria-label="Seleccionar periodo"
                 >
+                    <option value="all">Todo</option>
                     {chartData.map((m, i) => (
                         <option key={i} value={i}>{m.mesLargo} {m.anio}</option>
                     ))}
@@ -222,10 +236,10 @@ export default function ReporteMensual({ startDate, endDate }) {
                             }}
                         />
                         <Bar dataKey="ingresos" fill="#22C55E" radius={[8, 8, 8, 8]} maxBarSize={20} name="ingresos">
-                            {chartData.map((_, i) => <Cell key={i} opacity={i === idx ? 1 : 0.5} />)}
+                            {chartData.map((_, i) => <Cell key={i} opacity={isAll || i === idx ? 1 : 0.5} />)}
                         </Bar>
                         <Bar dataKey="egresos" fill="#EF4444" radius={[8, 8, 8, 8]} maxBarSize={20} name="egresos">
-                            {chartData.map((_, i) => <Cell key={i} opacity={i === idx ? 1 : 0.5} />)}
+                            {chartData.map((_, i) => <Cell key={i} opacity={isAll || i === idx ? 1 : 0.5} />)}
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>
@@ -236,13 +250,13 @@ export default function ReporteMensual({ startDate, endDate }) {
                 <div className="rm-stat">
                     <span className="rm-stat-label">Ingresos</span>
                     <div className="rm-stat-icon" style={{ background: 'rgba(34,197,94,0.12)', color: '#22C55E' }}><TrendingUp size={18} /></div>
-                    <span className="rm-stat-val" style={{ color: '#22C55E' }}>{formatMXN(sel.ingresos)}</span>
+                    <span className="rm-stat-val" style={{ color: '#22C55E' }}>{formatMXNStat(sel.ingresos)}</span>
                     <Badge pct={ingPct} cls="rm-stat-badge" />
                 </div>
                 <div className="rm-stat">
                     <span className="rm-stat-label">Egresos</span>
                     <div className="rm-stat-icon" style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}><TrendingDown size={18} /></div>
-                    <span className="rm-stat-val" style={{ color: '#EF4444' }}>{formatMXN(sel.egresos)}</span>
+                    <span className="rm-stat-val" style={{ color: '#EF4444' }}>{formatMXNStat(sel.egresos)}</span>
                     {/* For expenses, a drop is good → invert badge color */}
                     {egrPct !== null && (
                         <div className={`rm-stat-badge ${egrPct <= 0 ? 'up' : 'down'}`}>
@@ -254,7 +268,7 @@ export default function ReporteMensual({ startDate, endDate }) {
                 <div className="rm-stat">
                     <span className="rm-stat-label">Balance</span>
                     <div className="rm-stat-icon" style={{ background: 'rgba(255,135,0,0.12)', color: 'var(--accent-color, #FF8700)' }}><Wallet size={18} /></div>
-                    <span className="rm-stat-val" style={{ color: selBalance >= 0 ? 'var(--accent-color, #FF8700)' : '#EF4444' }}>{formatMXN(selBalance)}</span>
+                    <span className="rm-stat-val" style={{ color: selBalance >= 0 ? 'var(--accent-color, #FF8700)' : '#EF4444' }}>{formatMXNStat(selBalance)}</span>
                     <Badge pct={balPct} cls="rm-stat-badge" />
                 </div>
             </div>
