@@ -22,7 +22,18 @@ export async function extractItems(buffer) {
     // pdfjs rejects Node Buffers specifically (even though Buffer extends
     // Uint8Array), so always hand it a plain Uint8Array view.
     const data = new Uint8Array(buffer.buffer ? buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) : buffer);
-    const doc = await pdfjs.getDocument({ data, useSystemFonts: true, isEvalSupported: false }).promise;
+    // Serverless-safe options: text extraction needs no font rendering, so DON'T
+    // touch system fonts (fontconfig is absent in Vercel/Lambda → getDocument can
+    // throw or hang) and disable the worker/eval. This keeps extraction pure and
+    // deterministic in the Node runtime.
+    const doc = await pdfjs.getDocument({
+        data,
+        useSystemFonts: false,
+        disableFontFace: true,
+        isEvalSupported: false,
+        useWorkerFetch: false,
+        verbosity: 0,
+    }).promise;
 
     const pages = [];
     let fullText = '';

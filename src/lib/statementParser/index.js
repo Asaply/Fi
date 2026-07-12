@@ -67,22 +67,36 @@ export async function tryDeterministicParse(buffer) {
     let extracted;
     try {
         extracted = await extractItems(buffer);
-    } catch {
-        return null; // encrypted / corrupt / image-only → let AI handle it
+    } catch (e) {
+        // encrypted / corrupt / image-only → let AI handle it. Log so a
+        // serverless-only pdfjs failure (fonts/worker) is visible in Vercel logs
+        // instead of silently degrading every PDF to the slow Vision path.
+        console.error('[detParse] extractItems threw:', e?.message || e);
+        return null;
     }
     const { fullText, pages } = extracted;
-    if (!textIsUsable(fullText)) return null;
+    if (!textIsUsable(fullText)) {
+        console.warn('[detParse] text not usable (scanned/garbled) len=%d → AI', fullText?.length || 0);
+        return null;
+    }
 
     const bank = BANKS.find(b => b.match(fullText));
-    if (!bank) return null;
+    if (!bank) {
+        console.warn('[detParse] no bank matched (text OK) → AI');
+        return null;
+    }
 
     try {
         const parsed = bank.parse(pages, fullText);
-        if (!parsed || !Array.isArray(parsed.movimientos) || parsed.movimientos.length === 0) return null;
+        if (!parsed || !Array.isArray(parsed.movimientos) || parsed.movimientos.length === 0) {
+            console.warn('[detParse] %s parsed 0 movements → AI', bank.id);
+            return null;
+        }
         parsed._engine = 'deterministic';
         parsed._bank = bank.id;
         return parsed;
-    } catch {
+    } catch (e) {
+        console.error('[detParse] %s parser threw:', bank.id, e?.message || e);
         return null;
     }
 }
