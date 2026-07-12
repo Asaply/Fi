@@ -460,7 +460,7 @@ export default function FinanzasPage() {
                     paymentDate: ci.dia_pago || creditConfig.paymentDate || '',
                     pagoMinimo: ci.pago_minimo || '',
                     interesesPeriodo: ci.intereses_periodo || 0,
-                    deudaAlCorte: data.saldo_final || 0,
+                    deudaAlCorte: ci.saldo_al_corte || data.saldo_final || 0,
                     mesesPagoMinimo: ci.meses_pago_minimo || 0,
                     totalInteresesMinimo: ci.total_intereses_minimo || 0,
                     cat: ci.cat || 0,
