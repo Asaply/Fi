@@ -492,9 +492,18 @@ export async function POST(request) {
             tipo_cuenta: tipoCuenta,
             periodo: parsed.periodo || '',
             saldo_anterior: Number(parsed.saldo_anterior) || 0,
-            saldo_final: Number(parsed.saldo_final) || 0,
+            // For a credit card, the meaningful "balance" is the debt at cutoff
+            // (línea − disponible), carried in credito_info.saldo_al_corte. Emit it
+            // as saldo_final too so clients that read saldo_final for the debt
+            // (older app builds) show the real figure. Reconciliation already ran
+            // on the parsed object (saldo_final = 0), so this doesn't affect it.
+            saldo_final: (tipoCuenta === 'credito' && Number(ci.saldo_al_corte) > 0)
+                ? Number(ci.saldo_al_corte)
+                : Number(parsed.saldo_final) || 0,
             credito_info: tipoCuenta === 'credito' ? {
                 limite_credito: Number(ci.limite_credito) || 0,
+                credito_disponible: Number(ci.credito_disponible) || 0,
+                saldo_al_corte: Number(ci.saldo_al_corte) || 0,
                 pago_minimo: Number(ci.pago_minimo) || 0,
                 pago_sin_intereses: Number(ci.pago_sin_intereses) || 0,
                 dia_corte: Number(ci.dia_corte) || 0,

@@ -51,15 +51,43 @@ export function parseBbvaCredito(pages, fullText) {
     const mAb = fullText.match(/TOTAL ABONOS\s+-?\$?([\d,]+\.\d{2})/i);
     const mPer = fullText.match(/Periodo:\s*([\d]{1,2}-[a-z]{3}-\d{4}\s+al\s+[\d]{1,2}-[a-z]{3}-\d{4})/i);
 
+    // Statement header fields (collapse whitespace: glyphs can be spaced out).
+    const flat = fullText.replace(/\s+/g, ' ');
+    const grab = (re) => { const m = flat.match(re); return m ? num(m[1]) : 0; };
+    const limiteCredito     = grab(/L[íi]mite de cr[ée]dito:\s*\$?([\d,]+\.\d{2})/i);
+    const creditoDisponible = grab(/Cr[ée]dito disponible:\s*\$?([\d,]+\.\d{2})/i);
+    const pagoSinIntereses  = grab(/Pago para no generar intereses:\s*\d*\s*\$?([\d,]+\.\d{2})/i);
+    const pagoMinimo        = grab(/Pago m[íi]nimo:\s*\d*\s*\$?([\d,]+\.\d{2})/i);
+    const cat               = grab(/CAT[^\d]*([\d]+\.\d{1,2})\s*%/i);
+    const mCorte = flat.match(/Fecha de corte:\s*(\d{1,2})-[a-z]{3}-\d{4}/i);
+    const mPago  = flat.match(/l[íi]mite de pago:[^\n]*?(\d{1,2})-[a-z]{3}-\d{4}/i);
+    // On a credit card the real debt at cutoff = credit line − available credit.
+    const saldoAlCorte = (limiteCredito > 0 && creditoDisponible > 0)
+        ? Math.round((limiteCredito - creditoDisponible) * 100) / 100
+        : 0;
+
     return {
         banco: 'BBVA',
         tipo_cuenta: 'credito',
         periodo: mPer ? mPer[1].trim() : '',
+        // Keep saldos at 0: revolving cards don't satisfy the balance identity
+        // (saldoAnt + abonos − cargos == saldoFin), so setting them would break
+        // reconciliation. The real debt is carried in credito_info.saldo_al_corte.
         saldo_anterior: 0,
         saldo_final: 0,
         total_cargos: mCa ? num(mCa[1]) : 0,
         total_abonos: mAb ? num(mAb[1]) : 0,
         num_movimientos: 0,
+        credito_info: {
+            limite_credito: limiteCredito,
+            credito_disponible: creditoDisponible,
+            saldo_al_corte: saldoAlCorte,
+            pago_sin_intereses: pagoSinIntereses,
+            pago_minimo: pagoMinimo,
+            dia_corte: mCorte ? Number(mCorte[1]) : 0,
+            dia_pago: mPago ? Number(mPago[1]) : 0,
+            cat,
+        },
         movimientos,
     };
 }
