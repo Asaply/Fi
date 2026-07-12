@@ -151,7 +151,13 @@
 .cat-row-chev { color: var(--text-secondary); flex-shrink: 0; }
 
 @media (max-width: 768px) {
-    .cat-donut-row { grid-template-columns: 120px 1fr; gap: 14px; }
-    .cat-donut { width: 120px; height: 120px; }
+    /* Stack: donut on top, full-width legend below (no name truncation) */
+    .cat-donut-row { grid-template-columns: 1fr; justify-items: center; gap: 18px; }
+    .cat-donut { width: 150px; height: 150px; }
+    .cat-legend { width: 100%; gap: 10px; }
+    .cat-legend-row { gap: 12px; }
+    .cat-legend-name { font-size: 14px; }
+    .cat-legend-amt { font-size: 12px; }
+    .cat-legend-pct { font-size: 15px; min-width: 52px; }
     .cat-row-amt { font-size: 13px; }
 }
