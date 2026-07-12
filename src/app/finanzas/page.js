@@ -2310,7 +2310,7 @@ export default function FinanzasPage() {
                             </div>
                         </div>
 
-                        <div style={{ maxHeight: '50vh', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                        <div style={{ maxHeight: '50vh', overflowY: 'auto', overflowX: 'hidden', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                             <div className="import-rows-list">
                                 {pendingRows.map(r => (
                                     <div key={r._idx} className="import-row-card">
@@ -2322,7 +2322,6 @@ export default function FinanzasPage() {
                                         <div className="import-row-controls">
                                             <select
                                                 className="select-filter"
-                                                style={{ fontSize: '12px', padding: '3px 6px' }}
                                                 value={r.type}
                                                 onChange={e => updatePendingRow(r._idx, 'type', e.target.value)}
                                             >
@@ -2343,7 +2342,6 @@ export default function FinanzasPage() {
                                             </select>
                                             <select
                                                 className="select-filter"
-                                                style={{ fontSize: '12px', padding: '3px 6px' }}
                                                 value={r.categoria || 'Otros'}
                                                 onChange={e => updatePendingRow(r._idx, 'categoria', e.target.value)}
                                             >
