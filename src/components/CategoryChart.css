@@ -48,13 +48,18 @@
     padding: 24px 0;
 }
 
-/* Donut + legend */
+/* Donut + legend — mobile-first: stacked by default (donut on top, full-width
+   legend below) so category names never truncate. Side-by-side only on wide
+   screens (see min-width:769px query). Base must be the mobile layout because
+   the iOS webview media-query for max-width was not reliably applying. */
 .cat-donut-row {
     display: grid;
-    grid-template-columns: 150px 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 18px;
     align-items: center;
 }
+.cat-donut-row .cat-legend { width: 100%; gap: 10px; }
 .cat-donut {
     position: relative;
     width: 150px;
@@ -150,14 +155,19 @@
 .cat-row-amt { font-size: 14px; font-weight: 700; color: var(--text-primary); flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .cat-row-chev { color: var(--text-secondary); flex-shrink: 0; }
 
-@media (max-width: 768px) {
-    /* Stack: donut on top, full-width legend below (no name truncation) */
-    .cat-donut-row { grid-template-columns: 1fr; justify-items: center; gap: 18px; }
-    .cat-donut { width: 150px; height: 150px; }
-    .cat-legend { width: 100%; gap: 10px; }
-    .cat-legend-row { gap: 12px; }
-    .cat-legend-name { font-size: 14px; }
-    .cat-legend-amt { font-size: 12px; }
-    .cat-legend-pct { font-size: 15px; min-width: 52px; }
-    .cat-row-amt { font-size: 13px; }
+/* Mobile legend sizing (applies at the default, stacked layout) */
+.cat-legend-row { gap: 12px; }
+.cat-legend-name { font-size: 14px; }
+.cat-legend-pct { font-size: 15px; min-width: 52px; }
+
+/* Wide screens (tablet/desktop): donut and legend side by side */
+@media (min-width: 769px) {
+    .cat-donut-row {
+        grid-template-columns: 150px 1fr;
+        justify-items: stretch;
+        gap: 20px;
+    }
+    .cat-donut-row .cat-legend { width: auto; gap: 8px; }
+    .cat-legend-name { font-size: 13px; }
+    .cat-legend-pct { font-size: 14px; min-width: 46px; }
 }
