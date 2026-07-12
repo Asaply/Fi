@@ -65,6 +65,10 @@ function LoginPageInner() {
     const [mfaCode, setMfaCode]         = useState('');
     const [visible, setVisible]         = useState(false);
     const [remember, setRemember]       = useState(true);
+    // True until we've checked for a persisted session. While true we show a
+    // blank splash (not the login form) so a "remembered" user goes straight to
+    // the app with no login flash.
+    const [checkingSession, setCheckingSession] = useState(true);
     const router = useRouter();
     const searchParams = useSearchParams();
     const reason = searchParams.get('reason');
@@ -83,19 +87,27 @@ function LoginPageInner() {
     // Auto-forward if a session already exists (session persists across app
     // launches via Capacitor Preferences). Respects the "Recuérdame" choice:
     // if the user opted out, sign them out on next launch.
+    //
+    // Decision is made from getSession() alone — it reads from local storage and
+    // returns instantly, and session.user.user_metadata already carries the
+    // onboarded/access flags. We deliberately do NOT call getUser() here (network
+    // round-trip, ~2s) so a remembered user lands in the app immediately with no
+    // login flash. The destination page re-validates the token.
     useEffect(() => {
         let cancelled = false;
         (async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (cancelled || !session) return;
+            if (cancelled) return;
+            if (!session) { setCheckingSession(false); return; }
             const remembered = await getRemember();
-            if (!remembered) { await supabase.auth.signOut(); return; }
-            const { data: { user } } = await supabase.auth.getUser();
-            if (cancelled || !user) return;
-            const m = user.user_metadata || {};
+            if (cancelled) return;
+            if (!remembered) { await supabase.auth.signOut(); setCheckingSession(false); return; }
+            const m = session.user?.user_metadata || {};
             if (!m.onboarded) router.replace('/onboarding');
             else if (!hasAccess(m)) router.replace('/paywall');
             else router.replace('/finanzas');
+            // Keep checkingSession true: we're navigating away, so never reveal
+            // the login form during the redirect.
         })();
         return () => { cancelled = true; };
     }, []);
@@ -342,6 +354,13 @@ function LoginPageInner() {
             setError(`Error Google: ${e.message}`);
             setIsLoading(false);
         }
+    }
+
+    // While checking for a persisted session, show a blank dark splash instead of
+    // the login form. A remembered user is redirected before this ever unmounts,
+    // so they never see the login screen.
+    if (checkingSession) {
+        return <div style={{ position: 'fixed', inset: 0, background: '#000' }} />;
     }
 
     return (
