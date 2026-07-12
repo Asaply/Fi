@@ -1,12 +1,14 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip,
-    ResponsiveContainer, CartesianGrid, Legend,
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
 } from 'recharts';
+import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import './ReporteMensual.css';
 
 const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_LARGOS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const formatMXN = (n) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
@@ -17,10 +19,16 @@ const formatMXNShort = (n) => {
     return `$${n.toFixed(0)}`;
 };
 
+// Percent change vs a previous value; null when there's no comparable base.
+const pctChange = (cur, prev) => {
+    if (!prev || prev === 0) return null;
+    return ((cur - prev) / Math.abs(prev)) * 100;
+};
+
 export default function ReporteMensual({ startDate, endDate }) {
     const [chartData, setChartData] = useState([]);
-    const [totales, setTotales] = useState({ ingresos: 0, egresos: 0 });
     const [loading, setLoading] = useState(true);
+    const [selectedIdx, setSelectedIdx] = useState(null);
 
     useEffect(() => {
         const load = async () => {
@@ -52,7 +60,6 @@ export default function ReporteMensual({ startDate, endDate }) {
             const txRows = txRes.data || [];
             const tradingRows = tradingRes.data || [];
 
-            // Build map YYYY-MM → { ingresos, egresos }
             const monthMap = {};
             const ensure = (ym) => {
                 if (!monthMap[ym]) monthMap[ym] = { ingresos: 0, egresos: 0 };
@@ -76,7 +83,6 @@ export default function ReporteMensual({ startDate, endDate }) {
                 ensure(ym).ingresos += pnl;
             }
 
-            // Generate ordered month list from startDate to endDate
             const result = [];
             const cur = new Date(new Date(from).getFullYear(), new Date(from).getMonth(), 1);
             const endD = new Date(new Date(to).getFullYear(), new Date(to).getMonth(), 1);
@@ -84,107 +90,174 @@ export default function ReporteMensual({ startDate, endDate }) {
                 const ym = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`;
                 result.push({
                     mes: MESES_CORTOS[cur.getMonth()],
+                    mesLargo: MESES_LARGOS[cur.getMonth()],
+                    anio: cur.getFullYear(),
                     ingresos: monthMap[ym]?.ingresos || 0,
                     egresos: monthMap[ym]?.egresos || 0,
                 });
                 cur.setMonth(cur.getMonth() + 1);
             }
 
-            const totalIngresos = result.reduce((s, m) => s + m.ingresos, 0);
-            const totalEgresos  = result.reduce((s, m) => s + m.egresos, 0);
-
             setChartData(result);
-            setTotales({ ingresos: totalIngresos, egresos: totalEgresos });
+            setSelectedIdx(result.length ? result.length - 1 : null);
             } catch (_) {}
             setLoading(false);
         };
         load();
     }, [startDate, endDate]);
 
+    const totals = useMemo(() => {
+        const ingresos = chartData.reduce((s, m) => s + m.ingresos, 0);
+        const egresos = chartData.reduce((s, m) => s + m.egresos, 0);
+        return { ingresos, egresos, balance: ingresos - egresos };
+    }, [chartData]);
+
+    if (loading) {
+        return (
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <p className="rm-empty">Cargando...</p>
+            </div>
+        );
+    }
+    if (!chartData.length) {
+        return (
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h2 className="rm-eyebrow">Reporte Mensual</h2>
+                <p className="rm-empty">Sin datos en este período</p>
+            </div>
+        );
+    }
+
+    const idx = selectedIdx ?? chartData.length - 1;
+    const sel = chartData[idx] || chartData[chartData.length - 1];
+    const prev = idx > 0 ? chartData[idx - 1] : null;
+    const selBalance = sel.ingresos - sel.egresos;
+
+    const balPct = prev ? pctChange(selBalance, prev.ingresos - prev.egresos) : null;
+    const ingPct = prev ? pctChange(sel.ingresos, prev.ingresos) : null;
+    const egrPct = prev ? pctChange(sel.egresos, prev.egresos) : null;
+    const prevLabel = prev ? `${prev.mes.toLowerCase()} ${prev.anio}` : '';
+
+    const heroInt = Math.trunc(Math.abs(selBalance)).toLocaleString('es-MX');
+    const heroDec = (Math.abs(selBalance) % 1).toFixed(2).slice(1);
+
+    const Badge = ({ pct, cls = 'rm-hero-badge' }) => {
+        if (pct === null) return null;
+        const up = pct >= 0;
+        return (
+            <div className={`${cls} ${up ? 'up' : 'down'}`}>
+                {up ? <ArrowUpRight size={cls === 'rm-hero-badge' ? 15 : 12} /> : <ArrowDownRight size={cls === 'rm-hero-badge' ? 15 : 12} />}
+                {Math.abs(pct).toFixed(0)}% <span>vs {prevLabel}</span>
+            </div>
+        );
+    };
+
     return (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
-                    Reporte Mensual
-                </h2>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* Header: eyebrow + month selector */}
+            <div className="rm-head">
+                <h2 className="rm-eyebrow">Reporte Mensual</h2>
+                <select
+                    className="rm-select"
+                    value={idx}
+                    onChange={(e) => setSelectedIdx(Number(e.target.value))}
+                    aria-label="Seleccionar mes"
+                >
+                    {chartData.map((m, i) => (
+                        <option key={i} value={i}>{m.mesLargo} {m.anio}</option>
+                    ))}
+                </select>
             </div>
 
-            {loading ? (
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando...</p>
-            ) : chartData.length === 0 ? (
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 0' }}>
-                    Sin datos en este período
-                </p>
-            ) : (
-                <>
-                    {/* Bar chart */}
-                    <div style={{ height: '220px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} barCategoryGap="30%" barGap={3}>
-                                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis
-                                    dataKey="mes"
-                                    tick={{ fill: '#71717a', fontSize: 12 }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <YAxis
-                                    tickFormatter={formatMXNShort}
-                                    tick={{ fill: '#71717a', fontSize: 11 }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                    width={52}
-                                />
-                                <Tooltip
-                                    content={({ active, payload, label }) => {
-                                        if (!active || !payload?.length) return null;
-                                        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-                                        return (
-                                            <div style={{ background: dark ? '#1c1c1e' : '#fff', border: `1px solid ${dark ? '#333' : '#e5e5e5'}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                                                {label && <p style={{ color: dark ? '#999' : '#666', margin: '0 0 4px', fontSize: '11px' }}>{label}</p>}
-                                                {payload.map((p, i) => (
-                                                    <p key={i} style={{ color: p.color || (dark ? '#fff' : '#111'), margin: 0, fontSize: '12px', fontWeight: 500 }}>
-                                                        {p.name === 'ingresos' ? 'Ingresos' : 'Egresos'}: {formatMXN(p.value)}
-                                                    </p>
-                                                ))}
-                                            </div>
-                                        );
-                                    }}
-                                    cursor={{ fill: 'transparent' }}
-                                />
-                                <Bar dataKey="ingresos" fill="#22C55E" radius={[4, 4, 0, 0]} name="ingresos" />
-                                <Bar dataKey="egresos"  fill="#EF4444" radius={[4, 4, 0, 0]} name="egresos" />
-                            </BarChart>
-                        </ResponsiveContainer>
+            {/* Hero: selected month's net balance */}
+            <div className="rm-hero">
+                <div className="rm-hero-main">
+                    <div className={`rm-hero-amount${selBalance < 0 ? ' negative' : ''}`}>
+                        <span className="rm-hero-int">{selBalance < 0 ? '-$' : '$'}{heroInt}</span>
+                        <span className="rm-hero-dec">{heroDec}</span>
                     </div>
+                    <p className="rm-hero-label">Balance neto de {sel.mesLargo.toLowerCase()}</p>
+                    <Badge pct={balPct} />
+                </div>
+                <div className="rm-hero-icon"><Wallet size={26} /></div>
+            </div>
 
-                    {/* Totals summary */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--bg-border)', paddingTop: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E', flexShrink: 0 }} />
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Ingresos totales</span>
-                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#22C55E', fontVariantNumeric: 'tabular-nums' }}>
-                                {formatMXN(totales.ingresos)}
-                            </span>
+            {/* Legend */}
+            <div className="rm-legend">
+                <span className="rm-legend-item"><span className="rm-legend-dot" style={{ background: '#22C55E' }} /> Ingresos</span>
+                <span className="rm-legend-item"><span className="rm-legend-dot" style={{ background: '#EF4444' }} /> Egresos</span>
+            </div>
+
+            {/* Fat rounded bars */}
+            <div className="rm-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} barCategoryGap="28%" barGap={4} onClick={(s) => { if (s && s.activeTooltipIndex != null) setSelectedIdx(s.activeTooltipIndex); }}>
+                        <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="mes" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={formatMXNShort} tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={46} />
+                        <Tooltip
+                            cursor={{ fill: 'rgba(255,255,255,0.04)', radius: 8 }}
+                            content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null;
+                                const d = payload[0].payload;
+                                const bal = d.ingresos - d.egresos;
+                                return (
+                                    <div className="rm-tip">
+                                        <p className="rm-tip-title">{d.mesLargo} {d.anio}</p>
+                                        <div className="rm-tip-row">
+                                            <span className="lbl"><span className="rm-legend-dot" style={{ background: '#22C55E' }} /> Ingresos</span>
+                                            <span className="val">{formatMXN(d.ingresos)}</span>
+                                        </div>
+                                        <div className="rm-tip-row">
+                                            <span className="lbl"><span className="rm-legend-dot" style={{ background: '#EF4444' }} /> Egresos</span>
+                                            <span className="val">{formatMXN(d.egresos)}</span>
+                                        </div>
+                                        <div className="rm-tip-div" />
+                                        <div className="rm-tip-row">
+                                            <span className="lbl">Balance</span>
+                                            <span className="val" style={{ color: bal >= 0 ? '#22C55E' : '#EF4444' }}>{formatMXN(bal)}</span>
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                        />
+                        <Bar dataKey="ingresos" fill="#22C55E" radius={[8, 8, 8, 8]} maxBarSize={20} name="ingresos">
+                            {chartData.map((_, i) => <Cell key={i} opacity={i === idx ? 1 : 0.5} />)}
+                        </Bar>
+                        <Bar dataKey="egresos" fill="#EF4444" radius={[8, 8, 8, 8]} maxBarSize={20} name="egresos">
+                            {chartData.map((_, i) => <Cell key={i} opacity={i === idx ? 1 : 0.5} />)}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+
+            {/* Stat cards for the selected month */}
+            <div className="rm-stats">
+                <div className="rm-stat">
+                    <span className="rm-stat-label">Ingresos</span>
+                    <div className="rm-stat-icon" style={{ background: 'rgba(34,197,94,0.12)', color: '#22C55E' }}><TrendingUp size={18} /></div>
+                    <span className="rm-stat-val" style={{ color: '#22C55E' }}>{formatMXN(sel.ingresos)}</span>
+                    <Badge pct={ingPct} cls="rm-stat-badge" />
+                </div>
+                <div className="rm-stat">
+                    <span className="rm-stat-label">Egresos</span>
+                    <div className="rm-stat-icon" style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}><TrendingDown size={18} /></div>
+                    <span className="rm-stat-val" style={{ color: '#EF4444' }}>{formatMXN(sel.egresos)}</span>
+                    {/* For expenses, a drop is good → invert badge color */}
+                    {egrPct !== null && (
+                        <div className={`rm-stat-badge ${egrPct <= 0 ? 'up' : 'down'}`}>
+                            {egrPct <= 0 ? <ArrowDownRight size={12} /> : <ArrowUpRight size={12} />}
+                            {Math.abs(egrPct).toFixed(0)}% <span>vs {prevLabel}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Egresos totales</span>
-                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#EF4444', fontVariantNumeric: 'tabular-nums' }}>
-                                {formatMXN(totales.egresos)}
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '4px', borderTop: '1px solid var(--bg-border-subtle)' }}>
-                            <div style={{ width: '8px', height: '8px', flexShrink: 0 }} />
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Balance neto</span>
-                            <span style={{ fontSize: '14px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: totales.ingresos - totales.egresos >= 0 ? '#22C55E' : '#EF4444' }}>
-                                {formatMXN(totales.ingresos - totales.egresos)}
-                            </span>
-                        </div>
-                    </div>
-                </>
-            )}
+                    )}
+                </div>
+                <div className="rm-stat">
+                    <span className="rm-stat-label">Balance</span>
+                    <div className="rm-stat-icon" style={{ background: 'rgba(255,135,0,0.12)', color: 'var(--accent-color, #FF8700)' }}><Wallet size={18} /></div>
+                    <span className="rm-stat-val" style={{ color: selBalance >= 0 ? 'var(--accent-color, #FF8700)' : '#EF4444' }}>{formatMXN(selBalance)}</span>
+                    <Badge pct={balPct} cls="rm-stat-badge" />
+                </div>
+            </div>
         </div>
     );
 }
