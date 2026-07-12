@@ -282,6 +282,11 @@ button {
   overflow-x: hidden;
   background-color: transparent;
   padding-bottom: 64px;
+  /* Fade content out as it scrolls up under the transparent topbar, instead of
+     a hard cut at the top edge — gives the header continuity. */
+  --content-fade: 20px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--content-fade), #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--content-fade), #000 100%);
 }
 
 .page-container {
@@ -899,6 +904,7 @@ button {
     order: 2;
     padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
     overscroll-behavior-y: contain;
+    --content-fade: 28px;
   }
 
   .page-container {
