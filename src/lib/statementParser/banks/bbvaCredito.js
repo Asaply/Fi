@@ -67,7 +67,16 @@ export function parseBbvaCredito(pages, fullText) {
 
     const mCa = fullText.match(/TOTAL CARGOS\s+\$?([\d,]+\.\d{2})/i);
     const mAb = fullText.match(/TOTAL ABONOS\s+-?\$?([\d,]+\.\d{2})/i);
+    const mComis = fullText.match(/Monto de comisiones\s+\+?\s*\$?([\d,]+\.\d{2})/i);
     const mPer = fullText.match(/Periodo:\s*([\d]{1,2}-[a-z]{3}-\d{4}\s+al\s+[\d]{1,2}-[a-z]{3}-\d{4})/i);
+
+    // BBVA lists commission charges (e.g. "DISPOSICION CRED.EFEC.CAJERO") as
+    // movement rows in the desglose but EXCLUDES them from "TOTAL CARGOS" (they
+    // are totaled separately under "Monto de comisiones"). So the movement
+    // egresos sum to TOTAL CARGOS + Monto de comisiones. Add the commissions to
+    // the reconciliation target. (When there are no commission rows, comisiones
+    // is 0 → unchanged, so the other layout still reconciles.)
+    const totalCargos = (mCa ? num(mCa[1]) : 0) + (mComis ? num(mComis[1]) : 0);
 
     // Statement header fields (collapse whitespace: glyphs can be spaced out).
     const flat = fullText.replace(/\s+/g, ' ');
@@ -93,7 +102,7 @@ export function parseBbvaCredito(pages, fullText) {
         // reconciliation. The real debt is carried in credito_info.saldo_al_corte.
         saldo_anterior: 0,
         saldo_final: 0,
-        total_cargos: mCa ? num(mCa[1]) : 0,
+        total_cargos: totalCargos,
         total_abonos: mAb ? num(mAb[1]) : 0,
         num_movimientos: 0,
         credito_info: {
