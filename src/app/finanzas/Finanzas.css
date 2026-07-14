@@ -658,11 +658,11 @@
 }
 
 .import-row-card {
-    padding: 10px 12px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     /* Flex items default to min-width:auto — a long nowrap concept would
        otherwise expand the card past the container and scroll the whole
        modal sideways. min-width:0 lets it shrink so ellipsis kicks in. */
@@ -676,20 +676,35 @@
 .import-row-top {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+}
+
+/* date + concept share one line (denser than stacking them) */
+.import-row-info {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
 }
 
 .import-row-date {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
     white-space: nowrap;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
 }
 
 .import-row-amount {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-primary);
     white-space: nowrap;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
 }
 
 .import-row-concept {
@@ -699,7 +714,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
-    max-width: 100%;
+    flex: 1;
 }
 
 .import-row-controls {

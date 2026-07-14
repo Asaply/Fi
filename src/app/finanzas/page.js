@@ -2310,15 +2310,17 @@ export default function FinanzasPage() {
                             </div>
                         </div>
 
-                        <div style={{ maxHeight: '50vh', overflowY: 'auto', overflowX: 'hidden', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                        <div style={{ maxHeight: '58vh', overflowY: 'auto', overflowX: 'hidden', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                             <div className="import-rows-list">
                                 {pendingRows.map(r => (
                                     <div key={r._idx} className="import-row-card">
                                         <div className="import-row-top">
-                                            <span className="import-row-date">{r.date}</span>
+                                            <span className="import-row-info">
+                                                <span className="import-row-date">{r.date}</span>
+                                                <span className="import-row-concept" title={r.concept}>{r.concept}</span>
+                                            </span>
                                             <span className="import-row-amount">{formatCurrency(r.amount)}</span>
                                         </div>
-                                        <div className="import-row-concept" title={r.concept}>{r.concept}</div>
                                         <div className="import-row-controls">
                                             <select
                                                 className="select-filter"
