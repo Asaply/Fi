@@ -88,6 +88,11 @@ export function parseBbvaCredito(pages, fullText) {
     const cat               = grab(/CAT[^\d]*([\d]+\.\d{1,2})\s*%/i);
     const mCorte = flat.match(/Fecha de corte:\s*(\d{1,2})-[a-z]{3}-\d{4}/i);
     const mPago  = flat.match(/l[íi]mite de pago:[^\n]*?(\d{1,2})-[a-z]{3}-\d{4}/i);
+    // Last 4 digits of the card — lets the app tell apart two cards of the same
+    // bank (BBVA ·6560 vs BBVA ·1234) instead of merging them into one tab.
+    const mCard = flat.match(/N[úu]mero de tarjeta:\s*\d*(\d{4})\b/i)
+        || flat.match(/N[úu]mero de cuenta:\s*[X\*\s]*(\d{4})\b/i);
+    const cardLast4 = mCard ? mCard[1] : '';
     // On a credit card the real debt at cutoff = credit line − available credit.
     const saldoAlCorte = (limiteCredito > 0 && creditoDisponible > 0)
         ? Math.round((limiteCredito - creditoDisponible) * 100) / 100
@@ -105,6 +110,7 @@ export function parseBbvaCredito(pages, fullText) {
         total_cargos: totalCargos,
         total_abonos: mAb ? num(mAb[1]) : 0,
         num_movimientos: 0,
+        card_last4: cardLast4,
         credito_info: {
             limite_credito: limiteCredito,
             credito_disponible: creditoDisponible,

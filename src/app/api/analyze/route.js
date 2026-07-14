@@ -430,6 +430,18 @@ export async function POST(request) {
             }
         }
 
+        // Distinguish multiple cards of the same bank by appending the card's
+        // last 4 digits (e.g. "BBVA ·6560"). Only for credit; leaves debit and
+        // cards without a detected number unchanged. Done before mapTransactions
+        // so every transaction and the response carry the same card label.
+        {
+            const _tipo = String(parsed.tipo_cuenta || '').toLowerCase()
+                .normalize('NFD').replace(/[̀-ͯ]/g, '');
+            if (_tipo.startsWith('cred') && parsed.card_last4 && !String(parsed.banco).includes(parsed.card_last4)) {
+                parsed.banco = `${parsed.banco} ·${parsed.card_last4}`;
+            }
+        }
+
         let transactions = mapTransactions(parsed);
 
         if (transactions.length === 0) {
