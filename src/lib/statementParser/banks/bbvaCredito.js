@@ -2,17 +2,18 @@ import { clusterRows } from '../rows.js';
 import { ddMmmDashToISO } from '../dates.js';
 
 // BBVA tarjeta de crédito. The importable movements live in the
-// "CARGOS, COMPRAS Y ABONOS REGULARES (NO A MESES)" table. Layout via x-coords:
-//   x~35  operation date (DD-mmm-YYYY)
-//   x~122 posting date
-//   x~203 description
-//   x~516 signed amount "+ $329.00" (charge=egreso) / "- $115,000.00" (payment=ingreso)
-// The "COMPRAS Y CARGOS DIFERIDOS A MESES" schedule and the points tables have
-// no signed amount in this column, so they are naturally skipped. Foreign-currency
-// sub-lines ("USD $13.99 TIPO DE CAMBIO ...") carry no +/- prefix → skipped too.
-const SIGNED_AMOUNT = /^[+\-]\s*\$[\d,]+\.\d{2}$/;
-const AMOUNT_MIN_X = 470;
-const CONCEPT_MIN_X = 180;
+// "CARGOS, COMPRAS Y ABONOS REGULARES (NO A MESES)" / "DESGLOSE DE MOVIMIENTOS"
+// table. Two BBVA layouts exist:
+//   A) date | posting date | description | "+ $329.00" signed amount
+//   B) "Fecha de la operación | Fecha de cargo | Descripción | Monto" with the
+//      amount as "+ $78.00" / "- $6,535.99" (sign and value can be split cells).
+// A movement row starts with an operation date (DD-mmm-YYYY) in the first cell.
+// The amount is the RIGHTMOST value carrying an explicit +/- sign, so:
+//   - "IVA :$ 0.00 Interes:..." detail lines (no leading date) are skipped,
+//   - FX sub-lines ("USD $187.99 TIPO DE CAMBIO $17.47") have no sign → skipped,
+//   - the MSI/points tables carry no signed amount → skipped.
+// "+" = charge (egreso), "-" = payment (ingreso).
+const VALUE = /^([+\-])?\s*\$?([\d,]+\.\d{2})$/; // sign optional (may be a separate cell)
 
 function num(str) {
     return Number(String(str).replace(/[^0-9.]/g, '')) || 0;
@@ -24,26 +25,43 @@ export function parseBbvaCredito(pages, fullText) {
     for (const pg of pages) {
         const rows = clusterRows(pg.items, 3);
         for (const row of rows) {
-            const first = row.cells[0];
-            if (!first || first.x > 55) continue;
+            const cells = [...row.cells].sort((a, b) => a.x - b.x);
+            const first = cells[0];
+            if (!first || first.x > 60) continue;
             const fecha = ddMmmDashToISO(first.str);
             if (!fecha) continue;
 
-            const amountCell = row.cells.find(c => c.x >= AMOUNT_MIN_X && SIGNED_AMOUNT.test(c.str.trim()));
-            if (!amountCell) continue;
+            // Rightmost signed value = the movement amount. Sign may live in this
+            // cell ("+ $78.00") or in the immediately preceding cell ("+","$78.00").
+            let amtX = null, amtVal = 0, sign = null;
+            for (let i = cells.length - 1; i >= 0; i--) {
+                const s = cells[i].str.trim();
+                const m = s.match(VALUE);
+                if (!m) continue;
+                sign = m[1];
+                if (!sign && i > 0) {
+                    const prev = cells[i - 1].str.trim();
+                    if (prev === '+' || prev === '-') sign = prev;
+                }
+                amtX = cells[i].x;
+                amtVal = num(m[2]);
+                break;
+            }
+            if (!sign || amtVal <= 0) continue; // require explicit sign → skips FX/detail rows
 
-            let concepto = row.cells
-                .filter(c => c.x >= CONCEPT_MIN_X && c.x < AMOUNT_MIN_X && !SIGNED_AMOUNT.test(c.str.trim()))
+            // Concept = cells between the first date and the amount, dropping the
+            // second date column, sign/amount cells, and the "; Tarjeta Digital"
+            // suffix.
+            let concepto = cells
+                .filter(c => c.x > first.x + 5 && c.x < amtX
+                    && !VALUE.test(c.str.trim()) && !/^[+\-]$/.test(c.str.trim())
+                    && !ddMmmDashToISO(c.str))
                 .map(c => c.str).join(' ').replace(/\s+/g, ' ').trim();
-            // drop MSI installment markers like "04 DE 06 " / "12 DE 12 "
-            concepto = concepto.replace(/^\d{1,2}\s+DE\s+\d{1,2}\s+/i, '').trim();
+            concepto = concepto.replace(/\s*;.*$/, '').trim();          // drop "; Tarjeta Digital ***0560"
+            concepto = concepto.replace(/^\d{1,2}\s+DE\s+\d{1,2}\s+/i, '').trim(); // MSI marker
             if (!concepto) continue;
 
-            const negative = amountCell.str.trim().startsWith('-');
-            const monto = num(amountCell.str);
-            if (monto <= 0) continue;
-            // On a credit card a "+" is a charge (egreso) and a "-" is a payment (ingreso).
-            movimientos.push({ fecha, concepto, monto, tipo: negative ? 'ingreso' : 'egreso' });
+            movimientos.push({ fecha, concepto: concepto.slice(0, 80), monto: amtVal, tipo: sign === '-' ? 'ingreso' : 'egreso' });
         }
     }
 
