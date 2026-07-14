@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChevronRight, Lightbulb } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Modal from '@/components/Modal';
@@ -117,8 +117,22 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
                                                 onClick={() => setSelectedCategory(entry.name)} style={{ cursor: 'pointer' }} />
                                         ))}
                                     </Pie>
-                                    {/* No hover tooltip: overlapped the center total. Legend below
-                                        shows name/amount/%, and tapping a slice opens the detail. */}
+                                    {/* Tooltip pinned to the top (position y:0) so it never overlaps
+                                        the center total; x follows the cursor. */}
+                                    <Tooltip
+                                        position={{ y: 0 }}
+                                        allowEscapeViewBox={{ x: false, y: true }}
+                                        content={({ active, payload }) => {
+                                        if (!active || !payload?.length) return null;
+                                        const { name, value } = payload[0].payload;
+                                        const p = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        return (
+                                            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', boxShadow: 'var(--shadow-md)' }}>
+                                                <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '12px', fontWeight: 600 }}>{name}</p>
+                                                <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: '12px' }}>{formatMXN(value)} · {p}%</p>
+                                            </div>
+                                        );
+                                    }} />
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="cat-donut-center">
