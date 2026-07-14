@@ -659,7 +659,7 @@ export default function PortfolioHealth() {
                                         <Pie data={categoryStats} cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" paddingAngle={categoryStats.length > 1 ? 3 : 0} dataKey="value" stroke="none" startAngle={90} endAngle={-270}>
                                             {categoryStats.map((c, i) => <Cell key={i} fill={c.style.color} />)}
                                         </Pie>
-                                        <RechartsTooltip formatter={(value, name, p) => [formatCurrency(value), p?.payload?.cat]} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px' }} />
+                                        <RechartsTooltip position={{ y: 0 }} allowEscapeViewBox={{ x: false, y: true }} formatter={(value, name, p) => [formatCurrency(value), p?.payload?.cat]} contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px' }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 {dominantCat && (

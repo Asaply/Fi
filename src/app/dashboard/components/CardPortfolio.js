@@ -123,6 +123,8 @@ export default function CardPortfolio() {
                                         ))}
                                     </Pie>
                                     <Tooltip
+                                        position={{ y: 0 }}
+                                        allowEscapeViewBox={{ x: false, y: true }}
                                         content={({ active, payload }) => {
                                             if (!active || !payload?.length) return null;
                                             const { name, value } = payload[0].payload;
