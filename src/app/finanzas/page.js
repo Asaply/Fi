@@ -41,6 +41,7 @@ const CAT_COLORS = {
     'Ropa y Accesorios':             '#ec4899',
     'Servicios (luz, agua, internet)': '#06b6d4',
     'Educación':                     '#10b981',
+    'Viaje / Hospedaje':             '#14b8a6',
     'Sueldo':                        '#34d399',
     'Freelance':                     '#60a5fa',
     'Transferencia recibida':        '#a78bfa',
