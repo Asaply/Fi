@@ -1159,6 +1159,9 @@ export default function FinanzasPage() {
             {!isLoading && (() => {
                 const cards = accountType === 'credit' ? availableCreditCards : availableDebitCards;
                 if (cards.length === 0) return null;
+                // Display only: "BBVA ·5036" → "BBVA •••• 5036". Stored value
+                // (used for DB queries / selectedCard) stays untouched.
+                const fmtCard = (c) => String(c).replace(/\s*·\s*(\d{4})\s*$/, ' •••• $1');
                 return (
                     <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '12px', scrollbarWidth: 'none' }}>
                         {cards.length > 1 && (
@@ -1175,7 +1178,7 @@ export default function FinanzasPage() {
                                 onClick={() => setSelectedCard(card)}
                                 style={{ flexShrink: 0, padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: selectedCard === card ? 700 : 400, border: `1px solid ${selectedCard === card ? 'var(--accent)' : 'var(--bg-border)'}`, background: selectedCard === card ? 'rgba(255,135,0,0.12)' : 'transparent', color: selectedCard === card ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer' }}
                             >
-                                {card}
+                                {fmtCard(card)}
                             </button>
                         ))}
                     </div>
@@ -1188,7 +1191,7 @@ export default function FinanzasPage() {
             {!isLoading && selectedCard !== 'global' && (
                 <div style={{ marginBottom: '14px', padding: '14px 16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                        <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.4px', lineHeight: 1 }}>{selectedCard}</div>
+                        <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.4px', lineHeight: 1 }}>{String(selectedCard).replace(/\s*·\s*(\d{4})\s*$/, ' •••• $1')}</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{accountType === 'credit' ? <><CreditCardIcon size={11} /> Tarjeta de Crédito</> : <><Landmark size={11} /> Cuenta de Débito</>}</span>
                             {bankBalance?.periodo ? ` · ${bankBalance.periodo}` : ''}
@@ -2240,7 +2243,7 @@ export default function FinanzasPage() {
                     </div>
                 ) : (
                     /* Step 2: preview + confirm */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {/* Summary stats */}
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <div style={{ flex: 1, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
@@ -2310,7 +2313,7 @@ export default function FinanzasPage() {
                             </div>
                         </div>
 
-                        <div style={{ maxHeight: '58vh', overflowY: 'auto', overflowX: 'hidden', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                        <div style={{ overflowX: 'hidden', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                             <div className="import-rows-list">
                                 {pendingRows.map(r => (
                                     <div key={r._idx} className="import-row-card">
@@ -2355,7 +2358,7 @@ export default function FinanzasPage() {
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <div style={{ position: 'sticky', bottom: 0, display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '12px', marginTop: '-4px', background: 'linear-gradient(to top, var(--bg-card) 70%, transparent)' }}>
                             <button className="btn-secondary" onClick={() => setImportStep(1)}>Volver</button>
                             <button
                                 className="btn-primary"
