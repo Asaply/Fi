@@ -61,7 +61,13 @@ export function parseBbvaCredito(pages, fullText) {
             concepto = concepto.replace(/^\d{1,2}\s+DE\s+\d{1,2}\s+/i, '').trim(); // MSI marker
             if (!concepto) continue;
 
-            movimientos.push({ fecha, concepto: concepto.slice(0, 80), monto: amtVal, tipo: sign === '-' ? 'ingreso' : 'egreso' });
+            // A payment to the card ("PAGO TARJETA DE CREDITO", "SU PAGO") is an
+            // abono that reduces the balance — never a charge. Force it to
+            // ingreso regardless of how the sign column printed, so it isn't
+            // counted as a gasto.
+            const esPago = /\bpago\b.*\b(tarjeta|tdc|cuenta)\b|^su pago\b|pago recibido/i.test(concepto);
+            const tipo = (esPago || sign === '-') ? 'ingreso' : 'egreso';
+            movimientos.push({ fecha, concepto: concepto.slice(0, 80), monto: amtVal, tipo });
         }
     }
 
