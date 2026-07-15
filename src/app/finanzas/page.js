@@ -9,7 +9,7 @@ import PLCalendar from "@/components/PLCalendar";
 import { supabase } from "@/lib/supabaseClient";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL } from "@/lib/categorias";
+import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL, construirMemoriaCategorias, resolverCategoria } from "@/lib/categorias";
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import IngresosPorCategoria from "@/components/IngresosPorCategoria";
@@ -121,7 +121,7 @@ function normalizarFecha(rawDate) {
     return new Date().toISOString().split('T')[0];
 }
 
-function buildRows(rawRows, headers, mapping, isCreditCard = false) {
+function buildRows(rawRows, headers, mapping, isCreditCard = false, memoria = null) {
     const parseMonto = (s) => Math.abs(parseFloat((s || '').replace(/[$,\s]/g, '')) || 0);
 
     return rawRows.map((row, idx) => {
@@ -146,7 +146,7 @@ function buildRows(rawRows, headers, mapping, isCreditCard = false) {
             type = mappedType;
         }
 
-        return { _idx: idx, date: normalizarFecha(rawDate), concept, amount, type, client: 'N/A', categoria: categorizarTransaccion(concept) };
+        return { _idx: idx, date: normalizarFecha(rawDate), concept, amount, type, client: 'N/A', categoria: resolverCategoria(concept, null, memoria, type) };
     }).filter(r => r.amount > 0);
 }
 
@@ -437,7 +437,7 @@ export default function FinanzasPage() {
                 amount: Math.abs(Number(t.monto) || 0),
                 type: t.tipo === 'ajuste' ? 'Ajuste' : (t.tipo === 'ingreso' || t.tipo === 'abono') ? 'Ingreso' : 'Egreso',
                 client: 'N/A',
-                categoria: t.categoria || 'Otros',
+                categoria: resolverCategoria(t.concepto || '', t.categoria, categoriaMemoria, t.tipo),
                 account_type: tipoCuenta,
                 bank: t.banco || data.bank || 'Desconocido',
             })).filter(r => r.amount > 0);
@@ -562,7 +562,7 @@ export default function FinanzasPage() {
     };
 
     const handlePreview = () => {
-        const rows = buildRows(csvRawRows, csvHeaders, csvMapping, isCreditCard);
+        const rows = buildRows(csvRawRows, csvHeaders, csvMapping, isCreditCard, categoriaMemoria);
         setPendingRows(rows);
         setImportStep(2);
     };
@@ -638,6 +638,11 @@ export default function FinanzasPage() {
     });
 
     const fechaInicio = getFechaInicioFin(periodo);
+
+    // Memory of how the user has categorized each merchant before — reused during
+    // import so recurring merchants inherit the user's own category instead of
+    // falling to Otros. Built from ALL transactions (not period-filtered).
+    const categoriaMemoria = useMemo(() => construirMemoriaCategorias(transactions), [transactions]);
 
     // Period-filtered transactions for totals and table
     // Available cards per account type (for card switcher)
