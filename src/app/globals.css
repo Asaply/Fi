@@ -144,7 +144,12 @@ body {
 }
 
 :root {
-  --bg-image: linear-gradient(to bottom, var(--brand) 0%, var(--bg-base) 50%, var(--bg-base) 100%);
+  /* Warm glow biased to the top, fading to pure black — a soft ellipse of brand
+     light seated just above the viewport so the top of the app reads as a lit
+     horizon and the rest sinks into black. */
+  --bg-image:
+    radial-gradient(120% 55% at 78% -8%, rgba(255, 118, 20, 0.42) 0%, rgba(190, 55, 8, 0.20) 26%, rgba(0, 0, 0, 0) 58%),
+    linear-gradient(to bottom, rgba(255, 92, 0, 0.14) 0%, rgba(0, 0, 0, 0) 34%);
 }
 
 [data-theme="light"] {
