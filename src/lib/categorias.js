@@ -136,7 +136,13 @@ export function inferirCategoria(concepto, tipo) {
     if (esIngreso) {
         return aplicarReglas(norm, REGLAS_INGRESO) || 'Otros';
     }
-    return aplicarReglas(norm, REGLAS) || 'Otros';
+    const cat = aplicarReglas(norm, REGLAS);
+    if (cat) return cat;
+    // Heuristic fallback: a concept naming an "app" (e.g. "STRIPE *TEQUILA APP",
+    // "ALGUNA APP") is almost always a digital subscription. Whole-word so it
+    // doesn't catch "apparel"/"apple".
+    if (/\bapp\b/.test(norm)) return 'Suscripciones';
+    return 'Otros';
 }
 
 // Build a memory of how the user has categorized each merchant before, from
