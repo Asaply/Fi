@@ -14,6 +14,7 @@ const CATEGORY_COLORS = {
     'Transferencias': '#A855F7',
     'Restaurantes': '#F97316',
     'Inversiones': '#3B82F6',
+    'Viaje / Hospedaje': '#14B8A6',
     'Otros': '#6B7280',
 };
 

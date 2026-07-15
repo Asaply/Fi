@@ -11,6 +11,7 @@ export const CATEGORIAS_EGRESO = [
     'Papelería',
     'Servicios (luz, agua, internet)',
     'Educación',
+    'Viaje / Hospedaje',
     'Inversión',
     'Otros',
 ];
@@ -40,7 +41,7 @@ const PROCESSOR_PREFIXES = [
     'payclip', 'clip', 'sq', 'sqc', 'squ', 'square', 'pp', 'paypal', 'mp',
     'merpago', 'mercadopago', 'mercado pago', 'dlo', 'dlocal', 'ebanx', 'stripe',
     'conekta', 'openpay', 'izettle', 'sr pago', 'srpago', 'netpay', 'billpocket',
-    'aplazo', 'kueski',
+    'aplazo', 'kueski', 'smartpy', 'smart py',
 ];
 
 // Normalize a raw statement concept for matching: lowercase, strip accents,
@@ -81,13 +82,14 @@ export function claveComercio(concepto) {
 const REGLAS = [
     [['restaurante', 'restaurant', ' rest ', 'resto', 'taqueria', ' taco', 'tacos', 'cocina', 'kitchen', 'grill', 'parrilla', 'asador', 'marisco', 'sushi', 'ramen', 'pizza', 'burger', 'burguer', 'hamburgues', 'wings', 'alitas', 'comedor', 'fonda', 'cantina', 'birrieria', 'pozole', 'antojitos', 'buffet', 'mariscos', 'carnes', 'steak', 'bbq', 'deli', 'bistro', 'brasa',
         'mcdonald', 'burger king', 'kfc', 'subway', 'dominos', 'little caesar', 'carls jr', 'wendys', 'popeyes', 'sirloin', 'vips', 'toks', 'sanborns', 'applebee', 'chilis', 'wingstop', 'starbucks', 'cafe', 'coffee', 'panaderia', 'pasteleria', 'heladeria', 'nieve', 'churro', 'cinnabon', 'krispy', 'dunkin', 'mercato', 'sonora grill', 'la casa de tono', 'el fogoncito',
-        'pret a manger', 'autogrill', 'gelateria', 'gelato', 'ristorante', 'trattoria', 'osteria', 'pizzeria', 'paninoteca', 'panino', 'forno', 'sapori', 'singular coff', 'cookies', 'bakery', 'gastro', 'tavola', 'enoteca', 'sushi', 'poke'], 'Restaurantes'],
+        'pret a manger', 'autogrill', 'gelateria', 'gelato', 'ristorante', 'trattoria', 'osteria', 'pizzeria', 'paninoteca', 'panino', 'forno', 'sapori', 'singular coff', 'cookies', 'bakery', 'gastro', 'tavola', 'enoteca', 'sushi', 'poke', 'hamb', 'wendys'], 'Restaurantes'],
     [['oxxo', 'seven', '7-eleven', 'seven eleven', 'circle k', 'super', 'abarrote', 'walmart', 'chedraui', 'soriana', 'costco', 'sam', 'bodega aurrera', 'aurrera', 'la comer', 'comercial mexicana', 'heb', 'h-e-b', 'city market', 'fresko', 'merza', 'kiosko', 'tienda', 'minisuper', 'abarr', 'fruteria', 'carniceria', 'verduleria', 'tortilleria', 'mercado', 'central de abasto', 'smart and final', 'calimax',
         'al super', 'alsuper', 'fresh market', 'supermercado', 'lidl', 'carrefour', 'mercadona', 'alcampo', 'eroski', 'consum', 'conad', 'esselunga', 'coop', 'aldi', 'spar', 'grocery', 'supermarket', 'maquinas vending', 'vending', 'gate retail'], 'Comida y Abarrotes'],
     [['uber', 'didi', 'cabify', 'indriver', 'taxi', 'gasolin', 'pemex', 'oxxo gas', 'gas ', 'shell', 'mobil', 'combustible', 'estacionamiento', 'parking', 'parkimovil', 'caseta', 'peaje', 'capufe', 'metro', 'metrobus', 'autobus', 'camion', 'ado', 'primera plus', 'etn', 'aeropuerto', 'vuelo', 'aerolinea', 'volaris', 'aeromexico', 'viva aerobus', 'vivaaerobus', 'jetblue', 'american airlines', 'bird', 'jump', 'ecobici',
         'wizz air', 'wizz', 'ryanair', 'easyjet', 'vueling', 'iberia', 'ita airways', 'alitalia', 'lufthansa', 'renfe', 'trenitalia', 'italo treno', 'atm milano', 'fgv', 'aeroport', 'aeroporto', 'malpensa', 'fiumicino', 'autostrade', 'telepass', 'bolt', 'freenow', 'trenord', 'flixbus'], 'Transporte'],
     [['taller', 'refaccion', 'autozone', 'refaccionaria', 'llantas', 'vulcaniz', 'verificentro', 'verificacion', 'tenencia', 'agencia', 'mecanico', 'lavado auto', 'autolavado', 'seguro auto', 'kavak', 'gnp auto'], 'Automóvil'],
-    [['netflix', 'spotify', 'amazon prime', 'prime video', 'disney', 'star plus', 'hbo', 'paramount', 'crunchyroll', 'youtube premium', 'apple.com', 'apple com', 'itunes', 'icloud', 'google storage', 'google one', 'suscripcion', 'subscription', 'membresia', 'membership', 'openai', 'chatgpt', 'claude', 'anthropic', 'github', 'vercel', 'notion', 'canva', 'adobe', 'dropbox', 'microsoft', 'office 365', 'linkedin', 'twitch', 'patreon', 'audible', 'deezer', 'tidal', 'amazon', 'amzn', 'holafly', 'esim', 'airalo'], 'Suscripciones'],
+    [['netflix', 'spotify', 'amazon prime', 'prime video', 'disney', 'star plus', 'hbo', 'paramount', 'crunchyroll', 'youtube premium', 'apple.com', 'apple com', 'itunes', 'icloud', 'google storage', 'google one', 'suscripcion', 'subscription', 'membresia', 'membership', 'openai', 'chatgpt', 'claude', 'anthropic', 'github', 'vercel', 'notion', 'canva', 'adobe', 'dropbox', 'microsoft', 'office 365', 'linkedin', 'twitch', 'patreon', 'audible', 'deezer', 'tidal', 'amazon', 'amzn', 'holafly', 'esim', 'airalo',
+        'netlify', 'porkbun', 'godaddy', 'namecheap', 'cloudflare', 'hostinger', 'digitalocean', 'heroku', 'render com', 'supabase', 'firebase', 'atlassian', 'figma', 'openrouter', 'anthropic', 'cursor', 'replit'], 'Suscripciones'],
     [['transferencia', 'spei', 'transfer', 'traspaso', 'envio de dinero', 'deposito a', 'pago a tercero', 'pago cuenta de tercero', 'pago tarjeta de credito', 'pago de tarjeta', 'pago tdc', 'su pago', 'clabe', 'dimo', 'codi'], 'Transferencias'],
     [['farmacia', 'benavides', 'guadalajara', 'del ahorro', 'san pablo', 'similares', 'cruz verde', 'medico', 'doctor', 'hospital', 'clinica', 'sanatorio', 'laboratorio', 'chopo', 'salud digna', 'dentista', 'dental', 'odonto', 'optica', 'lentes', 'psicolog', 'nutriolog', 'consultorio', 'imss', 'issste', 'medicamento'], 'Salud'],
     [['cinepolis', 'cinemex', 'cinema', 'teatro', 'concierto', 'evento', 'ticketmaster', 'boletia', 'stubhub', 'museo', 'parque', 'feria', 'antro', ' bar ', 'cerveceria', 'pub ', 'billar', 'boliche', 'karaoke', 'casino', 'videojuego', 'gaming', 'steam', 'playstation', 'ps store', 'xbox', 'nintendo', 'epic games', 'riot', 'twitch', 'gimnasio', 'gym', 'smart fit', 'crossfit', 'spa', 'masaje', 'wellness', 'museo'], 'Entretenimiento'],
@@ -95,6 +97,7 @@ const REGLAS = [
     [['papeleria', 'office depot', 'officemax', 'lumen', 'tania', 'imprenta', 'copias', 'libreria', 'gonvill', 'porrua', 'ghandi'], 'Papelería'],
     [['telmex', 'telcel', 'at&t', 'att ', 'movistar', 'unefon', 'bait', 'izzi', 'megacable', 'totalplay', 'dish', 'sky', 'cfe', 'comision federal', 'agua', 'sacmex', 'siapa', 'gas natural', 'naturgy', 'gas lp', 'internet', 'telefono', 'recarga', 'recibo', 'predial', 'servicio de luz'], 'Servicios (luz, agua, internet)'],
     [['colegio', 'universidad', 'instituto', 'escuela', 'preparatoria', 'kinder', 'colegiatura', 'inscripcion', 'curso', 'diplomado', 'udemy', 'platzi', 'coursera', 'domestika', 'duolingo', 'clase', 'academia', 'tutoria', 'libro de texto'], 'Educación'],
+    [['airbnb', 'booking', 'hotel', 'hostal', 'hostel', 'motel', 'resort', 'trivago', 'expedia', 'despegar', 'hoteles', 'marriott', 'hilton', 'hyatt', 'holiday inn', 'city express', 'fiesta inn', 'posada', 'lodging'], 'Viaje / Hospedaje'],
     [['gbm', 'kuspit', 'bitso', 'binance', 'coinbase', 'etoro', 'cetesdirecto', 'fondeadora', 'inversion', 'afore', 'broker', 'trading'], 'Inversión'],
 ];
 
@@ -117,6 +120,39 @@ function tokenMatch(norm, token) {
     const t = token.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (!t) return false;
     return new RegExp('\\b' + t).test(norm);
+}
+
+// Common Mexican/Spanish first names. Used to spot a concept that is just a
+// person's name (a P2P transfer whose merchant text is only the recipient), so
+// it goes to Transferencias instead of Otros. A dictionary (not a shape rule)
+// avoids sweeping in businesses like "Atelier Prato" or "Suprem Pinazo".
+const NOMBRES = new Set([
+    'jose', 'juan', 'luis', 'carlos', 'jorge', 'miguel', 'francisco', 'javier',
+    'antonio', 'manuel', 'pedro', 'alberto', 'ricardo', 'fernando', 'roberto',
+    'eduardo', 'sergio', 'raul', 'hector', 'oscar', 'osmar', 'arturo', 'alejandro',
+    'daniel', 'david', 'diego', 'emilio', 'gabriel', 'gerardo', 'gustavo', 'ivan',
+    'leonardo', 'marco', 'mario', 'martin', 'omar', 'pablo', 'rafael', 'ramon',
+    'rodrigo', 'ruben', 'salvador', 'santiago', 'saul', 'tomas', 'victor', 'abel',
+    'adrian', 'agustin', 'andres', 'angel', 'benjamin', 'cesar', 'cristian',
+    'enrique', 'esteban', 'felipe', 'guillermo', 'ignacio', 'isaac', 'joaquin',
+    'julio', 'lorenzo', 'lucas', 'marcos', 'mateo', 'mauricio', 'nicolas', 'noe',
+    'rene', 'sebastian', 'vicente', 'ernesto', 'armando', 'alfredo', 'aldo',
+    'maria', 'guadalupe', 'juana', 'margarita', 'ana', 'rosa', 'blanca', 'laura',
+    'veronica', 'patricia', 'sofia', 'gabriela', 'monica', 'adriana', 'alejandra',
+    'andrea', 'carmen', 'claudia', 'daniela', 'diana', 'elena', 'fernanda',
+    'isabel', 'jimena', 'karla', 'leticia', 'lucia', 'luz', 'maribel', 'martha',
+    'mariana', 'marisol', 'natalia', 'norma', 'paola', 'paulina', 'raquel',
+    'regina', 'silvia', 'susana', 'teresa', 'valeria', 'vanessa', 'ximena', 'yolanda',
+    'brenda', 'cecilia', 'dulce', 'erika', 'karen', 'lorena', 'nancy', 'rocio', 'wendy',
+]);
+
+// True when the concept is only a person's name (first token is a known first
+// name, 1–3 alphabetic tokens, no digits/domains/merchant signals).
+function esNombrePersona(norm) {
+    const tokens = norm.split(' ').filter(Boolean);
+    if (tokens.length < 1 || tokens.length > 3) return false;
+    if (!tokens.every(t => /^[a-z]+$/.test(t))) return false;
+    return NOMBRES.has(tokens[0]);
 }
 
 function aplicarReglas(norm, reglas) {
@@ -142,6 +178,8 @@ export function inferirCategoria(concepto, tipo) {
     // "ALGUNA APP") is almost always a digital subscription. Whole-word so it
     // doesn't catch "apparel"/"apple".
     if (/\bapp\b/.test(norm)) return 'Suscripciones';
+    // A bare person name (no merchant signal) is a P2P transfer.
+    if (esNombrePersona(norm)) return 'Transferencias';
     return 'Otros';
 }
 
