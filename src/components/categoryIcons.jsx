@@ -2,7 +2,7 @@ import {
     RefreshCw, ShoppingCart, Utensils, Car, ArrowLeftRight, TrendingUp,
     Zap, GraduationCap, Banknote, HeartPulse, ShoppingBag, Film, Home,
     Wallet, Briefcase, Tag, ArrowDownLeft, Percent, Undo2, Gift, Plane,
-    Dumbbell, Baby, PawPrint, Wrench, Coffee, MoreHorizontal,
+    Dumbbell, Baby, PawPrint, Wrench, Coffee, MoreHorizontal, ShieldCheck,
 } from 'lucide-react';
 
 // Category → lucide icon. Matches substrings so AI-generated variants still map.
@@ -27,7 +27,8 @@ const RULES = [
     [/interes|rendimiento/i, Percent],
     [/devoluci|reembolso|bonific/i, Undo2],
     [/regalo|gift/i, Gift],
-    [/viaje|vuelo|hotel|travel/i, Plane],
+    [/viaje|vuelo|hotel|travel|hospedaje/i, Plane],
+    [/seguro|póliza|poliza/i, ShieldCheck],
     [/gym|gimnasio|deporte|fitness/i, Dumbbell],
     [/bebé|bebe|niñ/i, Baby],
     [/mascota|veterinar|pet/i, PawPrint],

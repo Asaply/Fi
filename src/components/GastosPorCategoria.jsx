@@ -15,6 +15,7 @@ const CATEGORY_COLORS = {
     'Restaurantes': '#F97316',
     'Inversiones': '#3B82F6',
     'Viaje / Hospedaje': '#14B8A6',
+    'Seguros': '#0EA5E9',
     'Otros': '#6B7280',
 };
 
