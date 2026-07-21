@@ -42,6 +42,7 @@ const CAT_COLORS = {
     'Servicios (luz, agua, internet)': '#06b6d4',
     'Educación':                     '#10b981',
     'Viaje / Hospedaje':             '#14b8a6',
+    'Seguros':                       '#0ea5e9',
     'Sueldo':                        '#34d399',
     'Freelance':                     '#60a5fa',
     'Transferencia recibida':        '#a78bfa',
@@ -822,6 +823,42 @@ export default function FinanzasPage() {
                 setTimeout(() => setHighlightedTxId(null), 3000);
             }
         }, 200);
+    };
+
+    // Re-run the (now expanded) categorization rules over transactions currently
+    // in "Otros" and persist any that resolve to a real category. Existing rows
+    // were imported before the rules grew, so they stay in Otros until re-run.
+    const [isRecategorizando, setIsRecategorizando] = useState(false);
+    const recategorizarOtros = async () => {
+        if (isRecategorizando) return;
+        setIsRecategorizando(true);
+        try {
+            const otros = transactions.filter(t => (t.categoria || 'Otros') === 'Otros');
+            const cambios = [];
+            for (const t of otros) {
+                const nueva = resolverCategoria(t.concept || '', null, categoriaMemoria, t.type);
+                if (nueva && nueva !== 'Otros') cambios.push({ id: t.id, categoria: nueva });
+            }
+            if (cambios.length === 0) {
+                toast.info('No hay transacciones en "Otros" que las reglas puedan reclasificar.');
+                return;
+            }
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user?.id) { toast.error('Sesión no válida.'); return; }
+            // Persist each change (Supabase has no multi-row differing-value update).
+            const results = await Promise.all(cambios.map(c =>
+                supabase.from('transactions').update({ categoria: c.categoria }).eq('id', c.id).eq('user_id', user.id)
+            ));
+            const fallidos = results.filter(r => r.error).length;
+            const okMap = new Map(cambios.map(c => [c.id, c.categoria]));
+            setTransactions(prev => prev.map(t => okMap.has(t.id) ? { ...t, categoria: okMap.get(t.id) } : t));
+            if (fallidos > 0) toast.warning(`Reclasificadas ${cambios.length - fallidos}, fallaron ${fallidos}.`);
+            else toast.success(`${cambios.length} transacciones reclasificadas.`);
+        } catch (err) {
+            toast.error('Error al recategorizar: ' + (err?.message || 'desconocido'));
+        } finally {
+            setIsRecategorizando(false);
+        }
     };
 
     const handleFormSubmit = async (e) => {
@@ -1645,6 +1682,9 @@ export default function FinanzasPage() {
                     <Upload size={13} /> Importar
                 </button>
                 <div style={{ flex: 1 }} />
+                <button className="btn-fin-ghost" onClick={recategorizarOtros} disabled={isRecategorizando} title="Reclasificar transacciones en Otros con las reglas actuales">
+                    <RefreshCw size={13} className={isRecategorizando ? 'spin' : ''} />
+                </button>
                 <button className="btn-fin-ghost" onClick={() => setShowClearAll(true)} title="Eliminar transacciones y memoria local">
                     <Trash2 size={13} />
                 </button>
