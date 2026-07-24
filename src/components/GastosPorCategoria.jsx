@@ -16,6 +16,7 @@ const CATEGORY_COLORS = {
     'Inversiones': '#3B82F6',
     'Viaje / Hospedaje': '#14B8A6',
     'Seguros': '#0EA5E9',
+    'Retiro de efectivo': '#84CC16',
     'Otros': '#6B7280',
 };
 
