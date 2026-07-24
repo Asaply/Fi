@@ -43,6 +43,7 @@ const CAT_COLORS = {
     'Educación':                     '#10b981',
     'Viaje / Hospedaje':             '#14b8a6',
     'Seguros':                       '#0ea5e9',
+    'Retiro de efectivo':            '#84cc16',
     'Sueldo':                        '#34d399',
     'Freelance':                     '#60a5fa',
     'Transferencia recibida':        '#a78bfa',

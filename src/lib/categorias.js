@@ -13,6 +13,7 @@ export const CATEGORIAS_EGRESO = [
     'Educación',
     'Viaje / Hospedaje',
     'Seguros',
+    'Retiro de efectivo',
     'Inversión',
     'Otros',
 ];
@@ -97,7 +98,8 @@ const REGLAS = [
     [['netflix', 'spotify', 'amazon prime', 'prime video', 'disney', 'star plus', 'hbo', 'paramount', 'crunchyroll', 'youtube premium', 'apple.com', 'apple com', 'itunes', 'icloud', 'google storage', 'google one', 'suscripcion', 'subscription', 'membresia', 'membership', 'openai', 'chatgpt', 'claude', 'anthropic', 'github', 'vercel', 'notion', 'canva', 'adobe', 'dropbox', 'microsoft', 'office 365', 'linkedin', 'twitch', 'patreon', 'audible', 'deezer', 'tidal', 'amazon', 'amzn', 'holafly', 'esim', 'airalo',
         'netlify', 'porkbun', 'godaddy', 'namecheap', 'cloudflare', 'hostinger', 'digitalocean', 'heroku', 'render com', 'supabase', 'firebase', 'atlassian', 'figma', 'openrouter', 'anthropic', 'cursor', 'replit',
         'hotmart', 'twinkl', 'recurrente', 'carg recur', 'cargo recur', 'domain', 'dominio', 'plan anual', 'plan mensual'], 'Suscripciones'],
-    [['transferencia', 'spei', 'transfer', 'traspaso', 'envio de dinero', 'deposito a', 'pago a tercero', 'pago cuenta de tercero', 'pago tarjeta de credito', 'pago de tarjeta', 'pago tdc', 'su pago', 'clabe', 'dimo', 'codi', 'cajero', 'retiro de efectivo', 'retiro efectivo', 'disposicion de efectivo', 'disposicion cred', 'disp de efec', 'disposicion efec'], 'Transferencias'],
+    [['cajero', 'retiro de efectivo', 'retiro efectivo', 'disposicion de efectivo', 'disposicion cred', 'disp de efec', 'disposicion efec', 'retiro cajero', 'retiro en efectivo'], 'Retiro de efectivo'],
+    [['transferencia', 'spei', 'transfer', 'traspaso', 'envio de dinero', 'deposito a', 'pago a tercero', 'pago cuenta de tercero', 'pago tarjeta de credito', 'pago de tarjeta', 'pago tdc', 'su pago', 'clabe', 'dimo', 'codi'], 'Transferencias'],
     [['farmacia', 'benavides', 'guadalajara', 'del ahorro', 'san pablo', 'similares', 'cruz verde', 'medico', 'doctor', 'hospital', 'clinica', 'sanatorio', 'laboratorio', 'chopo', 'salud digna', 'dentista', 'dental', 'odonto', 'optica', 'lentes', 'psicolog', 'nutriolog', 'consultorio', 'imss', 'issste', 'medicamento', 'far guad', 'farmacias guad', 'veterinaria', 'veterinario', 'clinica vet', 'ortho', 'ortopedia', 'orthomedica', 'medica', 'farmacon', 'droguer', 'farm ', 'bio healt'], 'Salud'],
     [['cinepolis', 'cinemex', 'cinema', 'teatro', 'concierto', 'evento', 'ticketmaster', 'boletia', 'stubhub', 'museo', 'parque', 'feria', 'antro', ' bar ', 'cerveceria', 'pub ', 'billar', 'boliche', 'karaoke', 'casino', 'videojuego', 'gaming', 'steam', 'playstation', 'ps store', 'xbox', 'nintendo', 'epic games', 'riot', 'twitch', 'gimnasio', 'gym', 'smart fit', 'crossfit', 'spa', 'masaje', 'wellness', 'museo', 'club social', 'estet', 'gypsy', 'whiskey', 'cerveza', 'mezcal'], 'Entretenimiento'],
     [['zara', 'h&m', 'h y m', 'pull&bear', 'bershka', 'stradivarius', 'liverpool', 'palacio de hierro', 'sears', 'suburbia', 'coppel', 'shein', 'nike', 'adidas', 'puma', 'converse', 'vans', 'levis', 'american eagle', 'forever 21', 'ropa', 'zapateria', 'zapatos', 'calzado', 'boutique', 'joyeria', 'reloj', 'perfumeria', 'sephora', 'sally', 'moda', 'fashion', 'flexi', 'andrea', 'price shoes',
