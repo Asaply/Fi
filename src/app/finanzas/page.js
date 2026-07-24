@@ -347,6 +347,28 @@ export default function FinanzasPage() {
             .then(({ error }) => { if (error) console.error('Migration:', error); });
     }, []);
 
+    // One-time migration: statements de crédito se guardaron como 'debito' porque
+    // el parser no detectó el tipo. El usuario confirmó que TODO su débito es en
+    // realidad crédito. Movemos debito → credito una sola vez por dispositivo.
+    useEffect(() => {
+        (async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user?.id) return;
+            const flag = `fnce_migrate_debito_a_credito_${user.id}`;
+            if (localStorage.getItem(flag)) return;
+            const { error } = await supabase.from('transactions')
+                .update({ account_type: 'credito' })
+                .eq('user_id', user.id)
+                .eq('account_type', 'debito');
+            if (!error) {
+                localStorage.setItem(flag, '1');
+                fetchData();
+            } else {
+                console.error('Migration debito→credito:', error);
+            }
+        })();
+    }, []);
+
     // ── Import handlers ──────────────────────────────────────────────────────
     // NOTE: La conexión bancaria vía Belvo está INACTIVA. El código de la
     // integración se conserva en src/components/BankConnectWidget.jsx y en
@@ -588,7 +610,10 @@ export default function FinanzasPage() {
                 date: r.date, concept: r.concept, amount: r.amount,
                 type: r.type, client: r.client || 'N/A',
                 categoria: r.categoria || 'Otros',
-                account_type: r.account_type || (isCreditCard ? 'credito' : 'debito'),
+                // Guardar según la sección donde el usuario está importando (Débito/
+                // Crédito), no el tipo adivinado por el parser — así los statements
+                // de crédito no caen en débito si la detección falla.
+                account_type: accountType === 'credit' ? 'credito' : 'debito',
                 bank: r.bank || 'Desconocido',
                 user_id: user.id,
             }));
@@ -675,7 +700,10 @@ export default function FinanzasPage() {
     }, [transactions, fechaInicio, accountType, selectedCard]);
 
     const totalIngresosBase = filteredTx.filter(t => t.type?.toLowerCase().trim() === 'ingreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const totalEgresos = filteredTx.filter(t => t.type?.toLowerCase().trim() === 'egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    // Include the legacy 'Gasto Personal' type as an egreso, matching the rest of
+    // the app (chart, dashboard, GastosHormiga). Otherwise egreso totals show $0
+    // while the category chart shows the same rows as spending.
+    const totalEgresos = filteredTx.filter(t => ['egreso', 'gasto personal'].includes(t.type?.toLowerCase().trim())).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
     // Trading income: positive P&L from closed trades in the period
     const tradingIncome = tradingOps
