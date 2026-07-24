@@ -29,7 +29,6 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
     const [activeIndex, setActiveIndex] = useState(null);
     const [allTransactions, setAllTransactions] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const [showBreakdown, setShowBreakdown] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -79,9 +78,6 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
 
     const dominant = data[0];
     const domPct = dominant && total > 0 ? (dominant.value / total) * 100 : 0;
-    const LEG = 5;
-    const legend = data.slice(0, LEG);
-    const restVal = data.slice(LEG).reduce((s, d) => s + d.value, 0);
 
     const categoryTx = allTransactions.filter(t => t.categoria === selectedCategory);
     const categoryTotal = categoryTx.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
@@ -94,11 +90,6 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
                     <h2 className="cat-title">Ingresos por categoría</h2>
                     {total > 0 && <span className="cat-sub" style={{ color: '#22c55e' }}>{formatMXN(total)} en total</span>}
                 </div>
-                {data.length > 0 && (
-                    <button className="cat-ver" onClick={() => setShowBreakdown(v => !v)}>
-                        {showBreakdown ? 'Ocultar' : 'Ver detalles'} <ChevronRight size={15} />
-                    </button>
-                )}
             </div>
 
             {data.length === 0 ? (
@@ -141,33 +132,6 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
                                 <span className="cat-donut-pct">100%</span>
                             </div>
                         </div>
-
-                        <div className="cat-legend">
-                            {legend.map((entry, idx) => {
-                                const p = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
-                                const color = getColor(entry.name, idx);
-                                return (
-                                    <button key={entry.name} className="cat-legend-row" onClick={() => setSelectedCategory(entry.name)}>
-                                        <span className="cat-legend-dot" style={{ background: color }} />
-                                        <span className="cat-legend-info">
-                                            <span className="cat-legend-name">{entry.name}</span>
-                                            <span className="cat-legend-amt">{formatMXN(entry.value)}</span>
-                                        </span>
-                                        <span className="cat-legend-pct" style={{ color }}>{p}%</span>
-                                    </button>
-                                );
-                            })}
-                            {restVal > 0 && (
-                                <button className="cat-legend-row" onClick={() => setShowBreakdown(true)}>
-                                    <span className="cat-legend-dot" style={{ background: 'var(--text-secondary)' }} />
-                                    <span className="cat-legend-info">
-                                        <span className="cat-legend-name">Más categorías</span>
-                                        <span className="cat-legend-amt">{formatMXN(restVal)}</span>
-                                    </span>
-                                    <span className="cat-legend-pct" style={{ color: 'var(--text-secondary)' }}>{((restVal / total) * 100).toFixed(1)}%</span>
-                                </button>
-                            )}
-                        </div>
                     </div>
 
                     {dominant && (
@@ -180,33 +144,31 @@ export default function IngresosPorCategoria({ startDate, endDate, accountType =
                         </div>
                     )}
 
-                    {showBreakdown && (
-                        <div className="cat-breakdown">
-                            <div className="cat-breakdown-head">
-                                <h3>Desglose por categoría</h3>
-                                <span>% del total</span>
-                            </div>
-                            {data.map((entry, idx) => {
-                                const p = total > 0 ? (entry.value / total) * 100 : 0;
-                                const color = getColor(entry.name, idx);
-                                const Icon = getCategoryIcon(entry.name);
-                                return (
-                                    <button key={entry.name} className="cat-row" onClick={() => setSelectedCategory(entry.name)}>
-                                        <span className="cat-row-icon" style={{ background: `${color}22`, color }}><Icon size={18} /></span>
-                                        <span className="cat-row-mid">
-                                            <span className="cat-row-toprow">
-                                                <span className="cat-row-name">{entry.name}</span>
-                                                <span className="cat-row-pct" style={{ color }}>{p.toFixed(1)}%</span>
-                                            </span>
-                                            <span className="cat-bar"><span className="cat-bar-fill" style={{ width: `${p}%`, background: color }} /></span>
-                                        </span>
-                                        <span className="cat-row-amt">{formatMXN(entry.value)}</span>
-                                        <ChevronRight className="cat-row-chev" size={16} />
-                                    </button>
-                                );
-                            })}
+                    <div className="cat-breakdown">
+                        <div className="cat-breakdown-head">
+                            <h3>Desglose por categoría</h3>
+                            <span>% del total</span>
                         </div>
-                    )}
+                        {data.map((entry, idx) => {
+                            const p = total > 0 ? (entry.value / total) * 100 : 0;
+                            const color = getColor(entry.name, idx);
+                            const Icon = getCategoryIcon(entry.name);
+                            return (
+                                <button key={entry.name} className="cat-row" onClick={() => setSelectedCategory(entry.name)}>
+                                    <span className="cat-row-icon" style={{ background: `${color}22`, color }}><Icon size={18} /></span>
+                                    <span className="cat-row-mid">
+                                        <span className="cat-row-toprow">
+                                            <span className="cat-row-name">{entry.name}</span>
+                                            <span className="cat-row-pct" style={{ color }}>{p.toFixed(1)}%</span>
+                                        </span>
+                                        <span className="cat-bar"><span className="cat-bar-fill" style={{ width: `${p}%`, background: color }} /></span>
+                                    </span>
+                                    <span className="cat-row-amt">{formatMXN(entry.value)}</span>
+                                    <ChevronRight className="cat-row-chev" size={16} />
+                                </button>
+                            );
+                        })}
+                    </div>
                 </>
             )}
 
