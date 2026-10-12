@@ -12,6 +12,8 @@ import { userHasAccess } from '@/lib/access';
 import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
 import { isTrialEligible } from '@/lib/trialEligibility';
 import { TRIAL_DAYS } from '@/lib/trial';
+import { STEP, onboardingStartStep } from '@/lib/onboardingResume';
+import { analysisToTransactionRows } from '@/lib/finanzas/analysisRows';
 import './Onboarding.css';
 
 const ONBOARDING_KEY = 'fnce_onboarding_v1';
@@ -23,9 +25,9 @@ const ONBOARDING_KEY = 'fnce_onboarding_v1';
 // 3 = Display name input
 // 4 = Goal selection
 // 5 = Security
-// 6 = Import CTA
-// 7 = Analysis insights (post-import)
-// 8 = Plans / payment (paywall)
+// 6 = Plans / payment (paywall) — starts the 7-day trial
+// 7 = Import CTA
+// 8 = Analysis insights (post-import)
 // 9 = Done
 const TOTAL_STEPS = 10;
 
@@ -48,9 +50,13 @@ export default function OnboardingPage() {
     // new account on a device that previously onboarded would wrongly skip onboarding.
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
-            if (data?.user?.user_metadata?.onboarded) {
+            const user = data?.user;
+            if (user?.user_metadata?.onboarded) {
                 router.replace('/finanzas');
+                return;
             }
+            const start = onboardingStartStep(user);
+            if (start !== STEP.START) setStep(start);
         });
         const t = setTimeout(() => setVisible(true), 60);
         return () => clearTimeout(t);
@@ -100,26 +106,26 @@ export default function OnboardingPage() {
                         onNext={() => advance(5)}
                     />
                 )}
-                {step === 5 && <StepSecurity onNext={() => advance(6)} />}
-                {step === 6 && (
-                    <StepImport
-                        onImportComplete={(data) => { setAnalysisData(data); advance(7); }}
-                        onSkip={() => advance(8)}
-                    />
-                )}
-                {step === 7 && (
-                    <StepInsights
-                        data={analysisData}
-                        onNext={() => advance(8)}
-                    />
-                )}
-                {step === 8 && (
+                {step === STEP.SECURITY && <StepSecurity onNext={() => advance(STEP.PLANS)} />}
+                {step === STEP.PLANS && (
                     <StepPlans
                         selectedGoal={selectedGoal}
-                        onDone={() => advance(9)}
+                        onDone={() => advance(STEP.IMPORT)}
                     />
                 )}
-                {step === 9 && <StepDone onFinish={() => complete('/finanzas')} />}
+                {step === STEP.IMPORT && (
+                    <StepImport
+                        onImportComplete={(data) => { setAnalysisData(data); advance(STEP.INSIGHTS); }}
+                        onSkip={() => advance(STEP.DONE)}
+                    />
+                )}
+                {step === STEP.INSIGHTS && (
+                    <StepInsights
+                        data={analysisData}
+                        onNext={() => advance(STEP.DONE)}
+                    />
+                )}
+                {step === STEP.DONE && <StepDone onFinish={() => complete('/finanzas')} />}
             </div>
 
             {/* Progress dots — hide on spinner and success */}
@@ -405,7 +411,9 @@ function StepImport({ onImportComplete, onSkip }) {
             fd.append('file', file);
 
             setStatusMsg('Detectando banco y transacciones...');
-            const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd });
+            const { data: { session } } = await supabase.auth.getSession();
+            const headers = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+            const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd, headers });
             const data = await res.json();
 
             if (!res.ok || !data.success) {
@@ -414,21 +422,8 @@ function StepImport({ onImportComplete, onSkip }) {
 
             setStatusMsg('Guardando transacciones...');
 
-            const { data: { user } } = await supabase.auth.getUser();
-            const banco = data.bank || 'Desconocido';
-            const accountType = data.tipo_cuenta || 'debito';
-
-            const payload = (data.transactions || []).map(t => ({
-                date: t.fecha,
-                concept: t.concepto,
-                amount: t.monto,
-                type: t.tipo === 'ajuste' ? 'egreso' : t.tipo,
-                client: 'N/A',
-                categoria: t.categoria || 'Otros',
-                bank: banco,
-                account_type: accountType,
-                user_id: user.id,
-            }));
+            // Same mapping as the /finanzas import ('Egreso'/'Ingreso', debito/credito).
+            const payload = analysisToTransactionRows(data, session.user.id);
 
             if (payload.length > 0) {
                 await supabase.from('transactions').insert(payload);
@@ -592,8 +587,7 @@ function StepPlans({ selectedGoal, onDone }) {
     const [trialEligible, setTrialEligible] = useState(true);
 
     // On reaching this step: if the user already has access, skip. Otherwise
-    // mark onboarding complete and show the plans screen with both the free-tier
-    // claim and the paid subscription (so Apple can review the IAP).
+    // show the plans screen (trial + subscription; Apple reviews the IAP here).
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -602,14 +596,12 @@ function StepPlans({ selectedGoal, onDone }) {
             if (cancelled) return;
             if (userHasAccess(data?.user)) { onDone(); return; }
 
-            // Show the plans screen immediately; persisting `onboarded` and
-            // loading the free-slot count are non-blocking so we don't sit on a
-            // black screen for ~3s waiting on sequential network calls.
+            // Show the plans screen immediately; the trial check is non-blocking.
             setPhase('plans');
 
+            // Keep the goal across the Stripe redirect; `onboarded` is set only by
+            // complete() at the end, so a returning user resumes at Import.
             if (selectedGoal) localStorage.setItem('fnce_primary_use', selectedGoal);
-            localStorage.setItem(ONBOARDING_KEY, '1');
-            supabase.auth.updateUser({ data: { onboarded: true } }).catch(() => {});
             isTrialEligible(data?.user?.id).then((ok) => { if (!cancelled) setTrialEligible(ok); });
         })();
         return () => { cancelled = true; };
