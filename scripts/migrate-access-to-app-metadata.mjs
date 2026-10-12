@@ -35,18 +35,33 @@ async function allUsers() {
     }
 }
 
-const [{ data: subs, error: subsErr }, { data: grants, error: grantsErr }] = await Promise.all([
-    admin.from('subscriptions').select('user_id, status, source, current_period_end'),
-    admin.from('free_grants').select('user_id'),
-]);
-if (subsErr) throw subsErr;
-if (grantsErr) throw grantsErr;
+// PostgREST caps each response at 1000 rows; read every page so no row is dropped.
+const PAGE = 1000;
+async function selectAll(table, columns) {
+    const rows = [];
+    for (let from = 0; ; from += PAGE) {
+        const { data, error } = await admin
+            .from(table)
+            .select(columns)
+            .order('user_id')
+            .range(from, from + PAGE - 1);
+        if (error) throw new Error(`${table}: ${error.message}`);
+        rows.push(...data);
+        if (data.length < PAGE) return rows;
+    }
+}
+
+const subs = await selectAll('subscriptions', 'user_id, status, source, current_period_end');
+const grants = await selectAll('free_grants', 'user_id');
 const subByUser = new Map(subs.map((s) => [s.user_id, s]));
 const grantByUser = new Map(grants.map((g) => [g.user_id, g]));
 
 const users = await allUsers();
 const counts = {};
 const changed = [];
+let toWrite = 0;
+let written = 0;
+const failed = [];
 for (const user of users) {
     const access = accessFromRecords({
         subscription: subByUser.get(user.id) || null,
@@ -62,6 +77,7 @@ for (const user of users) {
         current.subscription_source === access.subscription_source &&
         (current.subscription_expires_at ?? null) === access.subscription_expires_at;
     if (same) continue;
+    toWrite++;
 
     const um = user.user_metadata || {};
     if (um.subscription_status !== access.subscription_status) {
@@ -69,7 +85,8 @@ for (const user of users) {
     }
     if (apply) {
         const { error } = await admin.auth.admin.updateUserById(user.id, { app_metadata: access });
-        if (error) console.error(`✗ ${user.email}: ${error.message}`);
+        if (error) failed.push(`${user.email}: ${error.message}`);
+        else written++;
     }
 }
 
@@ -79,4 +96,16 @@ if (changed.length) {
     console.log('Difieren de su user_metadata actual (revisar):');
     for (const line of changed) console.log('  ' + line);
 }
-console.log(apply ? '✓ app_metadata escrito.' : 'Dry-run: no se escribió nada. Usa --apply para escribir.');
+if (!apply) {
+    console.log(`Escribiría: ${toWrite}`);
+    console.log('Dry-run: no se escribió nada. Usa --apply para escribir.');
+} else {
+    console.log(`Escritos: ${written}`);
+    if (failed.length) {
+        console.log(`Fallaron: ${failed.length}`);
+        for (const line of failed) console.log('  ' + line);
+        process.exitCode = 1;
+    } else {
+        console.log('✓ app_metadata escrito.');
+    }
+}
