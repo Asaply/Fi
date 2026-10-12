@@ -372,7 +372,7 @@ export default function FinanzasPage() {
     // ── Import handlers ──────────────────────────────────────────────────────
     // NOTE: La conexión bancaria vía Belvo está INACTIVA. El código de la
     // integración se conserva en src/components/BankConnectWidget.jsx y en
-    // src/app/api/belvo/* (dormido, no cableado a la UI). Ver BELVO_INTEGRATION.md
+    // src/app/api/belvo/* (dormido, no cableado a la UI). Ver docs/BELVO_INTEGRATION.md
     // para reactivarla. Se retiró el handler de aquí para no dejar código colgante.
 
     const parsePdfFile = async (file, password = '') => {

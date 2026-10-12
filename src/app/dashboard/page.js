@@ -375,7 +375,7 @@ export default function DashboardPage() {
                             <GastosPorCategoria startDate={fechaInicio} accountType={categoryView} mode={categoryView} />
                         </>
                     ) : (
-                        <IngresosPorCategoria startDate={fechaInicio} accountType="debit" />
+                        <IngresosPorCategoria startDate={fechaInicio} accountType={categoryView} />
                     )}
                 </div>
                 <div className="dashboard-full-width">
