@@ -53,10 +53,16 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
     pathname.startsWith('/terms') || pathname.startsWith('/privacy') ||
     pathname.startsWith('/paywall') ||
+    pathname.startsWith('/demo') ||
+    pathname.startsWith('/api/demo') ||
     pathname.startsWith('/api/stripe/webhook') ||
     pathname.startsWith('/api/iap/notifications')
 
   if (!user) {
+    // Public routes are public for API too — /api/demo provisions the demo
+    // account before any session exists, and the webhooks authenticate
+    // themselves (Stripe signature / Apple JWS) inside their handlers.
+    if (isPublic) return response
     // API routes with Bearer token — let route handler check auth
     if (pathname.startsWith('/api/') && request.headers.get('authorization')?.startsWith('Bearer ')) {
       return response
@@ -64,7 +70,6 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
     }
-    if (isPublic) return response
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

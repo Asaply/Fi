@@ -57,6 +57,24 @@ export async function POST() { return NextResponse.json({}, { status: 503 }); }
 `,
     },
     {
+        // Demo provisioning + cleanup. Dynamic (POST / cron GET) and only ever
+        // called on Vercel: the web /demo screen hits it via API_BASE, and the
+        // iOS test group uses pre-created accounts that need no API at all.
+        file: 'src/app/api/demo/route.js',
+        stub: `import { NextResponse } from 'next/server';
+export const dynamic = 'force-static';
+export async function POST() { return NextResponse.json({}, { status: 503 }); }
+`,
+    },
+    {
+        file: 'src/app/api/demo/cleanup/route.js',
+        stub: `import { NextResponse } from 'next/server';
+export const dynamic = 'force-static';
+export async function GET() { return NextResponse.json({}, { status: 503 }); }
+export async function POST() { return NextResponse.json({}, { status: 503 }); }
+`,
+    },
+    {
         file: 'src/app/sitemap.js',
         stub: `export const dynamic = 'force-static';
 export default function sitemap() { return []; }
