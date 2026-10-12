@@ -1,6 +1,7 @@
 // Shared logic for reflecting a Stripe subscription into our access model.
 // Used by both the webhook and verify-session routes.
 import { createClient } from '@supabase/supabase-js';
+import { accessMetadata } from './access';
 
 export function getAdminClient() {
     return createClient(
@@ -35,7 +36,7 @@ function customerId(sub) {
     return typeof sub.customer === 'string' ? sub.customer : sub.customer?.id ?? null;
 }
 
-// Persist subscription state for a user: subscriptions row + user_metadata.
+// Persist subscription state for a user: subscriptions row + app_metadata (+ mirror).
 // updateUserById shallow-merges user_metadata, so other keys (onboarded…) survive.
 export async function applyStripeSubscription(admin, userId, sub) {
     const { status, expiresAt } = mapStripeSubscription(sub);
@@ -53,12 +54,12 @@ export async function applyStripeSubscription(admin, userId, sub) {
         }, { onConflict: 'user_id' });
     if (upsertErr) console.error('[stripeSync] subscriptions upsert (non-fatal):', upsertErr.message);
 
+    const access = accessMetadata({ status, source: 'stripe', expiresAt });
     const { error: metaErr } = await admin.auth.admin.updateUserById(userId, {
-        user_metadata: {
-            subscription_status: status,
-            subscription_source: 'stripe',
-            subscription_expires_at: expiresAt,
-        },
+        app_metadata: access,
+        // Mirror for iOS builds already in the App Store, which read access from
+        // user_metadata on the client. No server-side check trusts this copy.
+        user_metadata: access,
     });
     if (metaErr) throw metaErr;
 
