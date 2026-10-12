@@ -1,6 +1,6 @@
 # Subproyecto 1 — Nuevo modelo de acceso
 
-**Fecha:** 2026-10-12 · **Estado:** aprobado en diseño, pendiente de plan
+**Fecha:** 2026-10-12 · **Estado:** aprobado · plan: `docs/superpowers/plans/2026-10-12-modelo-acceso.md`
 
 Forma parte de la reestructura de NVA. Orden de los subproyectos: **1. modelo de acceso** →
 2. colaborador frontend → 3. Belvo como fuente principal → 4. import PDF/CSV como secundario.
@@ -26,6 +26,8 @@ en su subproyecto.
 |---|---|
 | Entrada de usuarios nuevos | Prueba de 7 días con todas las funciones |
 | Tarjeta en web | Sí. Stripe Checkout con `subscription_data.trial_period_days: 7`; al terminar cobra solo |
+| Quién recibe la prueba | Solo quien nunca tuvo fila en `subscriptions`. Quien cancela y vuelve paga desde el día 1 |
+| Onboarding | Planes **antes** de importar: … → Seguridad → **Planes** → Importar → Insights → Listo |
 | Prueba en iOS | Oferta introductoria de 7 días configurada en App Store Connect (sin cambios de código) |
 | Usuarios con lugar free | Conservan acceso de por vida (`status: 'free'`, sin vencimiento) |
 | Dónde vive el acceso | `app_metadata`, que solo el servidor (service role) puede escribir |
@@ -66,8 +68,9 @@ subscription_expires_at: ISO string | null   // null = no vence
 - El camino anónimo de `/api/analyze`, incluido `checkAnonRateLimit` (`src/lib/rateLimitAnon.js`).
 - Las referencias a `/analyze` en `middleware.ts`, `ConditionalShell.js` y `sitemap.js`, y el mensaje
   `free_analysis_used` en `login/page.js`.
-- `src/lib/pendingAnalysis.js` y `src/lib/hooks/useClaimPendingAnalysis.js`. Por eso el **PR #4 se cierra
-  sin hacer merge** y el #5 se rebasa sobre el #3.
+- `src/lib/hooks/useClaimPendingAnalysis.js` y la clave de `sessionStorage`. El **PR #4 se cierra sin hacer
+  merge**. Su mapeo con tests (`analysisToTransactionRows`) se conserva, movido a `src/lib/finanzas/analysisRows.js`,
+  y lo usa el onboarding.
 
 ### Se modifica
 - **Lectura de acceso:** todas las llamadas a `hasAccess` que hoy reciben `user_metadata` pasan a
@@ -79,10 +82,20 @@ subscription_expires_at: ISO string | null   // null = no vence
 - **Stripe Checkout** (`api/stripe/create-checkout`): agrega `trial_period_days: 7`.
 - **`/api/analyze`:** exige sesión y `hasAccess(app_metadata)`; si no, responde 401/402. Se conserva el
   rate limit por usuario (10/min).
-- **Onboarding:** hoy llama a `/api/analyze` sin token. Pasa a mandar `Authorization: Bearer`, igual que `/finanzas`.
+- **Onboarding:**
+  - Nuevo orden de pasos: Planes (6) → Importar (7) → Insights (8) → Listo (9). Saltar el import lleva a Listo.
+  - `onboarded: true` se escribe **solo al final** (`complete()`), ya no al llegar a Planes.
+  - **Retomar:** al abrir `/onboarding`, si el usuario ya tiene acceso → salta a Importar. Si no tiene acceso pero
+    ya tiene `display_name` (pasó el paso del nombre) → salta a Planes. Si no, empieza desde el principio. Esto
+    cubre el regreso desde Stripe en web (`/paywall/success` → `/onboarding`) y a quien cerró la app en Planes.
+  - El import manda `Authorization: Bearer` (hoy va anónimo) y mapea con `analysisToTransactionRows`,
+    con lo que se corrige el bug actual de tipos (`'egreso'` en minúsculas) y del `account_type` crudo.
+- **Middleware:** `/paywall/success` se permite a usuarios sin onboarding, para que la verificación del pago
+  termine antes de regresar al onboarding.
 - **Landing y blog:** los CTA "Empezar gratis" → `/login`, con el texto "Prueba 7 días gratis".
 - **Paywall:** un solo plan, "7 días gratis, luego $X/mes" (precio actual).
-- **Privacidad** (`privacy/page.js`): quitar "Dirección IP (para límites de uso en análisis gratuitos)" y
+- **Privacidad** (`privacy/page.js`): "Dirección IP (para límites de uso en análisis gratuitos)" pasa a
+  "Dirección IP (para seguridad y límites de uso)", porque la IP se sigue registrando en `audit_logs`. Se quita
   "Resultados de análisis temporales (se eliminan al cerrar el navegador)".
 - **`anon_rate_limits`:** `enable row level security` sin políticas; solo la service role puede acceder.
   Se conserva porque `checkRateLimit` la usa para usuarios logueados.
