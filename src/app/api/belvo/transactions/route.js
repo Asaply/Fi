@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import belvo from 'belvo';
 import { getAuthUser, unauthorized, serverError } from '@/lib/apiAuth';
+import { userHasAccess } from '@/lib/access';
 
 export async function POST(req) {
     const user = await getAuthUser();
     if (!user) return unauthorized();
+    if (!userHasAccess(user)) return NextResponse.json({ error: 'Necesitas una suscripción activa.' }, { status: 402 });
 
     try {
         const body = await req.json();
