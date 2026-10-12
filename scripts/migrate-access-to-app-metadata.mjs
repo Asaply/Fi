@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 // Copy each user's access into app_metadata from `subscriptions` + `free_grants`.
+// user_metadata is never copied (the user can edit it). Users whose
+// user_metadata grants access today but who have no backing row are listed as
+// "PERDERÍA ACCESO" for manual reconciling; they are not granted anything.
 // Dry-run by default; pass --apply to write. Safe to re-run.
 //   node scripts/migrate-access-to-app-metadata.mjs
 //   node scripts/migrate-access-to-app-metadata.mjs --apply
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
-import { accessFromRecords } from '../src/lib/accessMigration.js';
+import { accessFromRecords, losesAccess, sameAccess } from '../src/lib/accessMigration.js';
 
 function loadEnvLocal() {
     if (!fs.existsSync('.env.local')) return;
@@ -59,6 +62,7 @@ const grantByUser = new Map(grants.map((g) => [g.user_id, g]));
 const users = await allUsers();
 const counts = {};
 const changed = [];
+const wouldLose = [];
 let toWrite = 0;
 let written = 0;
 const failed = [];
@@ -66,20 +70,19 @@ for (const user of users) {
     const access = accessFromRecords({
         subscription: subByUser.get(user.id) || null,
         freeGrant: grantByUser.get(user.id) || null,
-        userMetadata: user.user_metadata || {},
     });
     const label = access ? `${access.subscription_status}/${access.subscription_source}` : 'sin acceso';
     counts[label] = (counts[label] || 0) + 1;
-    if (!access) continue;
-
-    const current = user.app_metadata || {};
-    const same = current.subscription_status === access.subscription_status &&
-        current.subscription_source === access.subscription_source &&
-        (current.subscription_expires_at ?? null) === access.subscription_expires_at;
-    if (same) continue;
-    toWrite++;
 
     const um = user.user_metadata || {};
+    if (losesAccess(um, access)) {
+        wouldLose.push(`${user.email} (${um.subscription_status ?? '—'}/${um.subscription_source ?? '—'}/${um.subscription_expires_at ?? 'sin vencimiento'})`);
+    }
+    if (!access) continue;
+
+    if (sameAccess(user.app_metadata || {}, access)) continue;
+    toWrite++;
+
     if (um.subscription_status !== access.subscription_status) {
         changed.push(`${user.email}: user_metadata=${um.subscription_status ?? '—'} → ${access.subscription_status}`);
     }
@@ -96,6 +99,10 @@ if (changed.length) {
     console.log('Difieren de su user_metadata actual (revisar):');
     for (const line of changed) console.log('  ' + line);
 }
+console.log('');
+console.log(`!!! PERDERÍA ACCESO (reconciliar a mano antes de --apply): ${wouldLose.length}`);
+for (const line of wouldLose) console.log('  ' + line);
+console.log('');
 if (!apply) {
     console.log(`Escribiría: ${toWrite}`);
     console.log('Dry-run: no se escribió nada. Usa --apply para escribir.');
