@@ -1,15 +1,16 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, Lightbulb, AlertTriangle, Lock, ShoppingBag, RefreshCw, TrendingDown, Calendar as CalendarIcon, Target, Zap, BarChart2, Info, Check } from "lucide-react";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, AlertTriangle, Lock, RefreshCw, TrendingDown, Calendar as CalendarIcon, Target, Zap, BarChart2, Info, Check } from "lucide-react";
 import Modal from "@/components/Modal";
 import CurrencyInput from "@/components/CurrencyInput";
 import PLCalendar from "@/components/PLCalendar";
 import { supabase } from "@/lib/supabaseClient";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { inferirCategoria, categoriasParaTipo, CATEGORIAS_ALL, construirMemoriaCategorias, resolverCategoria } from "@/lib/categorias";
+import { categoriasParaTipo, CATEGORIAS_ALL, construirMemoriaCategorias, resolverCategoria } from "@/lib/categorias";
+import { parseCSV, autoDetect, buildRows } from "@/lib/finanzas/csvImport";
+import { PERIODOS_FIN, getFechaInicioFin } from "@/lib/finanzas/periodos";
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import IngresosPorCategoria from "@/components/IngresosPorCategoria";
@@ -22,159 +23,7 @@ import "./Finanzas.css";
 import { API_BASE } from "@/lib/apiBase";
 import { useClaimPendingAnalysis } from "@/lib/hooks/useClaimPendingAnalysis";
 
-const MOCK_DATA = [
-    { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },
-    { id: 2, date: "2026-02-18", client: "N/A", concept: "Suscripción Vercel", type: "Egreso", amount: 400 },
-    { id: 3, date: "2026-02-20", client: "TechFlow", concept: "Mantenimiento Mensual", type: "Ingreso", amount: 12000 },
-    { id: 4, date: "2026-02-25", client: "N/A", concept: "Pago Diseñador Freelance", type: "Egreso", amount: 15000 },
-];
-
-// ── Categorization — now powered by src/lib/categorias.js ────────────────────
-
-const CAT_COLORS = {
-    'Restaurantes':                  '#f97316',
-    'Comida y Abarrotes':            '#84cc16',
-    'Transporte':                    '#3b82f6',
-    'Suscripciones':                 '#8b5cf6',
-    'Transferencias':                '#6366f1',
-    'Salud':                         '#22c55e',
-    'Entretenimiento':               '#f59e0b',
-    'Ropa y Accesorios':             '#ec4899',
-    'Servicios (luz, agua, internet)': '#06b6d4',
-    'Educación':                     '#10b981',
-    'Viaje / Hospedaje':             '#14b8a6',
-    'Seguros':                       '#0ea5e9',
-    'Retiro de efectivo':            '#84cc16',
-    'Sueldo':                        '#34d399',
-    'Freelance':                     '#60a5fa',
-    'Transferencia recibida':        '#a78bfa',
-    'Inversión':                     '#0A84FF',
-    'Venta':                         '#fb923c',
-    'Otros':                         '#6b7280',
-};
-
-// Alias — kept so existing JSX using categorizarTransaccion still works
-function categorizarTransaccion(concepto) {
-    return inferirCategoria(concepto);
-}
-
-// ─── CSV helpers ─────────────────────────────────────────────────────────────
-
-function parseCSV(text) {
-    // Strip BOM and normalize line endings
-    const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-    const lines = clean.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return [];
-
-    // Auto-detect separator (semicolon or comma)
-    const sep = lines[0].includes(';') ? ';' : ',';
-
-    const result = [];
-    for (const line of lines) {
-        if (!line.trim()) continue;
-        const row = [];
-        let cur = '', inQ = false;
-        for (let i = 0; i < line.length; i++) {
-            const c = line[i];
-            if (c === '"') { inQ = !inQ; }
-            else if (c === sep && !inQ) { row.push(cur.trim().replace(/^["']|["']$/g, '')); cur = ''; }
-            else { cur += c; }
-        }
-        row.push(cur.trim().replace(/^["']|["']$/g, ''));
-        result.push(row);
-    }
-    return result;
-}
-
-const COL_PATTERNS = {
-    date:    [/^fecha$/i, /^date$/i, /^f\.?valor$/i, /^dt$/i, /^fecha operaci[oó]n$/i, /^fecha valor$/i, /^fec\.?$/i],
-    concept: [/^concepto$/i, /^descripci[oó]n$/i, /^description$/i, /^detalle$/i, /^referencia$/i, /^operaci[oó]n$/i, /^comercio$/i, /^movimiento$/i, /^narrativa$/i],
-    amount:  [/^monto$/i, /^importe$/i, /^amount$/i, /^valor$/i],
-    charge:  [/^cargo$/i, /^retiro$/i, /^d[eé]bito$/i, /^debit$/i, /^egresos$/i, /^cargos$/i, /^salida$/i],
-    credit:  [/^abono$/i, /^dep[oó]sito$/i, /^cr[eé]dito$/i, /^credit$/i, /^ingresos$/i, /^dep[oó]sitos$/i, /^entrada$/i],
-};
-
-function autoDetect(headers) {
-    const map = { date: '', concept: '', amount: '', charge: '', credit: '' };
-    headers.forEach(h => {
-        const normalized = h.trim().toLowerCase().replace(/\s+/g, ' ');
-        for (const [key, patterns] of Object.entries(COL_PATTERNS)) {
-            if (!map[key] && patterns.some(p => p.test(normalized))) map[key] = h;
-        }
-    });
-    return map;
-}
-
-function normalizarFecha(rawDate) {
-    if (!rawDate) return new Date().toISOString().split('T')[0];
-    // Already YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return rawDate;
-    // Try JS Date parse (handles ISO and some locale formats)
-    const parts = rawDate.split(/[\/\-\.]/);
-    if (parts.length === 3) {
-        const [a, b, c] = parts;
-        if (a.length === 4) {
-            // YYYY-MM-DD or YYYY/MM/DD
-            return `${a}-${b.padStart(2, '0')}-${c.padStart(2, '0')}`;
-        } else {
-            // DD/MM/YYYY (Mexican format)
-            const year = c.length === 2 ? `20${c}` : c;
-            return `${year}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
-        }
-    }
-    return new Date().toISOString().split('T')[0];
-}
-
-function buildRows(rawRows, headers, mapping, isCreditCard = false, memoria = null) {
-    const parseMonto = (s) => Math.abs(parseFloat((s || '').replace(/[$,\s]/g, '')) || 0);
-
-    return rawRows.map((row, idx) => {
-        const get = (col) => col ? (row[headers.indexOf(col)] || '') : '';
-        const rawDate = get(mapping.date);
-        const concept = get(mapping.concept).trim() || `Transacción ${idx + 1}`;
-        let amount = 0, type = 'Egreso';
-
-        if (mapping.charge || mapping.credit) {
-            const charge = parseMonto(get(mapping.charge));
-            const credit = parseMonto(get(mapping.credit));
-            if (credit > 0 && charge === 0) { amount = credit; type = isCreditCard ? 'Transferencia' : 'Ingreso'; }
-            else if (charge > 0) { amount = charge; type = 'Egreso'; }
-            else { amount = Math.max(credit, charge); }
-        } else if (mapping.amount) {
-            const v = parseFloat((get(mapping.amount) || '').replace(/[$,\s]/g, '')) || 0;
-            amount = Math.abs(v);
-            let mappedType = v >= 0 ? 'Ingreso' : 'Egreso';
-            if (isCreditCard) {
-                if (mappedType === 'Ingreso') mappedType = 'Transferencia';
-            }
-            type = mappedType;
-        }
-
-        return { _idx: idx, date: normalizarFecha(rawDate), concept, amount, type, client: 'N/A', categoria: resolverCategoria(concept, null, memoria, type) };
-    }).filter(r => r.amount > 0);
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
-
-const PERIODOS_FIN = [
-    { value: '1m', label: 'Este mes' },
-    { value: '3m', label: '3 meses' },
-    { value: '6m', label: '6 meses' },
-    { value: '1y', label: 'Este año' },
-    { value: 'Todos', label: 'Todos' },
-];
-
-function getFechaInicioFin(periodo) {
-    const now = new Date();
-    switch (periodo) {
-        case '1m': return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        case '3m': return new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
-        case '6m': return new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
-        case '1y': return new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-        case 'Todos': return '2000-01-01';
-        default:   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    }
-}
 
 export default function FinanzasPage() {
     const router = useRouter();
@@ -949,62 +798,10 @@ export default function FinanzasPage() {
         setIsModalOpen(false);
     };
 
-    const getLast3MonthsData = () => {
-        const data = [];
-        const today = new Date();
-        for (let i = 2; i >= 0; i--) {
-            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-
-            const monthData = {
-                label: d.toLocaleString('es-MX', { month: 'short' }),
-                ingresos: 0,
-                egresos: 0,
-                inversiones: 0,
-            };
-
-            transactions.forEach(t => {
-                const [tYear, tMonth] = t.date.split('-');
-                if (parseInt(tYear) === d.getFullYear() && parseInt(tMonth) === d.getMonth() + 1) {
-                    const ttype = t.type?.toLowerCase().trim();
-                    if (ttype === 'ingreso') monthData.ingresos += (Number(t.amount) || 0);
-                    if (ttype === 'egreso') monthData.egresos += (Number(t.amount) || 0);
-                    if (ttype === 'inversión') monthData.inversiones += (Number(t.amount) || 0);
-                }
-            });
-
-            data.push(monthData);
-        }
-        return data;
-    };
-
-    const chartData = getLast3MonthsData();
-    const maxAmount = Math.max(...chartData.flatMap(d => [d.ingresos, d.egresos, d.inversiones]), 100);
-
     // ── Analysis section ──────────────────────────────────────────────────────
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
-
-    const analysisData = useMemo(() => {
-        const egresos = filteredTx.filter(t => t.type?.toLowerCase().trim() === 'egreso');
-        const totalEgresosAll = egresos.reduce((s, t) => s + (t.amount || 0), 0);
-        if (totalEgresosAll === 0) return [];
-        const byCategory = {};
-        egresos.forEach(t => {
-            const cat = t.categoria || 'Otros';
-            if (!byCategory[cat]) byCategory[cat] = { total: 0, count: 0 };
-            byCategory[cat].total += t.amount || 0;
-            byCategory[cat].count++;
-        });
-        return Object.entries(byCategory)
-            .map(([name, { total, count }]) => ({
-                name,
-                total,
-                count,
-                pct: (total / totalEgresosAll) * 100,
-            }))
-            .sort((a, b) => b.total - a.total);
-    }, [filteredTx]);
 
     const monthTx = useMemo(() => filteredTx.filter(t => {
         const [y, m] = (t.date || '').split('-');
@@ -1049,7 +846,6 @@ export default function FinanzasPage() {
     // En tarjeta crédito: Ingreso = pago recibido, Ajuste = devolución/reembolso
     const cargosPeriodo = filteredTx.filter(t => t.type === 'Egreso').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     const pagosPeriodo = filteredTx.filter(t => t.type === 'Ingreso' || t.type === 'Transferencia').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const ajustesPeriodo = filteredTx.filter(t => t.type === 'Ajuste').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
     const creditTx = transactions.filter(t =>
         t.account_type === 'credito' &&
@@ -1127,7 +923,6 @@ export default function FinanzasPage() {
     }, [creditTx]);
 
     // Evolution narrative
-    const firstMonth = creditMonthlyHistory[0];
     const lastMonth = creditMonthlyHistory[creditMonthlyHistory.length - 1];
     const prevMonth = creditMonthlyHistory[creditMonthlyHistory.length - 2];
     const maxCargos = Math.max(...creditMonthlyHistory.map(m => m.cargos), 1);
