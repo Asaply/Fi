@@ -39,7 +39,7 @@ export default function PrivacyPage() {
                         </ul>
                         <h3 className={styles.h3}>2.3 Datos técnicos</h3>
                         <ul className={styles.ul}>
-                            <li className={styles.li}>Dirección IP (para límites de uso en análisis gratuitos).</li>
+                            <li className={styles.li}>Dirección IP (para seguridad y límites de uso).</li>
                             <li className={styles.li}>Tipo de navegador y sistema operativo.</li>
                             <li className={styles.li}>Preferencias de la aplicación almacenadas en tu dispositivo (localStorage).</li>
                         </ul>
@@ -90,7 +90,6 @@ export default function PrivacyPage() {
                         <ul className={styles.ul}>
                             <li className={styles.li}>Preferencias de visualización (tema, filtros).</li>
                             <li className={styles.li}>Configuración de PIN (guardada como hash PBKDF2, nunca el PIN en texto claro).</li>
-                            <li className={styles.li}>Resultados de análisis temporales (se eliminan al cerrar el navegador).</li>
                         </ul>
                     </section>
 
