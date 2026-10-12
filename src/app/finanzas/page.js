@@ -1,21 +1,24 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, ChevronRight, AlertCircle, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, AlertTriangle, Lock, RefreshCw, TrendingDown, Calendar as CalendarIcon, Target, Zap, BarChart2, Info, Check } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Edit2, Trash2, Plus, Wallet, TrendingUp, Upload, CheckCircle2, Receipt, Settings, Landmark, CreditCard as CreditCardIcon, AlertTriangle, Lock, RefreshCw, TrendingDown, Target, BarChart2, Info } from "lucide-react";
 import Modal from "@/components/Modal";
 import CurrencyInput from "@/components/CurrencyInput";
 import PLCalendar from "@/components/PLCalendar";
 import { supabase } from "@/lib/supabaseClient";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { categoriasParaTipo, CATEGORIAS_ALL, construirMemoriaCategorias, resolverCategoria } from "@/lib/categorias";
+import { categoriasParaTipo, construirMemoriaCategorias, resolverCategoria } from "@/lib/categorias";
 import { parseCSV, autoDetect, buildRows } from "@/lib/finanzas/csvImport";
 import { PERIODOS_FIN, getFechaInicioFin } from "@/lib/finanzas/periodos";
+import CreditInsights from "./components/CreditInsights";
+import CustomCardEditModal from "./components/CustomCardEditModal";
+import CreditConfigModal from "./components/CreditConfigModal";
+import ImportModal from "./components/ImportModal";
 import { getFilter, setFilter } from "@/lib/filterMemory";
 import GastosPorCategoria from "@/components/GastosPorCategoria";
 import IngresosPorCategoria from "@/components/IngresosPorCategoria";
 import GastosHormiga from "@/components/GastosHormiga";
-import NvaIntelligencePanel from "@/components/NvaIntelligencePanel";
 import InfoTip from "@/components/InfoTip";
 import { openTutorial } from "@/components/AppTutorial";
 import { toast } from "sonner";
@@ -1327,183 +1330,36 @@ export default function FinanzasPage() {
 
             {/* DEBT INTELLIGENCE + FORECASTING + SIMULATOR + INSIGHTS */}
             {!isLoading && accountType === 'credit' && creditTx.length > 0 && (
-                <div style={{ marginTop: '12px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-                    {/* DEBT INTELLIGENCE */}
-                    <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                        <p style={{ margin: '0 0 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Inteligencia de Deuda</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {[
-                                { label: 'Compras y Cargos', value: historicoCargos, color: 'var(--text-primary)' },
-                                { label: 'Pagos realizados', value: -historicoPagos, color: '#34d399' },
-                                { label: 'Devoluciones', value: -historicoAjustes, color: '#60a5fa' },
-                                ...(interesesPeriodo > 0 ? [{ label: 'Intereses / Comis.', value: interesesPeriodo, color: '#f87171' }] : []),
-                                ...(totalMSI > 0 ? [{ label: 'MSI activos', value: totalMSI, color: '#a78bfa' }] : []),
-                                ...(totalSuscripciones > 0 ? [{ label: 'Suscripciones', value: totalSuscripciones, color: '#fb923c' }] : []),
-                            ].map(({ label, value, color }) => (
-                                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{label}</span>
-                                    <span style={{ fontSize: '13px', fontWeight: 600, color }}>{value < 0 ? '-' : ''}{formatCurrency(Math.abs(value))}</span>
-                                </div>
-                            ))}
-                            <div style={{ height: '1px', background: 'var(--bg-border)', margin: '2px 0' }} />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Deuda neta</span>
-                                <span style={{ fontSize: '14px', fontWeight: 800, color: deudaActual > 0 ? '#f87171' : '#34d399' }}>{formatCurrency(deudaActual)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer', paddingTop: '4px' }} onClick={() => setIsEditingCreditConfig(true)}>
-                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CalendarIcon size={10} /> Corte: {creditConfig.cutoffDate || '—'}</span>
-                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CalendarIcon size={10} /> Límite: {creditConfig.paymentDate || '—'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* FORECASTING */}
-                    <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                        <p style={{ margin: '0 0 14px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>¿Qué pasa si...?</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {burnRateDiario > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                        {diasHastaSaturacion < 60
-                                            ? <AlertTriangle size={13} style={{ color: '#ef4444', flexShrink: 0 }} />
-                                            : diasHastaSaturacion < 120
-                                            ? <AlertTriangle size={13} style={{ color: '#eab308', flexShrink: 0 }} />
-                                            : <CheckCircle2 size={13} style={{ color: '#22c55e', flexShrink: 0 }} />
-                                        } ...sigues gastando igual
-                                    </span>
-                                    <span style={{ fontSize: '13px', fontWeight: 700, color: diasHastaSaturacion < 30 ? '#ef4444' : diasHastaSaturacion < 60 ? '#eab308' : '#34d399' }}>
-                                        {diasHastaSaturacion > 365 ? 'línea aguanta 1+ año' : `saturarías en ~${diasHastaSaturacion} días`}
-                                    </span>
-                                </div>
-                            )}
-                            {deudaComprometidaProxMes > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Lock size={13} style={{ color: '#a78bfa', flexShrink: 0 }} /> ...no cancelas nada fijo</span>
-                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#a78bfa' }}>{formatCurrency(deudaComprometidaProxMes)} comprometido</span>
-                                </div>
-                            )}
-                            {pagoNoInteres > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Target size={13} style={{ color: '#34d399', flexShrink: 0 }} /> ...pagas para evitar intereses</span>
-                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#34d399' }}>paga {formatCurrency(pagoNoInteres)}</span>
-                                </div>
-                            )}
-                            {Number(creditConfig.pagoMinimo) > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Zap size={13} style={{ color: '#eab308', flexShrink: 0 }} /> ...pagas el mínimo</span>
-                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#eab308' }}>{formatCurrency(Number(creditConfig.pagoMinimo))}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* MINIMUM PAYMENT CONSEQUENCE — killer feature */}
-                    {deudaActual > 0 && mesesMostrar > 0 && (
-                        <div style={{ padding: '16px', borderRadius: '14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                            <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 600, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '5px' }}><AlertTriangle size={11} /> Si solo pagas el mínimo...</p>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <div style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
-                                    <div style={{ fontSize: '22px', fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{mesesMostrar}</div>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>meses para liquidar</div>
-                                </div>
-                                <div style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
-                                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{formatCurrency(interesesMostrar)}</div>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>en intereses totales</div>
-                                </div>
-                            </div>
-                            {cat > 0 && (
-                                <p style={{ margin: '10px 0 0', fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center' }}>CAT: {cat}% anual</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* SIMULATOR */}
-                    <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                        <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Simulador de Pago</p>
-                        <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', background: 'rgba(0,0,0,0.2)', padding: '3px', borderRadius: '8px' }}>
-                            {[['minimo', 'Mínimo'], ['corte', 'Sin intereses'], ['total', 'Total']].map(([mode, label]) => (
-                                <button key={mode} style={{ flex: 1, fontSize: '11px', padding: '6px 4px', background: simulatorMode === mode ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: simulatorMode === mode ? '#fff' : 'var(--text-secondary)', borderRadius: '6px', cursor: 'pointer', fontWeight: simulatorMode === mode ? 600 : 400 }} onClick={() => setSimulatorMode(mode)}>{label}</button>
-                            ))}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Si pagas:</span>
-                                <span style={{ fontSize: '15px', fontWeight: 700, color: '#34d399' }}>{formatCurrency(simulatedPayment)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Deuda restante:</span>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(simulatedRemaining)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '8px', background: simulatedInterest > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.08)', border: `1px solid ${simulatedInterest > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'}` }}>
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>Intereses próx. mes:</span>
-                                <span style={{ fontSize: '13px', fontWeight: 700, color: simulatedInterest > 0 ? '#f87171' : '#4ade80' }}>{simulatedInterest > 0 ? `~${formatCurrency(simulatedInterest)}` : '$0.00'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* AUTO-INSIGHTS */}
-                    {autoInsights.length > 0 && (
-                        <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                            <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Lo que dice tu estado</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {autoInsights.map((ins, i) => (
-                                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                        <ins.Icon size={14} style={{ flexShrink: 0, marginTop: '2px', color: ins.iconColor }} />
-                                        <span style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4 }}>{ins.text}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* HISTORIAL MENSUAL */}
-                    {creditMonthlyHistory.length > 1 && (
-                        <div style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                                <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Evolución mensual</p>
-                                {trendVsPrev && (
-                                    <span style={{ fontSize: '11px', fontWeight: 600, color: trendVsPrev.direction === 'up' ? '#f87171' : '#34d399', padding: '2px 8px', borderRadius: '20px', background: trendVsPrev.direction === 'up' ? 'rgba(248,113,113,0.1)' : 'rgba(52,211,153,0.1)' }}>
-                                        {trendVsPrev.direction === 'up' ? '↑' : '↓'} {trendVsPrev.pct}% vs mes anterior
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Narrative */}
-                            {lastMonthNarrative && (
-                                <p style={{ margin: '0 0 14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: `3px solid ${lastMonth.neto >= 0 ? '#34d399' : '#f87171'}` }}>
-                                    {lastMonthNarrative}
-                                </p>
-                            )}
-
-                            {/* Monthly bars */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {creditMonthlyHistory.slice(-6).reverse().map(m => (
-                                    <div key={m.month}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{m.label}</span>
-                                            <div style={{ display: 'flex', gap: '12px' }}>
-                                                <span style={{ fontSize: '11px', color: '#f87171' }}>{formatCurrency(m.cargos)}</span>
-                                                <span style={{ fontSize: '11px', color: '#34d399' }}>{formatCurrency(m.pagos)}</span>
-                                            </div>
-                                        </div>
-                                        <div style={{ position: 'relative', height: '6px', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
-                                            {/* Cargos bar */}
-                                            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, (m.cargos / maxCargos) * 100)}%`, background: '#f87171', borderRadius: '999px', opacity: 0.7 }} />
-                                            {/* Pagos overlay */}
-                                            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, (m.pagos / maxCargos) * 100)}%`, background: '#34d399', borderRadius: '999px', opacity: 0.5 }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '10px', color: 'var(--text-secondary)' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f87171', display: 'inline-block' }} /> Cargos</span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} /> Pagos</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <CreditInsights
+                    autoInsights={autoInsights}
+                    burnRateDiario={burnRateDiario}
+                    cat={cat}
+                    creditConfig={creditConfig}
+                    creditMonthlyHistory={creditMonthlyHistory}
+                    deudaActual={deudaActual}
+                    deudaComprometidaProxMes={deudaComprometidaProxMes}
+                    diasHastaSaturacion={diasHastaSaturacion}
+                    formatCurrency={formatCurrency}
+                    historicoAjustes={historicoAjustes}
+                    historicoCargos={historicoCargos}
+                    historicoPagos={historicoPagos}
+                    interesesMostrar={interesesMostrar}
+                    interesesPeriodo={interesesPeriodo}
+                    lastMonth={lastMonth}
+                    lastMonthNarrative={lastMonthNarrative}
+                    maxCargos={maxCargos}
+                    mesesMostrar={mesesMostrar}
+                    pagoNoInteres={pagoNoInteres}
+                    setIsEditingCreditConfig={setIsEditingCreditConfig}
+                    setSimulatorMode={setSimulatorMode}
+                    simulatedInterest={simulatedInterest}
+                    simulatedPayment={simulatedPayment}
+                    simulatedRemaining={simulatedRemaining}
+                    simulatorMode={simulatorMode}
+                    totalMSI={totalMSI}
+                    totalSuscripciones={totalSuscripciones}
+                    trendVsPrev={trendVsPrev}
+                />
             )}
 
             {/* Action buttons */}
@@ -1842,414 +1698,68 @@ export default function FinanzasPage() {
             </Modal>
 
             {/* ── Custom Card Edit Modal ── */}
-            <Modal isOpen={isEditingCustomCard} onClose={() => setIsEditingCustomCard(false)} title="Editar tarjeta personalizada">
-                <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={async (e) => {
-                    e.preventDefault();
-                    const { data: { user } } = await supabase.auth.getUser();
-                    const newLabel = customCardForm.label.trim() || 'Por Cobrar';
-                    const newMonto = parseFloat(customCardForm.monto) || 0;
-                    const { error } = await supabase.from('user_config').upsert({
-                        user_id: user.id,
-                        concepto_custom_label: newLabel,
-                        concepto_custom_total: newMonto,
-                    }, { onConflict: 'user_id' });
-                    if (!error) {
-                        setUserConfig({ concepto_custom_label: newLabel, concepto_custom_total: newMonto });
-                        setIsEditingCustomCard(false);
-                    } else {
-                        console.error('Error saving user_config:', error?.message);
-                    }
-                }}>
-                    {/* Vincular una meta de la sección Metas */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Vincular una meta</label>
-                            <button type="button" className="btn-icon-sm glass" style={{ padding: '4px 10px', fontSize: '12px', color: 'var(--text-primary)' }} onClick={() => router.push('/budgets')}>
-                                Administrar metas
-                            </button>
-                        </div>
-                        {budgets.length === 0 ? (
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                                No tienes metas aún. Créalas en la sección Metas y aparecerán aquí para mostrarlas en esta tarjeta.
-                            </p>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <button type="button" onClick={() => linkMeta(null)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', background: !featuredMetaId ? 'rgba(255,255,255,0.08)' : 'transparent', border: `1px solid ${!featuredMetaId ? 'rgba(255,255,255,0.25)' : 'var(--border-color)'}`, color: 'var(--text-primary)', fontSize: '13px' }}>
-                                    <Wallet size={15} /> Concepto manual (sin meta)
-                                </button>
-                                {budgets.map(b => {
-                                    const sel = String(featuredMetaId) === String(b.id);
-                                    const paid = budgetPaid[b.id] || 0;
-                                    const tgt = Number(b.target_amount) || 0;
-                                    const pct = tgt > 0 ? Math.min(100, (paid / tgt) * 100) : 0;
-                                    return (
-                                        <button key={b.id} type="button" onClick={() => linkMeta(b.id)}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', background: sel ? `${b.color || '#fbbf24'}22` : 'transparent', border: `1px solid ${sel ? (b.color || '#fbbf24') : 'var(--border-color)'}`, color: 'var(--text-primary)' }}>
-                                            <span style={{ fontSize: '16px', lineHeight: 1 }}>{b.icon || '🎯'}</span>
-                                            <span style={{ flex: 1, minWidth: 0 }}>
-                                                <span style={{ display: 'block', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
-                                                <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)' }}>{pct.toFixed(0)}% · {formatCurrency(paid)} de {formatCurrency(tgt)}</span>
-                                            </span>
-                                            {sel && <Check size={15} style={{ color: b.color || '#fbbf24' }} />}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{ height: '1px', background: 'var(--border-color)' }} />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: featuredMetaId ? 0.5 : 1 }}>
-                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Nombre del concepto</label>
-                        <input type="text" className="select-filter" style={{ width: '100%' }} placeholder="Ej: Ahorro, Por Cobrar, Meta..." value={customCardForm.label} onChange={e => setCustomCardForm(p => ({ ...p, label: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Monto</label>
-                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={customCardForm.monto} onChange={e => setCustomCardForm(p => ({ ...p, monto: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                        <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsEditingCustomCard(false)}>Cancelar</button>
-                        <button type="submit" className="btn-primary">Guardar</button>
-                    </div>
-                </form>
-            </Modal>
+            <CustomCardEditModal
+                budgetPaid={budgetPaid}
+                budgets={budgets}
+                customCardForm={customCardForm}
+                featuredMetaId={featuredMetaId}
+                formatCurrency={formatCurrency}
+                isEditingCustomCard={isEditingCustomCard}
+                linkMeta={linkMeta}
+                router={router}
+                setCustomCardForm={setCustomCardForm}
+                setIsEditingCustomCard={setIsEditingCustomCard}
+                setUserConfig={setUserConfig}
+                supabase={supabase}
+            />
 
             {/* ── Credit Config Modal ── */}
-            <Modal isOpen={isEditingCreditConfig} onClose={() => setIsEditingCreditConfig(false)} title="Configuración de Tarjeta">
-                <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={handleSaveCreditConfig}>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                        Ajusta los parámetros de tu tarjeta para calcular tu utilización, saldo y cuenta regresiva.
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Límite de Crédito</label>
-                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="Ej: 50,000" value={creditConfig.limit} onChange={e => setCreditConfig(p => ({ ...p, limit: e.target.value }))} required />
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Día de Corte</label>
-                            <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="Ej: 18" min="1" max="31" value={creditConfig.cutoffDate} onChange={e => setCreditConfig(p => ({ ...p, cutoffDate: e.target.value }))} />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Día Límite de Pago</label>
-                            <input type="number" className="select-filter" style={{ width: '100%' }} placeholder="Ej: 25" min="1" max="31" value={creditConfig.paymentDate} onChange={e => setCreditConfig(p => ({ ...p, paymentDate: e.target.value }))} />
-                        </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Saldo al corte</label>
-                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.statementBalance} onChange={e => setCreditConfig(p => ({ ...p, statementBalance: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago mínimo</label>
-                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.pagoMinimo || ''} onChange={e => setCreditConfig(p => ({ ...p, pagoMinimo: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Pago para no generar intereses<InfoTip title="Pago para no generar intereses" text="El monto exacto que debes pagar antes de la fecha límite para que la tarjeta NO te cobre intereses. Viene impreso en tu estado de cuenta. Pagar menos que esto activa intereses sobre todo el saldo." /></label>
-                        <CurrencyInput className="select-filter" style={{ width: '100%' }} placeholder="0.00" value={creditConfig.noInterestPayment} onChange={e => setCreditConfig(p => ({ ...p, noInterestPayment: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                        <button type="button" className="btn-icon-sm glass" style={{ padding: '8px 16px', color: 'var(--text-primary)' }} onClick={() => setIsEditingCreditConfig(false)}>Cancelar</button>
-                        <button type="submit" className="btn-primary">Guardar</button>
-                    </div>
-                </form>
-            </Modal>
+            <CreditConfigModal
+                creditConfig={creditConfig}
+                handleSaveCreditConfig={handleSaveCreditConfig}
+                isEditingCreditConfig={isEditingCreditConfig}
+                setCreditConfig={setCreditConfig}
+                setIsEditingCreditConfig={setIsEditingCreditConfig}
+            />
 
             {/* ── Import Modal ── */}
-            <Modal isOpen={isImportOpen} onClose={resetImport} title="Importar Estado de Cuenta">
-                <input ref={fileInputRef} type="file" accept=".csv,.pdf,text/csv,application/pdf" style={{ display: 'none' }} onChange={handleFileUpload} />
-
-                {/* Result screen */}
-                {importResult ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '24px 0' }}>
-                        {importResult.ok ? (
-                            <>
-                                <CheckCircle2 size={48} color="var(--success)" />
-                                <p style={{ fontWeight: 600, fontSize: '16px' }}>{importResult.count} transacciones importadas</p>
-                                <div style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', background: 'rgba(255,135,0,0.07)', border: '1px solid rgba(255,135,0,0.2)', textAlign: 'center' }}>
-                                    <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                                        ¿Tienes otra tarjeta o cuenta? Puedes importar múltiples estados de cuenta y ver el análisis de cada una por separado.
-                                    </p>
-                                    <button
-                                        className="btn-cta-secondary"
-                                        style={{ width: '100%', justifyContent: 'center' }}
-                                        onClick={() => { setImportResult(null); setImportStep(1); setPendingRows([]); setPdfBankInfo(null); }}
-                                    >
-                                        <Upload size={14} /> Importar otra tarjeta
-                                    </button>
-                                </div>
-                                <button className="btn-primary" style={{ width: '100%' }} onClick={resetImport}>Listo</button>
-                            </>
-                        ) : (
-                            <>
-                                <AlertCircle size={48} color="var(--danger)" />
-                                <p style={{ color: 'var(--danger)', fontWeight: 600 }}>Error al importar</p>
-                                {importResult.errorMsg && (
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', maxWidth: '320px' }}>{importResult.errorMsg}</p>
-                                )}
-                                <button className="btn-secondary" onClick={() => setImportResult(null)}>Volver</button>
-                            </>
-                        )}
-                    </div>
-                ) : importStep === 1 ? (
-                    /* Step 1: upload + column mapping */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '100px' }}>
-                        <p style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
-                            Sube tu estado de cuenta en PDF o CSV. Compatible con todos los bancos de México: Nu, BBVA, Banorte, Santander, HSBC, Citibanamex, Spin by OXXO, Mercado Pago, Hey Banco, Inbursa, Afirme y más.
-                        </p>
-                        <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--bg-border)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                            Puedes importar estados de múltiples tarjetas y cuentas. Cada una tendrá su propio análisis y podrás verlas de forma individual o en vista global.
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                            <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Tipo de Tarjeta (para clasificar abonos y retiros)</label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    className={`btn-secondary ${!isCreditCard ? 'active' : ''}`}
-                                    style={{ flex: 1, borderColor: !isCreditCard ? 'var(--brand)' : '', color: !isCreditCard ? 'var(--brand)' : '' }}
-                                    onClick={() => setIsCreditCard(false)}
-                                >
-                                    Débito / Cheques
-                                </button>
-                                <button
-                                    className={`btn-secondary ${isCreditCard ? 'active' : ''}`}
-                                    style={{ flex: 1, borderColor: isCreditCard ? 'var(--brand)' : '', color: isCreditCard ? 'var(--brand)' : '' }}
-                                    onClick={() => setIsCreditCard(true)}
-                                >
-                                    Crédito
-                                </button>
-                            </div>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{isCreditCard ? 'Los pagos a la tarjeta se registrarán como "Transferencia" (interno) y no sumarán a tus ingresos.' : 'Los depósitos se registrarán como "Ingreso" y los retiros como "Egreso".'}</p>
-                        </div>
-
-
-                        {isParsing ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '28px 16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                <div style={{ width: 36, height: 36, border: '3px solid rgba(255,122,26,0.2)', borderTopColor: '#FF7A1A', borderRadius: '50%', animation: 'spin 0.9s linear infinite' }} />
-                                <div style={{ textAlign: 'center' }}>
-                                    <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>Analizando con IA...</p>
-                                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Esto puede tomar hasta 2 minutos</p>
-                                </div>
-                            </div>
-                        ) : !showPdfPassword ? (
-                            <button
-                                className="btn-secondary"
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', padding: '12px', border: '2px dashed var(--border-color)', borderRadius: '8px', width: '100%' }}
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isParsing}
-                            >
-                                <Upload size={18} />
-                                {csvHeaders.length > 0 ? `Archivo cargado (${csvRawRows.length} filas)` : 'Seleccionar archivo .pdf o .csv'}
-                            </button>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Lock size={18} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-                                    <div>
-                                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>PDF protegido con contraseña</p>
-                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Ingresa la contraseña para continuar</p>
-                                    </div>
-                                </div>
-                                <input
-                                    type="password"
-                                    className="select-filter"
-                                    style={{ width: '100%', fontSize: '14px', padding: '8px 12px', borderColor: pdfPasswordError ? 'var(--danger)' : undefined }}
-                                    placeholder="Contraseña del PDF"
-                                    value={pdfPassword}
-                                    onChange={e => { setPdfPassword(e.target.value); setPdfPasswordError(false); }}
-                                    onKeyDown={e => e.key === 'Enter' && !isParsing && pdfPassword && parsePdfFile(pendingPdfFile, pdfPassword)}
-                                    autoFocus
-                                />
-                                {pdfPasswordError && (
-                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--danger)' }}>Contraseña incorrecta. Intenta de nuevo.</p>
-                                )}
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        className="btn-secondary"
-                                        style={{ flex: 1 }}
-                                        onClick={() => { setShowPdfPassword(false); setPendingPdfFile(null); setPdfPassword(''); setPdfPasswordError(false); }}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        className="btn-primary"
-                                        style={{ flex: 1 }}
-                                        disabled={isParsing || !pdfPassword}
-                                        onClick={() => parsePdfFile(pendingPdfFile, pdfPassword)}
-                                    >
-                                        {isParsing ? 'Procesando...' : 'Continuar'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {csvHeaders.length > 0 && (
-                            <>
-                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '-8px' }}>Mapeo de columnas</p>
-                                {[
-                                    { key: 'date', label: 'Fecha *' },
-                                    { key: 'concept', label: 'Concepto *' },
-                                    { key: 'amount', label: 'Monto (columna única, + = ingreso)' },
-                                    { key: 'charge', label: 'Cargo / Retiro (débito)' },
-                                    { key: 'credit', label: 'Abono / Depósito (crédito)' },
-                                ].map(({ key, label }) => (
-                                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                                        <label style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{label}</label>
-                                        <select
-                                            className="select-filter"
-                                            style={{ fontSize: '13px', padding: '4px 8px', minWidth: '160px' }}
-                                            value={csvMapping[key]}
-                                            onChange={e => setCsvMapping(prev => ({ ...prev, [key]: e.target.value }))}
-                                        >
-                                            <option value="">— ignorar —</option>
-                                            {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
-                                        </select>
-                                    </div>
-                                ))}
-
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                                    <button className="btn-secondary" onClick={resetImport}>Cancelar</button>
-                                    <button
-                                        className="btn-primary"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                                        onClick={handlePreview}
-                                        disabled={!csvMapping.date || !csvMapping.concept || (!csvMapping.amount && !csvMapping.charge && !csvMapping.credit)}
-                                    >
-                                        Previsualizar <ChevronRight size={16} />
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                ) : (
-                    /* Step 2: preview + confirm */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {/* Summary stats */}
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <div style={{ flex: 1, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                                    {isCreditCard ? 'PAGOS' : 'INGRESOS'}
-                                </div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--positive)' }}>
-                                    {formatCurrency(pendingRows.filter(r => r.type === (isCreditCard ? 'Transferencia' : 'Ingreso')).reduce((s, r) => s + r.amount, 0))}
-                                </div>
-                            </div>
-                            <div style={{ flex: 1, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                                    {isCreditCard ? 'CARGOS' : 'EGRESOS'}
-                                </div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--negative)' }}>
-                                    {formatCurrency(pendingRows.filter(r => r.type === 'Egreso').reduce((s, r) => s + r.amount, 0))}
-                                </div>
-                            </div>
-                            <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>TRANSACCIONES</div>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{pendingRows.length}</div>
-                            </div>
-                        </div>
-                        
-                        {pdfBankInfo && (pdfBankInfo.saldo_anterior > 0 || pdfBankInfo.saldo_final > 0) && (
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <div style={{ flex: 1, background: 'rgba(255,135,0,0.08)', border: '1px solid rgba(255,135,0,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>SALDO ANTERIOR</div>
-                                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#FF8700' }}>
-                                        {formatCurrency(pdfBankInfo.saldo_anterior)}
-                                    </div>
-                                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>{pdfBankInfo.banco}</div>
-                                </div>
-                                <div style={{ flex: 1, background: 'rgba(255,135,0,0.08)', border: '1px solid rgba(255,135,0,0.25)', borderRadius: '8px', padding: '10px 14px' }}>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>SALDO AL CORTE</div>
-                                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#FF8700' }}>
-                                        {formatCurrency(pdfBankInfo.saldo_final)}
-                                    </div>
-                                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>{pdfBankInfo.periodo || pdfBankInfo.banco}</div>
-                                </div>
-                            </div>
-                        )}
-
-                        {nvaIntelligence && (
-                            <div className="mb-4">
-                                <NvaIntelligencePanel intelligence={nvaIntelligence} />
-                            </div>
-                        )}
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Revisa y ajusta tipo y categoría antes de importar.
-                            </p>
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Todo:</span>
-                                {isCreditCard ? (
-                                    <>
-                                        <button className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType('Transferencia')}>Pago</button>
-                                        <button className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType('Egreso')}>Cargo</button>
-                                        <button className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType('Ingreso')}>Ajuste</button>
-                                    </>
-                                ) : (
-                                    ['Ingreso', 'Egreso', 'Inversión', 'Por Cobrar'].map(t => (
-                                        <button key={t} className="btn-secondary" style={{ fontSize: '11px', padding: '3px 7px' }} onClick={() => handleBulkType(t)}>{t}</button>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        <div style={{ overflowX: 'hidden', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-                            <div className="import-rows-list">
-                                {pendingRows.map(r => (
-                                    <div key={r._idx} className="import-row-card">
-                                        <div className="import-row-top">
-                                            <span className="import-row-info">
-                                                <span className="import-row-date">{r.date}</span>
-                                                <span className="import-row-concept" title={r.concept}>{r.concept}</span>
-                                            </span>
-                                            <span className="import-row-amount">{formatCurrency(r.amount)}</span>
-                                        </div>
-                                        <div className="import-row-controls">
-                                            <select
-                                                className="select-filter"
-                                                value={r.type}
-                                                onChange={e => updatePendingRow(r._idx, 'type', e.target.value)}
-                                            >
-                                                {isCreditCard ? (
-                                                    <>
-                                                        <option value="Transferencia">Pago</option>
-                                                        <option value="Egreso">Cargo</option>
-                                                        <option value="Ingreso">Ajuste</option>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <option value="Ingreso">Ingreso</option>
-                                                        <option value="Egreso">Egreso</option>
-                                                        <option value="Inversión">Inversión</option>
-                                                        <option value="Por Cobrar">Por Cobrar</option>
-                                                    </>
-                                                )}
-                                            </select>
-                                            <select
-                                                className="select-filter"
-                                                value={r.categoria || 'Otros'}
-                                                onChange={e => updatePendingRow(r._idx, 'categoria', e.target.value)}
-                                            >
-                                                {CATEGORIAS_ALL.map(c => <option key={c}>{c}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div style={{ position: 'sticky', bottom: 0, display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '12px', marginTop: '-4px', background: 'linear-gradient(to top, var(--bg-card) 70%, transparent)' }}>
-                            <button className="btn-secondary" onClick={() => setImportStep(1)}>Volver</button>
-                            <button
-                                className="btn-primary"
-                                onClick={handleConfirmImport}
-                                disabled={isImporting || pendingRows.length === 0}
-                            >
-                                {isImporting ? 'Importando...' : `Importar ${pendingRows.length} transacciones`}
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </Modal>
+            <ImportModal
+                csvHeaders={csvHeaders}
+                csvMapping={csvMapping}
+                csvRawRows={csvRawRows}
+                fileInputRef={fileInputRef}
+                formatCurrency={formatCurrency}
+                handleBulkType={handleBulkType}
+                handleConfirmImport={handleConfirmImport}
+                handleFileUpload={handleFileUpload}
+                handlePreview={handlePreview}
+                importResult={importResult}
+                importStep={importStep}
+                isCreditCard={isCreditCard}
+                isImportOpen={isImportOpen}
+                isImporting={isImporting}
+                isParsing={isParsing}
+                nvaIntelligence={nvaIntelligence}
+                parsePdfFile={parsePdfFile}
+                pdfBankInfo={pdfBankInfo}
+                pdfPassword={pdfPassword}
+                pdfPasswordError={pdfPasswordError}
+                pendingPdfFile={pendingPdfFile}
+                pendingRows={pendingRows}
+                resetImport={resetImport}
+                setCsvMapping={setCsvMapping}
+                setImportResult={setImportResult}
+                setImportStep={setImportStep}
+                setIsCreditCard={setIsCreditCard}
+                setPdfBankInfo={setPdfBankInfo}
+                setPdfPassword={setPdfPassword}
+                setPdfPasswordError={setPdfPasswordError}
+                setPendingPdfFile={setPendingPdfFile}
+                setPendingRows={setPendingRows}
+                setShowPdfPassword={setShowPdfPassword}
+                showPdfPassword={showPdfPassword}
+                updatePendingRow={updatePendingRow}
+            />
         </div>
     );
 }
