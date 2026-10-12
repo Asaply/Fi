@@ -1,0 +1,82 @@
+#!/usr/bin/env node
+// Copy each user's access into app_metadata from `subscriptions` + `free_grants`.
+// Dry-run by default; pass --apply to write. Safe to re-run.
+//   node scripts/migrate-access-to-app-metadata.mjs
+//   node scripts/migrate-access-to-app-metadata.mjs --apply
+import fs from 'fs';
+import { createClient } from '@supabase/supabase-js';
+import { accessFromRecords } from '../src/lib/accessMigration.js';
+
+function loadEnvLocal() {
+    if (!fs.existsSync('.env.local')) return;
+    for (const line of fs.readFileSync('.env.local', 'utf8').split('\n')) {
+        const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+        if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+}
+
+loadEnvLocal();
+const apply = process.argv.includes('--apply');
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!url || !key) {
+    console.error('Faltan NEXT_PUBLIC_SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY.');
+    process.exit(1);
+}
+const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+
+async function allUsers() {
+    const users = [];
+    for (let page = 1; ; page++) {
+        const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+        if (error) throw error;
+        users.push(...data.users);
+        if (data.users.length < 1000) return users;
+    }
+}
+
+const [{ data: subs, error: subsErr }, { data: grants, error: grantsErr }] = await Promise.all([
+    admin.from('subscriptions').select('user_id, status, source, current_period_end'),
+    admin.from('free_grants').select('user_id'),
+]);
+if (subsErr) throw subsErr;
+if (grantsErr) throw grantsErr;
+const subByUser = new Map(subs.map((s) => [s.user_id, s]));
+const grantByUser = new Map(grants.map((g) => [g.user_id, g]));
+
+const users = await allUsers();
+const counts = {};
+const changed = [];
+for (const user of users) {
+    const access = accessFromRecords({
+        subscription: subByUser.get(user.id) || null,
+        freeGrant: grantByUser.get(user.id) || null,
+        userMetadata: user.user_metadata || {},
+    });
+    const label = access ? `${access.subscription_status}/${access.subscription_source}` : 'sin acceso';
+    counts[label] = (counts[label] || 0) + 1;
+    if (!access) continue;
+
+    const current = user.app_metadata || {};
+    const same = current.subscription_status === access.subscription_status &&
+        current.subscription_source === access.subscription_source &&
+        (current.subscription_expires_at ?? null) === access.subscription_expires_at;
+    if (same) continue;
+
+    const um = user.user_metadata || {};
+    if (um.subscription_status !== access.subscription_status) {
+        changed.push(`${user.email}: user_metadata=${um.subscription_status ?? '—'} → ${access.subscription_status}`);
+    }
+    if (apply) {
+        const { error } = await admin.auth.admin.updateUserById(user.id, { app_metadata: access });
+        if (error) console.error(`✗ ${user.email}: ${error.message}`);
+    }
+}
+
+console.log(`Usuarios: ${users.length}`);
+console.table(counts);
+if (changed.length) {
+    console.log('Difieren de su user_metadata actual (revisar):');
+    for (const line of changed) console.log('  ' + line);
+}
+console.log(apply ? '✓ app_metadata escrito.' : 'Dry-run: no se escribió nada. Usa --apply para escribir.');
