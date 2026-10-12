@@ -52,7 +52,7 @@ subscription_expires_at: ISO string | null   // null = no vence
 | Estado | Quién | Acceso |
 |---|---|---|
 | `active` con `expires_at` | Suscriptores Stripe/Apple, incluida la prueba (Stripe `trialing` → `active`) | Hasta `expires_at` + 24 h de gracia |
-| `active` sin `expires_at` | Pagos únicos legacy (`stripe_legacy`) | Siempre |
+| `active` sin `expires_at` | Pagos únicos legacy (solo si tienen fila en `subscriptions`) | Siempre |
 | `free` | Quien ya tiene uno de los 150 lugares | Siempre |
 | `expired` / sin estado | Todos los demás | Paywall |
 
@@ -113,11 +113,12 @@ script se puede correr las veces que haga falta y siempre da el estado correcto.
 - Por cada usuario de `auth.users`:
   - Si tiene fila en `subscriptions`, usa `status`, `source` y `current_period_end` → `expires_at`.
   - Si no, pero está en `free_grants`, usa `status: 'free'`, `source: 'free'` y `expires_at: null`.
-  - Si no tiene ninguna, pero `user_metadata.subscription_source === 'stripe_legacy'`, copia ese estado
-    (los pagos únicos anteriores al sistema de suscripciones no siempre tienen fila en `subscriptions`).
-  - Si no tiene nada de lo anterior, no lo toca.
-- `--dry-run` por defecto: imprime conteos por estado y los usuarios cuyo resultado difiere de su
-  `user_metadata` actual. `--apply` escribe.
+  - Si no tiene ninguna, no lo toca. **Nunca** copia nada de `user_metadata`: el usuario puede escribirlo,
+    así que copiarlo reabriría el hoyo. (Ningún código escribió jamás `stripe_legacy`.)
+- `--dry-run` por defecto: imprime conteos por estado, cuántos escribiría y la lista **PERDERÍA ACCESO**:
+  usuarios cuyo `user_metadata` actual da acceso pero que no tienen fila en `subscriptions` ni en
+  `free_grants` (pagos únicos viejos o upserts fallidos). Se reconcilian a mano (verificar el pago e insertar
+  la fila) antes de `--apply`. `--apply` escribe y reporta fallos con código de salida 1.
 
 **Orden de despliegue**
 1. Correr el script con `--dry-run`, revisar los conteos y luego correrlo con `--apply`. Nada lee `app_metadata`
