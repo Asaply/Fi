@@ -1701,7 +1701,6 @@ export default function FinanzasPage() {
                 setCustomCardForm={setCustomCardForm}
                 setIsEditingCustomCard={setIsEditingCustomCard}
                 setUserConfig={setUserConfig}
-                supabase={supabase}
             />
 
             {/* ── Credit Config Modal ── */}

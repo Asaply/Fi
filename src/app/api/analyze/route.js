@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { inferirCategoria as categorize } from '@/lib/categorias';
-import { getAuthUser, unauthorized, serverError, validateUpload } from '@/lib/apiAuth';
+import { getAuthUser, unauthorized, validateUpload } from '@/lib/apiAuth';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { userHasAccess } from '@/lib/access';
 import { auditLog, getIp } from '@/lib/auditLog';
