@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getAuthUser, unauthorized, serverError } from '@/lib/apiAuth';
+import { getAdminClient } from '@/lib/stripeSync';
+import { trialDaysFor } from '@/lib/trial';
 
 export const runtime = 'nodejs';
 
@@ -12,6 +14,13 @@ export async function POST(request) {
 
     try {
         const origin = request.headers.get('origin') || 'https://nva.lat';
+
+        const { data: prior } = await getAdminClient()
+            .from('subscriptions')
+            .select('user_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        const trialDays = trialDaysFor(prior);
 
         const session = await getStripe().checkout.sessions.create({
             mode: 'subscription',
@@ -27,7 +36,10 @@ export async function POST(request) {
             metadata: { user_id: user.id },
             // Propagate user_id onto the subscription so customer.subscription.*
             // and invoice.* webhook events can resolve the user.
-            subscription_data: { metadata: { user_id: user.id } },
+            subscription_data: {
+                metadata: { user_id: user.id },
+                ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
+            },
         });
 
         return NextResponse.json({ url: session.url });

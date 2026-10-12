@@ -10,7 +10,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
 import { userHasAccess } from '@/lib/access';
 import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
-import { getRemainingSlots, claimFreeSlot } from '@/lib/freeTier';
+import { isTrialEligible } from '@/lib/trialEligibility';
+import { TRIAL_DAYS } from '@/lib/trial';
 import './Onboarding.css';
 
 const ONBOARDING_KEY = 'fnce_onboarding_v1';
@@ -588,7 +589,7 @@ function StepPlans({ selectedGoal, onDone }) {
     const [native, setNative]       = useState(() => isNativeApp());
     const [loading, setLoading]     = useState(false);
     const [error, setError]         = useState('');
-    const [remaining, setRemaining] = useState(null); // free slots left (null = unknown)
+    const [trialEligible, setTrialEligible] = useState(true);
 
     // On reaching this step: if the user already has access, skip. Otherwise
     // mark onboarding complete and show the plans screen with both the free-tier
@@ -609,31 +610,10 @@ function StepPlans({ selectedGoal, onDone }) {
             if (selectedGoal) localStorage.setItem('fnce_primary_use', selectedGoal);
             localStorage.setItem(ONBOARDING_KEY, '1');
             supabase.auth.updateUser({ data: { onboarded: true } }).catch(() => {});
-            getRemainingSlots().then((slots) => {
-                if (!cancelled) setRemaining(slots?.remaining ?? 0);
-            });
+            isTrialEligible(data?.user?.id).then((ok) => { if (!cancelled) setTrialEligible(ok); });
         })();
         return () => { cancelled = true; };
     }, [onDone, selectedGoal]);
-
-    async function handleFree() {
-        setLoading(true);
-        setError('');
-        try {
-            const json = await claimFreeSlot();
-            if (json.granted) {
-                await supabase.auth.refreshSession();
-                onDone();
-                return;
-            }
-            // Race lost — slots just filled. Hide free, force subscription.
-            setRemaining(0);
-            setError('Se agotaron los lugares gratis. Suscríbete para continuar.');
-        } catch (_) {
-            setError('No se pudo activar el acceso gratis. Intenta de nuevo.');
-        }
-        setLoading(false);
-    }
 
     async function handleWebPay() {
         // Native must use StoreKit IAP only — never Stripe (App Store 3.1.1).
@@ -687,8 +667,6 @@ function StepPlans({ selectedGoal, onDone }) {
         );
     }
 
-    const freeAvailable = remaining > 0;
-
     return (
         <div className="ob-step">
             <p className="ob-overline">Último paso</p>
@@ -713,24 +691,25 @@ function StepPlans({ selectedGoal, onDone }) {
                     <span className="ob-plan-period">MXN / mes</span>
                 </div>
                 <p className="ob-plan-note">
-                    {native ? 'Se renueva automáticamente · Gestiona en Ajustes' : 'Pago seguro vía Stripe · Cancela cuando quieras'}
+                    {native
+                        ? `Nuevos suscriptores: ${TRIAL_DAYS} días gratis · Se renueva automáticamente`
+                        : trialEligible
+                            ? `${TRIAL_DAYS} días gratis, luego $99 MXN/mes · Cancela cuando quieras`
+                            : 'Pago seguro vía Stripe · Cancela cuando quieras'}
                 </p>
             </div>
 
             {error && <p className="ob-error">{error}</p>}
 
             <div className="ob-actions">
-                {freeAvailable && (
-                    <button className="ob-btn-pay" onClick={handleFree} disabled={loading}>
-                        {loading ? 'Activando...' : `Comenzar gratis — quedan ${remaining} de 150`}
-                    </button>
-                )}
                 <button
-                    className={freeAvailable ? 'ob-btn-link' : 'ob-btn-pay'}
+                    className="ob-btn-pay"
                     onClick={native ? handleNativePurchase : handleWebPay}
                     disabled={loading}
                 >
-                    {loading ? 'Procesando...' : 'Suscribirme — $99 MXN/mes'}
+                    {loading
+                        ? 'Procesando...'
+                        : !native && trialEligible ? `Probar ${TRIAL_DAYS} días gratis` : 'Suscribirme — $99 MXN/mes'}
                 </button>
                 {native && (
                     <button className="ob-btn-link" onClick={handleNativeRestore} disabled={loading}>
