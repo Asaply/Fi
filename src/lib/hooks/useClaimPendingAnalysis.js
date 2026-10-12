@@ -1,51 +1,42 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { PENDING_ANALYSIS_KEY, analysisToTransactionRows } from '@/lib/pendingAnalysis';
 
 /**
- * Claims the pending free analysis from sessionStorage and inserts it into
- * the transactions table for the given authenticated user.
- * Clears sessionStorage on success.
+ * Saves the free analysis done at /analyze (before signup) into the
+ * authenticated user's transactions, then clears it from sessionStorage.
  * @param {string|null|undefined} userId
+ * @param {(count: number) => void} [onClaimed] called after a successful insert
  */
-export function useClaimPendingAnalysis(userId) {
+export function useClaimPendingAnalysis(userId, onClaimed) {
+    const onClaimedRef = useRef(onClaimed);
+    onClaimedRef.current = onClaimed;
+
     useEffect(() => {
         if (!userId) return;
 
-        async function claim() {
-            const raw = sessionStorage.getItem('nva_pending_analysis');
-            if (!raw) return;
+        const raw = sessionStorage.getItem(PENDING_ANALYSIS_KEY);
+        if (!raw) return;
+        // Take it before the async insert so a double mount can't insert twice.
+        sessionStorage.removeItem(PENDING_ANALYSIS_KEY);
 
-            let analysisData;
-            try {
-                analysisData = JSON.parse(raw);
-            } catch {
-                return;
-            }
-
-            const transactions = analysisData?.transactions;
-            if (!Array.isArray(transactions) || transactions.length === 0) return;
-
-            const rows = transactions.map(tx => ({
-                fecha: tx.fecha,
-                concepto: tx.concepto,
-                monto: Number(tx.monto) || 0,
-                tipo: tx.tipo,
-                categoria: tx.categoria || 'Otros',
-                banco: tx.banco || analysisData.bank || 'Desconocido',
-                user_id: userId,
-                imported_from: 'free_analysis',
-            })).filter(r => r.monto > 0 && r.fecha);
-
-            if (rows.length === 0) return;
-
-            const { error } = await supabase.from('transactions').insert(rows);
-            if (!error) {
-                sessionStorage.removeItem('nva_pending_analysis');
-            } else {
-                console.error('[useClaimPendingAnalysis]', error);
-            }
+        let analysis;
+        try {
+            analysis = JSON.parse(raw);
+        } catch {
+            return;
         }
 
-        claim();
+        const rows = analysisToTransactionRows(analysis, userId);
+        if (rows.length === 0) return;
+
+        supabase.from('transactions').insert(rows).then(({ error }) => {
+            if (error) {
+                console.error('[useClaimPendingAnalysis]', error);
+                sessionStorage.setItem(PENDING_ANALYSIS_KEY, raw);
+                return;
+            }
+            onClaimedRef.current?.(rows.length);
+        });
     }, [userId]);
 }
