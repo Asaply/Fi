@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { auditLog } from '@/lib/auditLog';
-import { getAdminClient, applyStripeSubscription } from '@/lib/stripeSync';
+import { getAdminClient, applyStripeSubscription, invoiceSubscriptionId } from '@/lib/stripeSync';
 
 export const runtime = 'nodejs';
 
@@ -63,9 +63,9 @@ export async function POST(request) {
             }
 
             case 'invoice.paid': {
-                const invoice = event.data.object;
-                if (!invoice.subscription) break;
-                const sub = await stripe.subscriptions.retrieve(invoice.subscription);
+                const subscriptionId = invoiceSubscriptionId(event.data.object);
+                if (!subscriptionId) break;
+                const sub = await stripe.subscriptions.retrieve(subscriptionId);
                 const userId = await resolveUserId(admin, sub);
                 if (!userId) break;
                 await applyStripeSubscription(admin, userId, sub);  // bumps expires_at on renewal

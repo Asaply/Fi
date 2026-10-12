@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { auditLog, getIp } from '@/lib/auditLog';
-import { getAdminClient, applyStripeSubscription } from '@/lib/stripeSync';
+import { getAdminClient, applyStripeSubscription, isCheckoutActivated } from '@/lib/stripeSync';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +26,8 @@ export async function GET(request) {
         const stripe = getStripe();
         const session = await stripe.checkout.sessions.retrieve(sessionId);
         const userId = session.client_reference_id || session.metadata?.user_id;
-        const paid = session.payment_status === 'paid';
+        // Trial checkouts complete with payment_status 'no_payment_required'.
+        const paid = isCheckoutActivated(session);
 
         if (!userId || !paid || !session.subscription) {
             return NextResponse.json({ paid: false });

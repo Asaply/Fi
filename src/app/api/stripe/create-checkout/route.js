@@ -15,11 +15,13 @@ export async function POST(request) {
     try {
         const origin = request.headers.get('origin') || 'https://nva.lat';
 
-        const { data: prior } = await getAdminClient()
+        const { data: prior, error: priorErr } = await getAdminClient()
             .from('subscriptions')
             .select('user_id')
             .eq('user_id', user.id)
             .maybeSingle();
+        // Fail closed: a lookup error must not hand out a second trial.
+        if (priorErr) return serverError('stripe/create-checkout prior lookup', priorErr);
         const trialDays = trialDaysFor(prior);
 
         const session = await getStripe().checkout.sessions.create({
