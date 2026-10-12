@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
-import { hasAccess } from '@/lib/access';
+import { userHasAccess } from '@/lib/access';
 import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
 import { getRemainingSlots, claimFreeSlot } from '@/lib/freeTier';
 import styles from './paywall.module.css';
@@ -42,7 +42,7 @@ function PaywallInner() {
                 router.replace(loginUrl);
                 return;
             }
-            if (hasAccess(session.user?.user_metadata)) {
+            if (userHasAccess(session.user)) {
                 router.replace('/finanzas');
                 return;
             }

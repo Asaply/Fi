@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
-import { hasAccess } from '@/lib/access';
+import { userHasAccess } from '@/lib/access';
 import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
 import { getRemainingSlots, claimFreeSlot } from '@/lib/freeTier';
 import './Onboarding.css';
@@ -599,7 +599,7 @@ function StepPlans({ selectedGoal, onDone }) {
             setNative(isNativeApp());
             const { data } = await supabase.auth.getUser();
             if (cancelled) return;
-            if (hasAccess(data?.user?.user_metadata)) { onDone(); return; }
+            if (userHasAccess(data?.user)) { onDone(); return; }
 
             // Show the plans screen immediately; persisting `onboarded` and
             // loading the free-slot count are non-blocking so we don't sit on a

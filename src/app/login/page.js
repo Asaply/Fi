@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { hasAccess } from '@/lib/access';
+import { postAuthDestination } from '@/lib/access';
 import './Login.css';
 
 // mode: 'landing' | 'login' | 'register' | 'registered'
@@ -102,10 +102,7 @@ function LoginPageInner() {
             const remembered = await getRemember();
             if (cancelled) return;
             if (!remembered) { await supabase.auth.signOut(); setCheckingSession(false); return; }
-            const m = session.user?.user_metadata || {};
-            if (!m.onboarded) router.replace('/onboarding');
-            else if (!hasAccess(m)) router.replace('/paywall');
-            else router.replace('/finanzas');
+            router.replace(postAuthDestination(session.user));
             // Keep checkingSession true: we're navigating away, so never reveal
             // the login form during the redirect.
         })();
@@ -272,11 +269,7 @@ function LoginPageInner() {
                         });
                         if (authErr) throw authErr;
                         const user = authData?.user;
-                        const isOnboarded = !!user?.user_metadata?.onboarded;
-                        const isPaid = hasAccess(user?.user_metadata);
-                        if (!isOnboarded) router.push('/onboarding');
-                        else if (!isPaid) router.push('/paywall');
-                        else router.push('/finanzas');
+                        router.push(postAuthDestination(user));
                     } catch (e2) {
                         setError(`Error al autenticar: ${e2.message}`);
                         setIsLoading(false);
@@ -328,11 +321,7 @@ function LoginPageInner() {
                             });
                             if (authErr) throw authErr;
                             const user = authData?.user;
-                            const isOnboarded = !!user?.user_metadata?.onboarded;
-                            const isPaid = hasAccess(user?.user_metadata);
-                            if (!isOnboarded) router.push('/onboarding');
-                            else if (!isPaid) router.push('/paywall');
-                            else router.push('/finanzas');
+                            router.push(postAuthDestination(user));
                         } catch (e2) {
                             setError(`Error al autenticar: ${e2.message}`);
                             setIsLoading(false);
