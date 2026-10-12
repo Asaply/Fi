@@ -53,7 +53,7 @@ export default function LandingPage() {
             Ya tengo cuenta →
           </Link>
         </div>
-        <p className={styles.ctaNote}>Sin registro · Sin tarjeta · Compatible con todos los bancos de México</p>
+        <p className={styles.ctaNote}>7 días gratis · Cancela cuando quieras · Compatible con todos los bancos de México</p>
       </section>
 
       {/* ── Trust bar — bancos compatibles ── */}

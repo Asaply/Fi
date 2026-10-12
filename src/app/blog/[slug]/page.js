@@ -54,7 +54,7 @@ export default async function PostPage({ params }) {
 
         {/* CTA */}
         <div className={styles.ctaBox}>
-          <p className={styles.ctaTitle}>Analiza tu estado de cuenta gratis</p>
+          <p className={styles.ctaTitle}>Prueba NVA 7 días gratis</p>
           <p className={styles.ctaDesc}>Sube tu PDF y NVA categoriza todo automáticamente. Compatible con todos los bancos de México.</p>
           <Link href="/login" className={styles.ctaBtn}>Prueba 7 días gratis</Link>
         </div>
