@@ -1497,7 +1497,7 @@ git grep -nE "checkAnonRateLimit|freeTier|[\"'=]/analyze" -- src  # nada
 
 ```bash
 git push -u origin feature/modelo-acceso
-gh pr create --base refactor/finanzas-page --title "feat: nuevo modelo de acceso (prueba 7 días, app_metadata)" --body-file - <<'EOF'
+gh pr create --base main --title "feat: nuevo modelo de acceso (prueba 7 días, app_metadata)" --body-file - <<'EOF'
 Implementa docs/superpowers/specs/2026-10-12-modelo-acceso-design.md (plan: docs/superpowers/plans/2026-10-12-modelo-acceso.md).
 
 **Orden de despliegue (obligatorio):** ver "Despliegue" en el plan. El script de migración se corre ANTES y DESPUÉS del deploy.
@@ -1508,12 +1508,14 @@ EOF
 
 - [ ] **Step 5: Despliegue (Leonardo + Claude, en este orden)**
 
-1. Merge de #3 → #5 → este PR, **sin** promover a producción todavía. Si Vercel despliega `main` automáticamente, hacer los pasos 2 y 3 antes del último merge.
+1. Merge de este PR a main (ya incluye el refactor de finanzas que no llegó a main), **sin** promover a producción todavía. Si Vercel despliega `main` automáticamente, hacer los pasos 2 y 3 antes del merge.
 2. Correr `alter table … enable row level security` (Task 8, Step 3) en el SQL Editor.
 3. `node scripts/migrate-access-to-app-metadata.mjs` (dry-run). Revisar el conteo: el número de `free/free` debe coincidir con las filas de `free_grants`. Revisar la lista de usuarios que difieren.
+   - Si el dry-run lista usuarios en PERDERÍA ACCESO, reconciliarlos a mano (verificar pago en Stripe/Apple e insertar fila en subscriptions) y repetir el dry-run hasta que la lista esté vacía.
+   - Verificar: `select count(*) from subscriptions where source='stripe' and current_period_end is null;` — si > 0, re-sincronizar esas suscripciones antes del deploy.
 4. `node scripts/migrate-access-to-app-metadata.mjs --apply`.
-5. Deploy a producción (merge a `main`).
-6. Justo después: `node scripts/migrate-access-to-app-metadata.mjs --apply` otra vez.
+5. Deploy a producción (promover el deploy de `main`).
+6. Justo después: `node scripts/migrate-access-to-app-metadata.mjs --apply` otra vez. Nota: esta corrida puede competir con un webhook que llegue a mitad de la corrida y dejar un dato viejo (raro); volver a correrla lo resuelve.
 7. Verificar en prod:
    - Un usuario free entra a `/finanzas`.
    - Cuenta nueva → onboarding → Planes → Stripe (modo test en preview) → regresa a Importar.
