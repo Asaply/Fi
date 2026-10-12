@@ -32,7 +32,7 @@ export default async function PostPage({ params }) {
         </Link>
         <div className={styles.navActions}>
           <Link href="/blog" className={styles.navLink}>← Blog</Link>
-          <Link href="/analyze" className={styles.navCta}>Empezar gratis</Link>
+          <Link href="/login" className={styles.navCta}>Prueba 7 días gratis</Link>
         </div>
       </nav>
 
@@ -56,7 +56,7 @@ export default async function PostPage({ params }) {
         <div className={styles.ctaBox}>
           <p className={styles.ctaTitle}>Analiza tu estado de cuenta gratis</p>
           <p className={styles.ctaDesc}>Sube tu PDF y NVA categoriza todo automáticamente. Compatible con todos los bancos de México.</p>
-          <Link href="/analyze" className={styles.ctaBtn}>Empezar gratis</Link>
+          <Link href="/login" className={styles.ctaBtn}>Prueba 7 días gratis</Link>
         </div>
       </article>
 

@@ -32,25 +32,6 @@ function translateError(msg) {
     return msg;
 }
 
-function LoginBanner({ reason }) {
-    if (!reason) return null;
-    const msg = reason === 'free_analysis_used'
-        ? 'Ya usaste tu análisis gratis. Crea una cuenta para análisis ilimitados.'
-        : reason === 'more_analyses'
-        ? 'Crea tu cuenta para guardar y analizar más estados de cuenta.'
-        : null;
-    if (!msg) return null;
-    return (
-        <div style={{
-            background: '#FF8700', color: '#fff', fontWeight: 600,
-            fontSize: '0.9rem', textAlign: 'center', padding: '0.75rem 1rem',
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        }}>
-            {msg}
-        </div>
-    );
-}
-
 function LoginPageInner() {
     const [mode, setMode]               = useState('landing');
     const [tosAccepted, setTos]         = useState(false);
@@ -71,7 +52,6 @@ function LoginPageInner() {
     const [checkingSession, setCheckingSession] = useState(true);
     const router = useRouter();
     const searchParams = useSearchParams();
-    const reason = searchParams.get('reason');
     const redirectTo = searchParams.get('redirect') || null;
 
     useEffect(() => {
@@ -354,7 +334,6 @@ function LoginPageInner() {
 
     return (
         <div className="login-root">
-            <LoginBanner reason={reason} />
             <div className="login-bg-glow"        aria-hidden />
             <div className="login-bg-speedlines"  aria-hidden />
 

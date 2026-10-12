@@ -1,8 +1,5 @@
-// The free analysis at /analyze runs before the user has an account, so its
-// result is parked in sessionStorage until they sign up and land on /finanzas.
-import { resolverCategoria } from './categorias';
-
-export const PENDING_ANALYSIS_KEY = 'nva_pending_analysis';
+// Turn a POST /api/analyze response into rows for the `transactions` table.
+import { resolverCategoria } from '../categorias';
 
 // Normalize the account type the parser reports ("Débito", "credito", …).
 export function tipoCuentaDe(analysis) {

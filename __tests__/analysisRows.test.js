@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analysisToTransactionRows } from '../src/lib/pendingAnalysis';
+import { analysisToTransactionRows } from '../src/lib/finanzas/analysisRows';
 
 // Shape returned by POST /api/analyze (see mapTransactions in that route).
 const analysis = {
