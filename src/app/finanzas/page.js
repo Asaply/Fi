@@ -20,6 +20,7 @@ import { openTutorial } from "@/components/AppTutorial";
 import { toast } from "sonner";
 import "./Finanzas.css";
 import { API_BASE } from "@/lib/apiBase";
+import { useClaimPendingAnalysis } from "@/lib/hooks/useClaimPendingAnalysis";
 
 const MOCK_DATA = [
     { id: 1, date: "2026-02-15", client: "Acme Corp", concept: "Desarrollo Web (50%)", type: "Ingreso", amount: 45000 },
@@ -181,6 +182,7 @@ export default function FinanzasPage() {
     const [tradingOps, setTradingOps] = useState([]);
     const [portfolioAssets, setPortfolioAssets] = useState([]);
     const [userConfig, setUserConfig] = useState({ concepto_custom_label: 'Por Cobrar', concepto_custom_total: 0 });
+    const [userId, setUserId] = useState(null);
     const [periodo, setPeriodo] = useState('Todos');
     const [accountType, setAccountType] = useState('debit'); // 'debit' | 'credit'
     const [selectedCard, setSelectedCard] = useState('global'); // 'global' | bank name
@@ -284,6 +286,7 @@ export default function FinanzasPage() {
         fetchData();
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (!user?.id) return;
+            setUserId(user.id);
             try {
                 // Try legacy key first for backward compat
                 const raw = localStorage.getItem(`nva_bank_balance_${user.id}`);
@@ -299,6 +302,12 @@ export default function FinanzasPage() {
             } catch (_) {}
         });
     }, []);
+
+    // Free analysis done at /analyze before signing up → save it now.
+    useClaimPendingAnalysis(userId, (count) => {
+        toast.success(`Guardamos tu análisis: ${count} movimientos`);
+        fetchData();
+    });
 
     useEffect(() => {
         const saved = getFilter('finanzas');
