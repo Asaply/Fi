@@ -1,0 +1,26 @@
+# Quién revisa qué. GitHub pide review automáticamente al dueño de la ruta
+# tocada en un PR. (Para que el review sea *obligatorio* hace falta branch
+# protection, que en repo privado requiere GitHub Pro.)
+#
+# La última regla que coincide gana.
+
+# Por defecto: todo lo revisa el mantenedor
+*                               @Asaply
+
+# Frontend — reemplazar @COLABORADOR por el usuario de GitHub del colaborador
+# src/components/               @COLABORADOR
+# ui-kit/                       @COLABORADOR
+
+# Zonas sensibles — siempre el mantenedor, aunque se agreguen reglas arriba
+src/lib/                        @Asaply
+src/app/api/                    @Asaply
+src/middleware.ts               @Asaply
+*.sql                           @Asaply
+scripts/                        @Asaply
+ios/                            @Asaply
+capacitor.config.ts             @Asaply
+next.config.mjs                 @Asaply
+vercel.json                     @Asaply
+package.json                    @Asaply
+package-lock.json               @Asaply
+.github/                        @Asaply
