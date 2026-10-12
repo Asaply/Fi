@@ -1007,39 +1007,6 @@ button, a, [role="button"], input, select, textarea, label, .profile-icon {
     margin-top: 16px;
   }
 
-  /* CardPortfolio dashboard summary — stack 3 columns vertically */
-  .portfolio-summary-grid {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
-
-  .portfolio-donut-wrapper {
-    display: flex;
-    justify-content: center;
-    width: 100% !important;
-  }
-
-  .top-activos-list {
-    width: 100% !important;
-  }
-
-  .top-activo-row {
-    overflow: hidden;
-  }
-
-  .top-activo-nombre {
-    font-size: 0.85rem !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 120px;
-  }
-
-  .top-activo-monto {
-    flex-shrink: 0;
-    font-size: 0.85rem !important;
-  }
-
   /* App metric cards — tighter on mobile */
   .app-metric-card {
     padding: 12px !important;

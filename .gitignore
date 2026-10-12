@@ -52,3 +52,12 @@ apple-certs/APPLE_ROOT_CAS.txt
 
 # Estados de cuenta reales (PII) — no versionar
 Estados de cuenta statement/
+
+# Pruebas locales y notas personales — no versionar
+/scratch/
+/nva/
+.obsidian/
+
+# PDFs/CSVs sueltos en la raíz suelen ser estados de cuenta (PII)
+/*.pdf
+/*.csv

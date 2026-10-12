@@ -69,7 +69,7 @@ const nextConfig = {
         images: { unoptimized: true },
     }),
     serverExternalPackages: [
-        'pdf-parse', 'pdfjs-dist', 'unpdf',
+        'pdfjs-dist', 'unpdf',
         '@napi-rs/canvas', '@napi-rs/canvas-darwin-arm64',
         'belvo',
     ],
