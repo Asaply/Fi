@@ -4,7 +4,7 @@
 
 export class BancosError extends Error {
     // code: 'no_session' | 'no_subscription' | 'max_links' | 'forbidden' | 'conflict'
-    //       | 'not_found' | 'rate_limited' | 'unknown'
+    //       | 'not_found' | 'rate_limited' | 'unavailable' | 'unknown'
     constructor(code, { retryAfter = null, message } = {}) {
         super(message || code);
         this.code = code;
@@ -12,7 +12,8 @@ export class BancosError extends Error {
     }
 }
 
-export const MAX_LINKS_PER_USER = 5;
+export { MAX_LINKS_PER_USER } from '../../../supabase/functions/_shared/bancos/constants.js';
+import { MAX_LINKS_PER_USER } from '../../../supabase/functions/_shared/bancos/constants.js';
 const SYNC_COOLDOWN_MS = 10 * 60 * 1000;
 const SYNC_DURATION_MS = 4000;
 
