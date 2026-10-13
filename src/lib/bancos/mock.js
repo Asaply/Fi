@@ -4,7 +4,7 @@
 
 export class BancosError extends Error {
     // code: 'no_session' | 'no_subscription' | 'max_links' | 'forbidden' | 'conflict'
-    //       | 'not_found' | 'rate_limited' | 'unknown'
+    //       | 'not_found' | 'rate_limited' | 'unavailable' | 'unknown'
     constructor(code, { retryAfter = null, message } = {}) {
         super(message || code);
         this.code = code;

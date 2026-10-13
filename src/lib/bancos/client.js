@@ -11,7 +11,7 @@ export { BancosError, MAX_LINKS_PER_USER } from './mock';
 
 const useMock = process.env.NEXT_PUBLIC_BANCOS_MOCK === '1';
 
-const STATUS_TO_CODE = { 401: 'no_session', 402: 'no_subscription', 403: 'forbidden', 404: 'not_found', 429: 'rate_limited' };
+const STATUS_TO_CODE = { 401: 'no_session', 402: 'no_subscription', 403: 'forbidden', 404: 'not_found', 429: 'rate_limited', 503: 'unavailable' };
 
 async function invoke(name, body) {
     const { data, error } = await supabase.functions.invoke(name, { body });
