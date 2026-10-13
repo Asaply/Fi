@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildMemory, categorizeRows } from '../../supabase/functions/_shared/bancos/categorize.js';
+import { buildMemory, categorizeRows, categorizeLocally, applyAiCategories } from '../../supabase/functions/_shared/bancos/categorize.js';
 
 const row = (concept, type = 'Egreso', merchant = null) => ({ concept, merchant, type, amount: 100, categoria: null, categoria_origen: null });
 
@@ -50,5 +50,20 @@ describe('categorizeRows', () => {
     it('la IA sí puede asignar una categoría de ingreso a un ingreso', async () => {
         const [r] = await categorizeRows([row('ZZQX', 'Ingreso')], { memoria: new Map(), classify: async () => ['Sueldo'] });
         expect(r).toMatchObject({ categoria: 'Sueldo', categoria_origen: 'ia' });
+    });
+});
+
+describe('categorizeLocally / applyAiCategories', () => {
+    it('categorizeLocally no llama a nadie y deja lo desconocido en Otros sin origen', () => {
+        const out = categorizeLocally([row('NETFLIX.COM'), row('ZZQX')], { memoria: new Map() });
+        expect(out[0].categoria_origen).toBe('regla');
+        expect(out[1]).toMatchObject({ categoria: 'Otros', categoria_origen: null });
+    });
+    it('applyAiCategories devuelve solo las filas que obtuvieron categoría y propaga errores', async () => {
+        const rows = [row('ZZQX 1'), row('ZZQX 2')].map((r) => ({ ...r, categoria: 'Otros' }));
+        const resolved = await applyAiCategories(rows, async () => ['Entretenimiento', 'Inventada']);
+        expect(resolved).toEqual([rows[0]]);
+        expect(rows[0]).toMatchObject({ categoria: 'Entretenimiento', categoria_origen: 'ia' });
+        await expect(applyAiCategories(rows, async () => { throw new Error('down'); })).rejects.toThrow('down');
     });
 });

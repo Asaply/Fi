@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createAnthropicClassifier, parseCategories, buildPrompt, AI_MODEL } from '../../supabase/functions/_shared/bancos/ai.js';
 
-const okResponse = (text) => ({ ok: true, json: async () => ({ content: [{ type: 'text', text }] }) });
+const okResponse = (text, stop_reason = 'end_turn') => ({ ok: true, json: async () => ({ stop_reason, content: [{ type: 'text', text }] }) });
 
 describe('parseCategories', () => {
     it('lee el arreglo JSON aunque venga con texto alrededor', () => {
@@ -43,6 +43,19 @@ describe('createAnthropicClassifier', () => {
         const classify = createAnthropicClassifier({ apiKey: 'k', fetchImpl });
         await classify([{ concept: 'X', amount: 1, type: 'Egreso' }]);
         expect(fetchImpl.mock.calls[0][1].signal).toBeDefined();
+    });
+    it('pide max_tokens 4096 y sin thinking', async () => {
+        const fetchImpl = vi.fn(async () => okResponse('["Salud"]'));
+        await createAnthropicClassifier({ apiKey: 'k', fetchImpl })([{ concept: 'X', amount: 1, type: 'Egreso' }]);
+        const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+        expect(body.max_tokens).toBe(4096);
+        expect(body.thinking).toEqual({ type: 'disabled' });
+    });
+    it('una respuesta que no terminó en end_turn lanza en vez de devolver Otros', async () => {
+        for (const reason of ['max_tokens', 'refusal', null]) {
+            const classify = createAnthropicClassifier({ apiKey: 'k', fetchImpl: async () => okResponse('["Salud"', reason) });
+            await expect(classify([{ concept: 'X', amount: 1, type: 'Egreso' }])).rejects.toThrow('stop_reason');
+        }
     });
     it('error HTTP → lanza (el pipeline lo atrapa)', async () => {
         const classify = createAnthropicClassifier({ apiKey: 'k', fetchImpl: async () => ({ ok: false, status: 529 }) });

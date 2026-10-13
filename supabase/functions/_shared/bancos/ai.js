@@ -42,11 +42,20 @@ export function createAnthropicClassifier({ apiKey, fetchImpl = fetch, model = A
         const res = await fetchImpl('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-            body: JSON.stringify({ model, max_tokens: 1024, messages: [{ role: 'user', content: buildPrompt(batch) }] }),
+            // Thinking off (Haiku 5.5 accepts it at its default effort) and room for 50 answers:
+            // a truncated reply would silently turn the whole batch into "Otros".
+            body: JSON.stringify({
+                model,
+                max_tokens: 4096,
+                thinking: { type: 'disabled' },
+                messages: [{ role: 'user', content: buildPrompt(batch) }],
+            }),
             signal: AbortSignal.timeout(20000),
         });
         if (!res.ok) throw new Error(`anthropic ${res.status}`);
         const json = await res.json();
+        // max_tokens / refusal / anything but a finished answer: fail so the rows are retried.
+        if (json?.stop_reason !== 'end_turn') throw new Error(`anthropic stop_reason ${json?.stop_reason}`);
         const text = (json?.content || []).find((c) => c.type === 'text')?.text ?? '';
         return parseCategories(text, batch.length);
     }

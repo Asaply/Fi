@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { syncLink, syncWindow } from '../../supabase/functions/_shared/bancos/sync.js';
 import { createMockProvider } from '../../supabase/functions/_shared/bancos/provider/mock.js';
 import { createFakeBankDb } from '../helpers/fakeBankDb.js';
+import { AI_MAX_ROWS_PER_SYNC } from '../../supabase/functions/_shared/bancos/constants.js';
 
 const now = new Date('2026-10-13T12:00:00Z');
 
@@ -85,7 +86,8 @@ describe('syncLink: robustez del lote', () => {
         await syncLink({ db, provider, classify, link, ...syncWindow(link, now), now, newId });
         // Second pass mixes settled rows (already categorized) with fresh ones (e.g. the "Otros" retry path).
         await syncLink({ db, provider, classify: null, link, from: '2025-10-13', to: '2026-10-13', now, newId });
-        expect(spy).toHaveBeenCalledTimes(2);
+        // 1st sync: local categories + one AI batch; 2nd sync: local categories only.
+        expect(spy).toHaveBeenCalledTimes(3);
         for (const [rows] of spy.mock.calls) {
             expect(rows.length).toBeGreaterThan(0);
             expect(new Set(rows.map((r) => Object.keys(r).sort().join())).size).toBe(1);
@@ -151,5 +153,62 @@ describe('syncLink: lecturas completas aunque el servidor corte páginas', () =>
         const res = await syncLink({ db, provider, classify: null, link, ...syncWindow({ last_synced_at: null }, now), now, newId });
         expect(res.transfersLinked).toBe(0);
         expect(db.state.transactions.filter((t) => t.transfer_group_id)).toHaveLength(0);
+    });
+});
+
+describe('syncLink: IA acotada y después de guardar', () => {
+    // Provider with `n` movements nobody's rules know ("ZZQX n"), one per day back from today.
+    function manyUnknown(provider, n) {
+        return {
+            ...provider,
+            listTransactions: async (id) => Array.from({ length: n }, (_, i) => ({
+                id: `${id}-u${String(i).padStart(4, '0')}`, accountId: `${id}-deb`,
+                date: new Date(now.getTime() - i * 86400000).toISOString().slice(0, 10),
+                description: `ZZQX ${i}`, merchant: null, amount: 10 + i, direction: 'out', status: 'processed',
+            })),
+        };
+    }
+
+    it(`con más de ${AI_MAX_ROWS_PER_SYNC} filas sin resolver la IA recibe como máximo ${AI_MAX_ROWS_PER_SYNC}, las más recientes`, async () => {
+        const { db, provider, link, newId } = await setup();
+        const classify = vi.fn(async (items) => items.map(() => 'Ropa y Accesorios'));
+        const res = await syncLink({ db, provider: manyUnknown(provider, 300), classify, link, ...syncWindow(link, now), now, newId });
+        const sent = classify.mock.calls.flatMap(([items]) => items);
+        expect(sent).toHaveLength(AI_MAX_ROWS_PER_SYNC);
+        expect(classify.mock.calls.every(([items]) => items.length <= 50)).toBe(true);
+        expect(sent.map((i) => i.concept)).toContain('ZZQX 0');
+        expect(sent.map((i) => i.concept)).not.toContain(`ZZQX ${AI_MAX_ROWS_PER_SYNC}`);
+        expect(res).toMatchObject({ transactions: 300, aiCategorized: AI_MAX_ROWS_PER_SYNC });
+        expect(db.state.transactions.filter((t) => t.categoria_origen === 'ia')).toHaveLength(AI_MAX_ROWS_PER_SYNC);
+        expect(db.state.transactions.filter((t) => t.categoria === 'Otros' && t.categoria_origen === null)).toHaveLength(100);
+    });
+
+    it('si la IA lanza, las filas ya quedaron guardadas en Otros y el link queda al día', async () => {
+        const { db, provider, link, newId } = await setup();
+        const classify = vi.fn(async () => { throw new Error('ai down'); });
+        await syncLink({ db, provider: manyUnknown(provider, 120), classify, link, ...syncWindow(link, now), now, newId });
+        expect(classify).toHaveBeenCalledTimes(1);
+        expect(db.state.transactions).toHaveLength(120);
+        expect(db.state.transactions.every((t) => t.categoria === 'Otros' && t.categoria_origen === null)).toBe(true);
+        expect(db.state.links[0].status).toBe('valid');
+    });
+
+    it('el resultado de un lote se guarda antes de pedir el siguiente', async () => {
+        const { db, provider, link, newId } = await setup();
+        const seen = [];
+        const classify = vi.fn(async (items) => {
+            seen.push(db.state.transactions.filter((t) => t.categoria_origen === 'ia').length);
+            return items.map(() => 'Ropa y Accesorios');
+        });
+        await syncLink({ db, provider: manyUnknown(provider, 120), classify, link, ...syncWindow(link, now), now, newId });
+        expect(seen).toEqual([0, 50, 100]);
+    });
+
+    it('las filas guardadas por lote de IA conservan el mismo juego de llaves', async () => {
+        const { db, provider, link, newId } = await setup();
+        const spy = vi.spyOn(db, 'upsertTransactions');
+        await syncLink({ db, provider: manyUnknown(provider, 60), classify: async (items) => items.map(() => 'Ropa y Accesorios'), link, ...syncWindow(link, now), now, newId });
+        const keySets = new Set(spy.mock.calls.flatMap(([rows]) => rows.map((r) => Object.keys(r).sort().join())));
+        expect(keySets.size).toBe(1);
     });
 });
