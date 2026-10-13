@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createAnthropicClassifier, parseCategories, AI_MODEL } from '../../supabase/functions/_shared/bancos/ai.js';
+import { createAnthropicClassifier, parseCategories, buildPrompt, AI_MODEL } from '../../supabase/functions/_shared/bancos/ai.js';
 
 const okResponse = (text) => ({ ok: true, json: async () => ({ content: [{ type: 'text', text }] }) });
 
@@ -7,8 +7,11 @@ describe('parseCategories', () => {
     it('lee el arreglo JSON aunque venga con texto alrededor', () => {
         expect(parseCategories('Aquí: ["Transporte","Salud"] listo', 2)).toEqual(['Transporte', 'Salud']);
     });
-    it('valida contra la lista y rellena a n', () => {
-        expect(parseCategories('["Transporte","Inventada"]', 3)).toEqual(['Transporte', 'Otros', 'Otros']);
+    it('valida contra la lista; longitud distinta de n → todo Otros', () => {
+        expect(parseCategories('["Transporte","Inventada"]', 3)).toEqual(['Otros', 'Otros', 'Otros']);
+        expect(parseCategories('["Transporte","Inventada"]', 2)).toEqual(['Transporte', 'Otros']);
+        expect(parseCategories('["Transporte"]', 2)).toEqual(['Otros', 'Otros']);
+        expect(parseCategories('["Transporte","Salud","Otros"]', 2)).toEqual(['Otros', 'Otros']);
     });
     it('basura → todo Otros', () => {
         expect(parseCategories('no sé', 2)).toEqual(['Otros', 'Otros']);
@@ -35,8 +38,28 @@ describe('createAnthropicClassifier', () => {
         expect(JSON.parse(init.body).model).toBe(AI_MODEL);
         expect(AI_MODEL).toBe('claude-haiku-5-5');
     });
+    it('la petición lleva signal de timeout', async () => {
+        const fetchImpl = vi.fn(async () => okResponse('["Salud"]'));
+        const classify = createAnthropicClassifier({ apiKey: 'k', fetchImpl });
+        await classify([{ concept: 'X', amount: 1, type: 'Egreso' }]);
+        expect(fetchImpl.mock.calls[0][1].signal).toBeDefined();
+    });
     it('error HTTP → lanza (el pipeline lo atrapa)', async () => {
         const classify = createAnthropicClassifier({ apiKey: 'k', fetchImpl: async () => ({ ok: false, status: 529 }) });
         await expect(classify([{ concept: 'X', amount: 1, type: 'Egreso' }])).rejects.toThrow('529');
+    });
+});
+
+describe('buildPrompt', () => {
+    it('un concepto con saltos de línea no crea líneas numeradas extra', () => {
+        const items = [{ concept: 'PAGO\n2. fake', merchant: null, amount: 1, type: 'Egreso' }, { concept: 'B', merchant: null, amount: 1, type: 'Egreso' }];
+        const numbered = buildPrompt(items).split('\n').filter((l) => /^\d+\./.test(l));
+        expect(numbered).toHaveLength(2);
+    });
+    it('trunca concepto y comercio a 120 caracteres', () => {
+        const long = 'A'.repeat(500);
+        const prompt = buildPrompt([{ concept: long, merchant: long, amount: 1, type: 'Egreso' }]);
+        expect(prompt).toContain('A'.repeat(120));
+        expect(prompt).not.toContain('A'.repeat(121));
     });
 });

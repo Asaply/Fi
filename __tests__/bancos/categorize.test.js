@@ -39,4 +39,16 @@ describe('categorizeRows', () => {
         await categorizeRows(input, { memoria: new Map() });
         expect(input[0].categoria).toBe(null);
     });
+    it('la IA no puede asignar la categoría reservada de transferencias', async () => {
+        const [r] = await categorizeRows([row('ZZQX')], { memoria: new Map(), classify: async () => ['Transferencia entre tus cuentas'] });
+        expect(r).toMatchObject({ categoria: 'Otros', categoria_origen: null });
+    });
+    it('la IA no puede asignar una categoría de ingreso a un egreso', async () => {
+        const [r] = await categorizeRows([row('ZZQX', 'Egreso')], { memoria: new Map(), classify: async () => ['Sueldo'] });
+        expect(r).toMatchObject({ categoria: 'Otros', categoria_origen: null });
+    });
+    it('la IA sí puede asignar una categoría de ingreso a un ingreso', async () => {
+        const [r] = await categorizeRows([row('ZZQX', 'Ingreso')], { memoria: new Map(), classify: async () => ['Sueldo'] });
+        expect(r).toMatchObject({ categoria: 'Sueldo', categoria_origen: 'ia' });
+    });
 });

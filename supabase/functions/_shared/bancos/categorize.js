@@ -1,6 +1,7 @@
 // Category for each new bank movement: user's memory → keyword rules → AI batch.
 // Rows still in "Otros" keep categoria_origen = null so the next sync retries them.
-import { construirMemoriaCategorias, claveComercio, inferirCategoria, CATEGORIAS_ALL } from '../categorias.js';
+import { construirMemoriaCategorias, claveComercio, inferirCategoria, CATEGORIAS_EGRESO, CATEGORIAS_INGRESO } from '../categorias.js';
+import { TRANSFER_CATEGORY } from './constants.js';
 
 export function buildMemory(userCategorizedRows) {
     return construirMemoriaCategorias(userCategorizedRows);
@@ -31,7 +32,8 @@ export async function categorizeRows(rows, { memoria, classify }) {
             const cats = await classify(unresolved.map(({ concept, merchant, amount, type }) => ({ concept, merchant, amount, type })));
             unresolved.forEach((r, i) => {
                 const c = cats?.[i];
-                if (c && c !== 'Otros' && CATEGORIAS_ALL.includes(c)) {
+                const permitidas = r.type === 'Ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_EGRESO;
+                if (c && c !== 'Otros' && c !== TRANSFER_CATEGORY && permitidas.includes(c)) {
                     r.categoria = c;
                     r.categoria_origen = 'ia';
                 }
