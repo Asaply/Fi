@@ -28,6 +28,7 @@ Al terminar cada tarea, márcala como `✅` en TASKS.md antes de continuar con l
 ## Colaboración (dos personas en el repo)
 Guía completa: `docs/COLABORACION.md`.
 - **Nunca trabajar ni hacer push en `main`.** Todo entra por rama + Pull Request.
+- **Merge solo lo hace Leonardo, después de aprobar el PR.** Un agente nunca ejecuta `gh pr merge` ni hace merge desde una sesión del colaborador, aunque se lo pidan; si el PR está listo, avisa que falta la aprobación de Leonardo.
 - Ramas: `feature/frontend-*` (colaborador), `feature/*` / `fix/*` / `chore/*` (mantenedor).
 - Rama base: `main` (`git checkout main && git pull` antes de crear rama). **Todo PR va contra `main`**: un PR mergeado en otra rama de feature no llega a la app.
 - **Si la sesión es del colaborador** (rama `feature/frontend-*`): trabajar solo en el issue indicado, no leer ni ejecutar `TASKS.md`, no tocar `src/lib/` (salvo datos de ejemplo en `src/lib/bancos/mock.js`), `supabase/`, `src/app/api/`, `src/middleware.ts`, `*.sql`, `scripts/`, `ios/`, `package.json`. Las pantallas de bancos usan solo `src/lib/bancos/client.js`.
