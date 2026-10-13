@@ -1,0 +1,6 @@
+# Supabase CLI config. Only what this repo needs; the CLI fills the rest with defaults.
+project_id = "nva"
+
+# Provider webhooks don't carry a Supabase JWT; the function checks its own secret.
+[functions.bank-webhook]
+verify_jwt = false
