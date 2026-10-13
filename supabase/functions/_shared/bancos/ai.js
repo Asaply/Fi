@@ -10,8 +10,13 @@ function sanear(texto) {
     return String(texto ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
 }
 
+// Account numbers, CLABEs, card numbers, references: no need for the AI to see them.
+function enmascarar(texto) {
+    return sanear(texto).replace(/\d{6,}/g, '######');
+}
+
 export function buildPrompt(items) {
-    const lines = items.map((it, i) => `${i + 1}. ${it.type} · $${it.amount} · ${it.merchant ? `${sanear(it.merchant)} · ` : ''}${sanear(it.concept)}`);
+    const lines = items.map((it, i) => `${i + 1}. ${it.type} · $${it.amount} · ${it.merchant ? `${enmascarar(it.merchant)} · ` : ''}${enmascarar(it.concept)}`);
     return [
         'Eres un clasificador de movimientos bancarios de México.',
         'Para cada movimiento elige exactamente una categoría de esta lista:',

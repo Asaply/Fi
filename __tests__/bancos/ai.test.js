@@ -75,4 +75,12 @@ describe('buildPrompt', () => {
         expect(prompt).toContain('A'.repeat(120));
         expect(prompt).not.toContain('A'.repeat(121));
     });
+    it('enmascara corridas de 6 o más dígitos en concepto y comercio', () => {
+        const prompt = buildPrompt([{ concept: 'SPEI A 012180001234567890 REF 12345', merchant: 'TIENDA 9876543', amount: 1500, type: 'Egreso' }]);
+        expect(prompt).not.toContain('012180001234567890');
+        expect(prompt).not.toContain('9876543');
+        expect(prompt).toContain('SPEI A ###### REF 12345');
+        expect(prompt).toContain('TIENDA ######');
+        expect(prompt).toContain('$1500');
+    });
 });
