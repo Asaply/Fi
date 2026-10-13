@@ -1,0 +1,69 @@
+// In-memory implementation of the db.js interface for handler/sync tests.
+import { TRANSFER_CATEGORY } from '../../supabase/functions/_shared/bancos/constants.js';
+
+export function createFakeBankDb() {
+    const state = { links: [], accounts: [], transactions: [] };
+    let seq = 0;
+    const id = (p) => `${p}-${++seq}`;
+
+    return {
+        state,
+        async countActiveLinks(userId) {
+            return state.links.filter((l) => l.user_id === userId && l.status !== 'disconnected').length;
+        },
+        async getLinkById(linkId) { return state.links.find((l) => l.id === linkId) || null; },
+        async getLinkByProviderId(pid) { return state.links.find((l) => l.provider_link_id === pid) || null; },
+        async insertLink(row) { const r = { id: id('link'), ...row }; state.links.push(r); return r; },
+        async updateLink(linkId, patch) { Object.assign(state.links.find((l) => l.id === linkId), patch); },
+        async listUserLinks(userId, { includeDisconnected = false } = {}) {
+            return state.links.filter((l) => l.user_id === userId && (includeDisconnected || l.status !== 'disconnected'));
+        },
+        async upsertAccounts(rows) {
+            return rows.map((row) => {
+                const existing = state.accounts.find((a) => a.provider_account_id === row.provider_account_id);
+                if (existing) return Object.assign(existing, row);
+                const r = { id: id('acc'), ...row };
+                state.accounts.push(r);
+                return r;
+            });
+        },
+        async setAccountsConnected(linkId, connected) {
+            state.accounts.filter((a) => a.link_id === linkId).forEach((a) => { a.connected = connected; });
+        },
+        async getTransactionsByExternalIds(userId, ids) {
+            return state.transactions
+                .filter((t) => t.user_id === userId && ids.includes(t.external_id))
+                .map(({ external_id, categoria, categoria_origen, transfer_group_id }) => ({ external_id, categoria, categoria_origen, transfer_group_id }));
+        },
+        async listUserCategorized(userId) {
+            return state.transactions.filter((t) => t.user_id === userId && t.categoria_origen === 'usuario').map(({ concept, categoria }) => ({ concept, categoria }));
+        },
+        async upsertTransactions(rows) {
+            for (const row of rows) {
+                const existing = state.transactions.find((t) => t.user_id === row.user_id && t.external_id === row.external_id);
+                if (existing) Object.assign(existing, row);
+                else state.transactions.push({ id: id('tx'), ...row });
+            }
+        },
+        async listBankTransactionsInRange(userId, accountIds, { from, to }) {
+            return state.transactions
+                .filter((t) => t.user_id === userId && accountIds.includes(t.bank_account_id) && t.date >= from && t.date <= to)
+                .map(({ external_id, bank_status, date }) => ({ external_id, bank_status, date }));
+        },
+        async deleteTransactionsByExternalIds(userId, ids) {
+            state.transactions = state.transactions.filter((t) => !(t.user_id === userId && ids.includes(t.external_id)));
+        },
+        async listRecentBankTransactions(userId, since) {
+            return state.transactions
+                .filter((t) => t.user_id === userId && t.source === 'banco' && t.date >= since)
+                .map(({ external_id, bank_account_id, date, amount, type, concept, transfer_group_id }) => ({ external_id, bank_account_id, date, amount, type, concept, transfer_group_id }));
+        },
+        async setTransferGroup(userId, ids, groupId) {
+            for (const t of state.transactions) {
+                if (t.user_id !== userId || !ids.includes(t.external_id)) continue;
+                t.transfer_group_id = groupId;
+                if (t.categoria_origen !== 'usuario') { t.categoria = TRANSFER_CATEGORY; t.categoria_origen = 'regla'; }
+            }
+        },
+    };
+}
