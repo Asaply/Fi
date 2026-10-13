@@ -61,3 +61,6 @@ Estados de cuenta statement/
 # PDFs/CSVs sueltos en la raíz suelen ser estados de cuenta (PII)
 /*.pdf
 /*.csv
+
+# Supabase CLI local cache
+supabase/.temp/
