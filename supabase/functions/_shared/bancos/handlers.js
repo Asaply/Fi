@@ -1,7 +1,7 @@
 // Request logic for the bank-* Edge Functions. Pure: everything external comes in
 // `deps` ({ db, provider, classify, now, runInBackground, userHasAccess, webhookSecret }).
 import { MAX_LINKS_PER_USER, SYNC_COOLDOWN_SECONDS, LINK_STATUS } from './constants.js';
-import { syncLink, syncWindow } from './sync.js';
+import { syncLink, syncWindow, historyWindow } from './sync.js';
 
 const ok = (body, status = 200) => ({ status, body });
 const fail = (status, error, extra = {}) => ({ status, body: { error, ...extra } });
@@ -22,15 +22,17 @@ async function ownLink(user, linkId, deps) {
 
 // Never throws: failures are stored on the link so the app can show them, and the link
 // keeps the status it had before this attempt (`previousStatus`, default `link.status`).
-export async function runSync(link, deps, { previousStatus } = {}) {
+// `fullHistory`: fetch the provider's whole history (its historical-update events),
+// not just the incremental window since the last sync.
+export async function runSync(link, deps, { previousStatus, fullHistory = false } = {}) {
     const restoreStatus = previousStatus ?? link.status;
     try {
         const now = deps.now();
-        const { from, to } = syncWindow(link, now);
+        const { from, to } = fullHistory ? historyWindow(now) : syncWindow(link, now);
         await syncLink({ db: deps.db, provider: deps.provider, classify: deps.classify, link, from, to, now });
     } catch (e) {
         try {
-            await deps.db.updateLink(link.id, {
+            await deps.db.updateLinkIfActive(link.id, {
                 last_error: String(e?.message || e).slice(0, 500),
                 status: restoreStatus,
                 updated_at: deps.now().toISOString(),
@@ -138,8 +140,12 @@ export async function handleWebhook({ request }, deps) {
 
     const nowIso = deps.now().toISOString();
     switch (event.kind) {
+        // Historical updates can arrive after register-link already synced (and set
+        // last_synced_at), so they always fetch the full history window.
         case 'accounts_ready':
         case 'transactions_ready':
+            deps.runInBackground(runSync(link, deps, { fullHistory: true }));
+            break;
         case 'new_transactions':
             deps.runInBackground(runSync(link, deps));
             break;

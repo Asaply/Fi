@@ -11,10 +11,15 @@ const DAY_MS = 86400000;
 const isoDate = (d) => d.toISOString().slice(0, 10);
 const addDays = (isoDay, n) => isoDate(new Date(Date.parse(isoDay) + n * DAY_MS));
 
-export function syncWindow(link, now) {
+// The whole history the provider may hold (up to INITIAL_HISTORY_DAYS).
+export function historyWindow(now) {
     const to = isoDate(now);
-    if (!link.last_synced_at) return { from: addDays(to, -INITIAL_HISTORY_DAYS), to };
-    return { from: addDays(isoDate(new Date(link.last_synced_at)), -OVERLAP_DAYS), to };
+    return { from: addDays(to, -INITIAL_HISTORY_DAYS), to };
+}
+
+export function syncWindow(link, now) {
+    if (!link.last_synced_at) return historyWindow(now);
+    return { from: addDays(isoDate(new Date(link.last_synced_at)), -OVERLAP_DAYS), to: isoDate(now) };
 }
 
 export async function syncLink({ db, provider, classify, link, from, to, now = new Date(), newId = () => crypto.randomUUID() }) {
@@ -62,7 +67,8 @@ export async function syncLink({ db, provider, classify, link, from, to, now = n
     const pairs = findOwnTransferPairs(recent.map((t) => ({ ...t, key: t.external_id })));
     for (const pair of pairs) await db.setTransferGroup(userId, pair, newId());
 
-    await db.updateLink(link.id, {
+    // A link disconnected while this sync ran must not come back as 'valid'.
+    await db.updateLinkIfActive(link.id, {
         status: LINK_STATUS.VALID,
         last_synced_at: now.toISOString(),
         last_error: null,

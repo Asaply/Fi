@@ -50,6 +50,10 @@ export function createDb(sb) {
         async updateLink(id, patch) {
             must(await sb.from('bank_links').update(patch).eq('id', id));
         },
+        // For writes that finish a background sync: a link disconnected meanwhile stays disconnected.
+        async updateLinkIfActive(id, patch) {
+            must(await sb.from('bank_links').update(patch).eq('id', id).neq('status', 'disconnected'));
+        },
         async listUserLinks(userId, { includeDisconnected = false } = {}) {
             let q = sb.from('bank_links').select('*').eq('user_id', userId);
             if (!includeDisconnected) q = q.neq('status', 'disconnected');

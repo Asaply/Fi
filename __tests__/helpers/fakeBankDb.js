@@ -29,6 +29,10 @@ export function createFakeBankDb({ maxRows } = {}) {
         async getLinkByProviderId(pid) { return state.links.find((l) => l.provider_link_id === pid) || null; },
         async insertLink(row) { const r = { id: id('link'), ...row }; state.links.push(r); return r; },
         async updateLink(linkId, patch) { Object.assign(state.links.find((l) => l.id === linkId), patch); },
+        async updateLinkIfActive(linkId, patch) {
+            const link = state.links.find((l) => l.id === linkId);
+            if (link && link.status !== 'disconnected') Object.assign(link, patch);
+        },
         async listUserLinks(userId, { includeDisconnected = false } = {}) {
             return state.links.filter((l) => l.user_id === userId && (includeDisconnected || l.status !== 'disconnected'));
         },

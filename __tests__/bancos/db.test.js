@@ -111,6 +111,13 @@ describe('createDb', () => {
         expect(sb.calls[0]).toContainEqual(['neq', 'status', 'disconnected']);
         expect(sb.calls[0]).toContainEqual(['eq', 'user_id', 'u1']);
     });
+    it('updateLinkIfActive no toca links desconectados', async () => {
+        const sb = recordingClient();
+        await createDb(sb).updateLinkIfActive('l1', { status: 'valid' });
+        expect(sb.calls[0]).toContainEqual(['update', { status: 'valid' }]);
+        expect(sb.calls[0]).toContainEqual(['eq', 'id', 'l1']);
+        expect(sb.calls[0]).toContainEqual(['neq', 'status', 'disconnected']);
+    });
     it('errores de Supabase se lanzan', async () => {
         const sb = recordingClient({ data: null, error: { message: 'boom' } });
         await expect(createDb(sb).getLinkById('x')).rejects.toThrow('boom');

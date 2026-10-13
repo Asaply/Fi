@@ -237,3 +237,64 @@ describe('deleteAllUserLinks', () => {
         await expect(deleteAllUserLinks({ userId: 'u1' }, deps)).rejects.toThrow('provider_unavailable');
     });
 });
+
+describe('historial completo en los eventos históricos del proveedor', () => {
+    async function registered() {
+        const ctx = makeDeps();
+        const pid = ctx.deps.provider.simulateConnect({ userId: 'u1' });
+        await handleRegisterLink({ user, body: { provider_link_id: pid } }, ctx.deps);
+        await flush(ctx.background);
+        ctx.background.length = 0;
+        ctx.advance(3600);
+        const spy = vi.spyOn(ctx.deps.provider, 'listTransactions');
+        return { ...ctx, pid, spy };
+    }
+
+    for (const kind of ['transactions_ready', 'accounts_ready']) {
+        it(`${kind} después del registro pide 365 días aunque ya haya last_synced_at`, async () => {
+            const { deps, background, pid, spy } = await registered();
+            expect(deps.db.state.links[0].last_synced_at).toBeTruthy();
+            await handleWebhook({ request: hook({ kind, providerLinkId: pid }) }, deps);
+            await flush(background);
+            expect(spy).toHaveBeenCalledTimes(1);
+            expect(spy.mock.calls[0][1]).toEqual({ from: '2025-10-13', to: '2026-10-13' });
+        });
+    }
+
+    it('new_transactions sigue usando la ventana incremental', async () => {
+        const { deps, background, pid, spy } = await registered();
+        await handleWebhook({ request: hook({ kind: 'new_transactions', providerLinkId: pid }) }, deps);
+        await flush(background);
+        expect(spy.mock.calls[0][1]).toEqual({ from: '2026-10-10', to: '2026-10-13' });
+    });
+});
+
+describe('desconectar durante una sincronización en curso', () => {
+    // listTransactions blocks until `release(result)`; disconnect happens meanwhile.
+    function gatedProvider(deps) {
+        const original = deps.provider.listTransactions.bind(deps.provider);
+        let release;
+        const gate = new Promise((r) => { release = r; });
+        deps.provider.listTransactions = async (id, range) => {
+            const fail = await gate;
+            if (fail) throw new Error(fail);
+            return original(id, range);
+        };
+        return (fail = null) => release(fail);
+    }
+
+    for (const [label, failure] of [['termina bien', null], ['falla', 'banco caído']]) {
+        it(`si la sincronización ${label} después, el link sigue desconectado`, async () => {
+            const { deps, background } = makeDeps();
+            const pid = deps.provider.simulateConnect({ userId: 'u1' });
+            const release = gatedProvider(deps);
+            const { body } = await handleRegisterLink({ user, body: { provider_link_id: pid } }, deps);
+            await new Promise((r) => setTimeout(r, 0));
+            expect((await handleDisconnect({ user, body: { link_id: body.link.id } }, deps)).body).toEqual({ ok: true });
+            release(failure);
+            await flush(background);
+            expect(deps.db.state.links[0].status).toBe('disconnected');
+            expect(await deps.db.countActiveLinks('u1')).toBe(0);
+        });
+    }
+});
