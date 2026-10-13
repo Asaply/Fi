@@ -14,14 +14,16 @@ function guard(user, deps, { needsAccess = true } = {}) {
 }
 
 async function ownLink(user, linkId, deps) {
-    if (!linkId) return null;
+    if (typeof linkId !== 'string' || !linkId || linkId.length > 100) return null;
     const link = await deps.db.getLinkById(linkId);
     if (!link || link.user_id !== user.id || link.status === LINK_STATUS.DISCONNECTED) return null;
     return link;
 }
 
-// Never throws: failures are stored on the link so the app can show them.
-export async function runSync(link, deps) {
+// Never throws: failures are stored on the link so the app can show them, and the link
+// keeps the status it had before this attempt (`previousStatus`, default `link.status`).
+export async function runSync(link, deps, { previousStatus } = {}) {
+    const restoreStatus = previousStatus ?? link.status;
     try {
         const now = deps.now();
         const { from, to } = syncWindow(link, now);
@@ -30,7 +32,7 @@ export async function runSync(link, deps) {
         try {
             await deps.db.updateLink(link.id, {
                 last_error: String(e?.message || e).slice(0, 500),
-                status: link.last_synced_at ? LINK_STATUS.VALID : LINK_STATUS.SYNCING,
+                status: restoreStatus,
                 updated_at: deps.now().toISOString(),
             });
         } catch {
@@ -68,12 +70,14 @@ export async function handleRegisterLink({ user, body }, deps) {
     const nowIso = deps.now().toISOString();
     const existing = await deps.db.getLinkByProviderId(providerLinkId);
     let link;
+    let previousStatus;
     if (existing) {
         if (existing.user_id !== user.id) return fail(403, 'forbidden');
         if (existing.status === LINK_STATUS.VALID || existing.status === LINK_STATUS.SYNCING) return fail(409, 'conflict');
         if (existing.status === LINK_STATUS.DISCONNECTED && await deps.db.countActiveLinks(user.id) >= MAX_LINKS_PER_USER) {
             return fail(409, 'max_links');
         }
+        previousStatus = existing.status;
         await deps.db.updateLink(existing.id, { status: LINK_STATUS.SYNCING, last_error: null, updated_at: nowIso });
         link = { ...existing, status: LINK_STATUS.SYNCING };
     } else {
@@ -88,7 +92,7 @@ export async function handleRegisterLink({ user, body }, deps) {
             updated_at: nowIso,
         });
     }
-    deps.runInBackground(runSync(link, deps));
+    deps.runInBackground(runSync(link, deps, { previousStatus }));
     return ok({ link: { id: link.id, institution_name: link.institution_name, status: LINK_STATUS.SYNCING } });
 }
 
@@ -104,8 +108,9 @@ export async function handleSync({ user, body }, deps) {
     if (elapsed < SYNC_COOLDOWN_SECONDS) {
         return fail(429, 'rate_limited', { retry_after: Math.ceil(SYNC_COOLDOWN_SECONDS - elapsed) });
     }
+    const previousStatus = link.status;
     await deps.db.updateLink(link.id, { status: LINK_STATUS.SYNCING, last_manual_sync_at: now.toISOString(), updated_at: now.toISOString() });
-    deps.runInBackground(runSync(link, deps));
+    deps.runInBackground(runSync(link, deps, { previousStatus }));
     return ok({ status: LINK_STATUS.SYNCING }, 202);
 }
 
@@ -122,6 +127,7 @@ export async function handleDisconnect({ user, body }, deps) {
 
 export async function handleWebhook({ request }, deps) {
     if (!deps.provider) return fail(503, 'provider_unavailable');
+    if (!deps.webhookSecret) return fail(503, 'webhook_not_configured');
     const parsed = await deps.provider.parseWebhook(request, deps.webhookSecret);
     if (!parsed.authorized) return fail(401, 'unauthorized');
     const event = parsed.event;

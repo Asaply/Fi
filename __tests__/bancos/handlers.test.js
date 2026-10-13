@@ -154,6 +154,72 @@ describe('errores de sincronización en segundo plano', () => {
     });
 });
 
+describe('el link conserva su estado si falla la sincronización', () => {
+    it('sincronización manual de un link token_required que falla lo deja token_required', async () => {
+        const { deps, background, advance } = makeDeps();
+        const pid = deps.provider.simulateConnect({ userId: 'u1' });
+        const { body } = await handleRegisterLink({ user, body: { provider_link_id: pid } }, deps);
+        await flush(background);
+        deps.db.state.links[0].status = 'token_required';
+        deps.provider.listAccounts = vi.fn().mockRejectedValue(new Error('banco caído'));
+        advance(601);
+        background.length = 0;
+        expect((await handleSync({ user, body: { link_id: body.link.id } }, deps)).status).toBe(202);
+        await flush(background);
+        expect(deps.db.state.links[0]).toMatchObject({ status: 'token_required', last_error: 'banco caído' });
+    });
+
+    it('re-registrar un link token_required con el proveedor caído lo deja token_required', async () => {
+        const { deps, background } = makeDeps();
+        const pid = deps.provider.simulateConnect({ userId: 'u1' });
+        await handleRegisterLink({ user, body: { provider_link_id: pid } }, deps);
+        await flush(background);
+        deps.db.state.links[0].status = 'token_required';
+        deps.provider.listAccounts = vi.fn().mockRejectedValue(new Error('banco caído'));
+        background.length = 0;
+        expect((await handleRegisterLink({ user, body: { provider_link_id: pid } }, deps)).status).toBe(200);
+        await flush(background);
+        expect(deps.db.state.links[0]).toMatchObject({ status: 'token_required', last_error: 'banco caído' });
+    });
+
+    it('webhook de movimientos sobre un link invalid que falla lo deja invalid', async () => {
+        const { deps, background } = makeDeps();
+        const pid = deps.provider.simulateConnect({ userId: 'u1' });
+        await handleRegisterLink({ user, body: { provider_link_id: pid } }, deps);
+        await flush(background);
+        deps.db.state.links[0].status = 'invalid';
+        deps.provider.listAccounts = vi.fn().mockRejectedValue(new Error('banco caído'));
+        background.length = 0;
+        await handleWebhook({ request: hook({ kind: 'new_transactions', providerLinkId: pid }) }, deps);
+        await flush(background);
+        expect(deps.db.state.links[0]).toMatchObject({ status: 'invalid', last_error: 'banco caído' });
+    });
+});
+
+describe('endurecimiento', () => {
+    it('webhook sin secreto configurado → 503 sin cambiar estado', async () => {
+        const { deps, background } = makeDeps({ webhookSecret: undefined });
+        const pid = deps.provider.simulateConnect({ userId: 'u1' });
+        await handleRegisterLink({ user, body: { provider_link_id: pid } }, deps);
+        await flush(background);
+        const before = JSON.stringify(deps.db.state);
+        background.length = 0;
+        const res = await handleWebhook({ request: hook({ kind: 'link_invalid', providerLinkId: pid }, '') }, deps);
+        expect(res).toEqual({ status: 503, body: { error: 'webhook_not_configured' } });
+        expect(JSON.stringify(deps.db.state)).toBe(before);
+        expect(background).toHaveLength(0);
+    });
+
+    it('link_id que no es string → 404', async () => {
+        const { deps } = makeDeps();
+        for (const link_id of [123, {}, [], 'x'.repeat(101)]) {
+            expect((await handleSync({ user, body: { link_id } }, deps)).status).toBe(404);
+            expect((await handleDisconnect({ user, body: { link_id } }, deps)).status).toBe(404);
+            expect((await handleConnectToken({ user, body: { link_id } }, deps)).status).toBe(404);
+        }
+    });
+});
+
 describe('deleteAllUserLinks', () => {
     it('borra todos los links activos del usuario en el proveedor', async () => {
         const { deps } = makeDeps();
