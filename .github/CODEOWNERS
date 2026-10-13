@@ -7,12 +7,14 @@
 # Por defecto: todo lo revisa el mantenedor
 *                               @Asaply
 
-# Frontend — reemplazar @COLABORADOR por el usuario de GitHub del colaborador
-# src/components/               @COLABORADOR
-# ui-kit/                       @COLABORADOR
+# Frontend — Alan
+src/components/                @alanmiranda7676-cyber @Asaply
+ui-kit/                        @alanmiranda7676-cyber @Asaply
 
 # Zonas sensibles — siempre el mantenedor, aunque se agreguen reglas arriba
 src/lib/                        @Asaply
+src/lib/bancos/mock.js          @Asaply @alanmiranda7676-cyber
+supabase/                       @Asaply
 src/app/api/                    @Asaply
 src/middleware.ts               @Asaply
 *.sql                           @Asaply
