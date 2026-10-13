@@ -1,5 +1,7 @@
-// In-memory provider with realistic Mexican data. Used by tests and to exercise
-// the whole backend before a real provider is integrated. Never set it in production.
+// In-memory provider with realistic Mexican data. For tests and local runs only.
+// Its state lives in memory per instance, and a deployed Edge Function builds a
+// new instance on every request, so a link "connected" in one request does not
+// exist in the next: it cannot drive a deployed backend. Never set it in production.
 
 const KINDS = new Set(['accounts_ready', 'transactions_ready', 'new_transactions', 'link_invalid', 'link_token_required']);
 
