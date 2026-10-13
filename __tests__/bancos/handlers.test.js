@@ -220,6 +220,33 @@ describe('endurecimiento', () => {
     });
 });
 
+describe('deleteAllUserLinks sin la migración aplicada', () => {
+    const missing = (message) => async () => { throw new Error(message); };
+
+    it('tabla bank_links inexistente → 0 links, no bloquea borrar la cuenta', async () => {
+        for (const message of [
+            "Could not find the table 'public.bank_links' in the schema cache",
+            'relation "public.bank_links" does not exist',
+        ]) {
+            const { deps } = makeDeps({ provider: null });
+            deps.db.listUserLinks = missing(message);
+            expect(await deleteAllUserLinks({ userId: 'u1' }, deps)).toBe(0);
+        }
+    });
+
+    it('cualquier otro error de base de datos sí aborta', async () => {
+        const { deps } = makeDeps({ provider: null });
+        deps.db.listUserLinks = missing('connection refused');
+        await expect(deleteAllUserLinks({ userId: 'u1' }, deps)).rejects.toThrow('connection refused');
+    });
+
+    it('error de otra tabla no se confunde con bank_links', async () => {
+        const { deps } = makeDeps({ provider: null });
+        deps.db.listUserLinks = missing('relation "public.transactions" does not exist');
+        await expect(deleteAllUserLinks({ userId: 'u1' }, deps)).rejects.toThrow('transactions');
+    });
+});
+
 describe('deleteAllUserLinks', () => {
     it('borra todos los links activos del usuario en el proveedor', async () => {
         const { deps } = makeDeps();

@@ -161,9 +161,25 @@ export async function handleWebhook({ request }, deps) {
     return ok({ received: true });
 }
 
+// PostgREST ("Could not find the table … in the schema cache") or Postgres
+// ("relation … does not exist") when bank_links hasn't been created yet.
+export function isMissingBankLinksTable(e) {
+    const msg = String(e?.message || e || '');
+    return /bank_links/.test(msg) && /(schema cache|does not exist)/i.test(msg);
+}
+
 // Account deletion: stop provider billing before the user disappears.
 export async function deleteAllUserLinks({ userId }, deps) {
-    const links = await deps.db.listUserLinks(userId, { includeDisconnected: false });
+    let links;
+    try {
+        links = await deps.db.listUserLinks(userId, { includeDisconnected: false });
+    } catch (e) {
+        // Before the bank-sync migration is applied the table doesn't exist, so
+        // there can't be any links to clean up: don't block account deletion
+        // (App Store 5.1.1(v)). Any other database error still aborts.
+        if (isMissingBankLinksTable(e)) return 0;
+        throw e;
+    }
     if (!links.length) return 0;
     if (!deps.provider) throw new Error('provider_unavailable');
     for (const link of links) await deps.provider.deleteLink(link.provider_link_id);
