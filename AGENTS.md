@@ -29,7 +29,7 @@ Al terminar cada tarea, márcala como `✅` en TASKS.md antes de continuar con l
 Guía completa: `docs/COLABORACION.md`.
 - **Nunca trabajar ni hacer push en `main`.** Todo entra por rama + Pull Request.
 - Ramas: `feature/frontend-*` (colaborador), `feature/*` / `fix/*` / `chore/*` (mantenedor).
-- Rama base: `feature/modelo-acceso` mientras el PR #7 no esté en `main`; después, `main`. Actualizarla antes de crear rama.
+- Rama base: `main` (`git checkout main && git pull` antes de crear rama). **Todo PR va contra `main`**: un PR mergeado en otra rama de feature no llega a la app.
 - **Si la sesión es del colaborador** (rama `feature/frontend-*`): trabajar solo en el issue indicado, no leer ni ejecutar `TASKS.md`, no tocar `src/lib/` (salvo datos de ejemplo en `src/lib/bancos/mock.js`), `supabase/`, `src/app/api/`, `src/middleware.ts`, `*.sql`, `scripts/`, `ios/`, `package.json`. Las pantallas de bancos usan solo `src/lib/bancos/client.js`.
 - En `page.js` que mezclan UI y Supabase: cambiar solo JSX/estilos, nunca queries, auth ni cálculos.
 - Archivos compartidos (`globals.css`, `layout.js`, `Sidebar.js`, `BottomNav.js`, `Topbar.js`, `ConditionalShell.js`): cambios mínimos y mencionarlos en el PR.

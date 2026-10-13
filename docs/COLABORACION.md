@@ -50,25 +50,25 @@ Crea una cuenta normal en la app con tu correo de trabajo y pásale el correo a 
 
 ## 2. Flujo de trabajo
 
-**Rama base:** mientras el PR #7 (nuevo modelo de acceso) no esté en `main`, todo parte de `feature/modelo-acceso`.
-Cuando entre a `main`, Leonardo avisa y a partir de ahí todo parte de `main`.
+**Rama base:** `main`.
 
 1. **Toma un issue** en GitHub asignado a ti. Si no existe, créalo y avisa antes de empezar.
 2. **Crea la rama desde la base actualizada:**
    ```bash
-   git checkout feature/modelo-acceso && git pull      # o main, cuando Leonardo avise
+   git checkout main && git pull
    git checkout -b feature/frontend-<descripcion-corta>
    ```
 3. **Commits pequeños** con prefijo: `feat:`, `fix:`, `style:`, `refactor:`.
 4. **Antes de abrir el PR:**
    ```bash
-   git fetch && git rebase origin/feature/modelo-acceso   # o origin/main
+   git fetch && git rebase origin/main
    npm run lint
    npx vitest run
    npm run build
    ```
-5. **Abre el PR** contra la rama base y llena la plantilla, con capturas del simulador o de 375 px.
-6. Leonardo revisa y hace **squash merge**. Nadie hace push directo a `main` ni a la rama base.
+5. **Abre el PR** contra `main` y llena la plantilla, con capturas del simulador o de 375 px.
+6. Leonardo revisa y hace **squash merge**. Nadie hace push directo a `main`.
+   **Los PRs siempre van contra `main`**, nunca contra otra rama de feature: un PR mergeado en otra rama no llega a la app.
 7. Después del merge borra tu rama local.
 
 Mantén las ramas cortas, de 1 a 3 días. Una rama que vive dos semanas termina en conflictos.
