@@ -67,7 +67,12 @@ Crea una cuenta normal en la app con tu correo de trabajo y pásale el correo a 
    npm run build
    ```
 5. **Abre el PR** contra `main` y llena la plantilla, con capturas del simulador o de 375 px.
-6. Leonardo revisa y hace **squash merge**. Nadie hace push directo a `main`.
+6. **Revisión y aprobación (obligatoria por acuerdo del equipo):**
+   - El PR queda abierto hasta que **Leonardo lo apruebe** en GitHub (*Review changes → Approve*).
+   - Si pide ajustes, haces los cambios en la **misma rama** (nuevos commits, sin abrir otro PR) y respondes cada comentario.
+   - **Alan nunca hace merge**, aunque GitHub muestre el botón habilitado: `main` no tiene protección técnica
+     todavía, así que esta regla la cumplimos nosotros. **Solo Leonardo hace el merge** (squash), después de aprobar.
+   - Nadie hace push directo a `main`.
    **Los PRs siempre van contra `main`**, nunca contra otra rama de feature: un PR mergeado en otra rama no llega a la app.
 7. Después del merge borra tu rama local.
 
