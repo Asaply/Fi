@@ -21,7 +21,7 @@ create table if not exists public.bank_accounts (
     id uuid primary key default gen_random_uuid(),
     user_id uuid not null references auth.users(id) on delete cascade,
     link_id uuid not null references public.bank_links(id) on delete cascade,
-    provider_account_id text not null unique,
+    provider_account_id text not null,
     name text,
     number_masked text,
     account_type text not null check (account_type in ('debito', 'credito')),
@@ -34,7 +34,10 @@ create table if not exists public.bank_accounts (
     minimum_payment numeric,
     no_interest_payment numeric,
     connected boolean not null default true,
-    updated_at timestamptz not null default now()
+    updated_at timestamptz not null default now(),
+    -- Scoped per user: a provider reusing an account id across users must never
+    -- let one user's sync overwrite another user's row.
+    constraint bank_accounts_user_provider_account_key unique (user_id, provider_account_id)
 );
 create index if not exists bank_accounts_link_id_idx on public.bank_accounts(link_id);
 create index if not exists bank_accounts_user_id_idx on public.bank_accounts(user_id);
@@ -56,6 +59,45 @@ begin
             add constraint transactions_user_external_key unique (user_id, external_id);
     end if;
 end $$;
+
+-- Allowed values for the bank columns (same idempotent lookup as above).
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'transactions_source_check') then
+        alter table public.transactions
+            add constraint transactions_source_check check (source in ('manual', 'banco'));
+    end if;
+    if not exists (select 1 from pg_constraint where conname = 'transactions_bank_status_check') then
+        alter table public.transactions
+            add constraint transactions_bank_status_check
+            check (bank_status is null or bank_status in ('pending', 'processed'));
+    end if;
+    if not exists (select 1 from pg_constraint where conname = 'transactions_categoria_origen_check') then
+        alter table public.transactions
+            add constraint transactions_categoria_origen_check
+            check (categoria_origen is null or categoria_origen in ('usuario', 'memoria', 'regla', 'ia'));
+    end if;
+end $$;
+
+-- Any change of `categoria` made by an end user (any app screen: edit form, bulk
+-- recategorize, ...) marks the category as theirs, so bank sync never overwrites it
+-- and the memory learns it. Edge Functions (service role) are not affected.
+create or replace function public.transactions_mark_user_categoria()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+    if new.categoria is distinct from old.categoria and coalesce(auth.role(), '') = 'authenticated' then
+        new.categoria_origen := 'usuario';
+    end if;
+    return new;
+end $$;
+drop trigger if exists transactions_mark_user_categoria on public.transactions;
+create trigger transactions_mark_user_categoria
+    before update of categoria on public.transactions
+    for each row execute function public.transactions_mark_user_categoria();
+
 create index if not exists transactions_transfer_group_idx
     on public.transactions(transfer_group_id) where transfer_group_id is not null;
 create index if not exists transactions_bank_account_date_idx
@@ -73,4 +115,5 @@ drop policy if exists "bank_accounts_select_own" on public.bank_accounts;
 create policy "bank_accounts_select_own" on public.bank_accounts
     for select to authenticated using (auth.uid() = user_id);
 
-revoke insert, update, delete on public.bank_links, public.bank_accounts from anon, authenticated;
+revoke all on public.bank_links, public.bank_accounts from anon, authenticated;
+grant select on public.bank_links, public.bank_accounts to authenticated;

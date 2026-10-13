@@ -71,10 +71,13 @@ export async function syncLink({ db, provider, classify, link, from, to, now = n
     const fresh = [];
     for (const r of mapped) {
         const e = existing.get(r.external_id);
+        // Rows already stored keep what the user may have edited (`client`); the key
+        // is always present so every upsert row has the same key set.
+        const client = e ? (e.client ?? r.client) : r.client;
         if (e?.categoria_origen) {
-            settled.push({ ...r, categoria: e.categoria, categoria_origen: e.categoria_origen, transfer_group_id: e.transfer_group_id });
+            settled.push({ ...r, client, categoria: e.categoria, categoria_origen: e.categoria_origen, transfer_group_id: e.transfer_group_id });
         } else {
-            fresh.push({ ...r, transfer_group_id: e?.transfer_group_id ?? null });
+            fresh.push({ ...r, client, transfer_group_id: e?.transfer_group_id ?? null });
         }
     }
     const memoria = buildMemory(await db.listUserCategorized(userId));
@@ -88,7 +91,7 @@ export async function syncLink({ db, provider, classify, link, from, to, now = n
 
     const inRange = await db.listBankTransactionsInRange(userId, accounts.map((a) => a.id), { from, to });
     const stale = stalePendingExternalIds(inRange, mapped.map((r) => r.external_id), { from, to });
-    if (stale.length) await db.deleteTransactionsByExternalIds(userId, stale);
+    if (stale.length) await db.deletePendingByExternalIds(userId, stale);
 
     const recent = await db.listRecentBankTransactions(userId, addDays(from, -TRANSFER_WINDOW_DAYS));
     const pairs = findOwnTransferPairs(recent.map((t) => ({ ...t, key: t.external_id })));

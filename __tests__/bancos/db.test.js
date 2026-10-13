@@ -100,10 +100,23 @@ describe('createDb', () => {
         expect(upserts).toHaveLength(2);
         expect(upserts[0].find((c) => c[0] === 'upsert')[2]).toEqual({ onConflict: 'user_id,external_id' });
     });
-    it('upsert de cuentas usa provider_account_id', async () => {
+    it('upsert de cuentas usa (user_id, provider_account_id): un id repetido en otro usuario no pisa la fila ajena', async () => {
         const sb = recordingClient({ data: [{ id: 'a' }], error: null });
-        await createDb(sb).upsertAccounts([{ provider_account_id: 'p' }]);
-        expect(sb.calls[0].find((c) => c[0] === 'upsert')[2]).toEqual({ onConflict: 'provider_account_id' });
+        await createDb(sb).upsertAccounts([{ user_id: 'u1', provider_account_id: 'p' }]);
+        expect(sb.calls[0].find((c) => c[0] === 'upsert')[2]).toEqual({ onConflict: 'user_id,provider_account_id' });
+    });
+    it('getTransactionsByExternalIds trae client para conservarlo', async () => {
+        const sb = recordingClient();
+        await createDb(sb).getTransactionsByExternalIds('u1', ['a']);
+        expect(sb.calls[0].find((c) => c[0] === 'select')[1]).toContain('client');
+    });
+    it('deletePendingByExternalIds solo borra filas pendientes', async () => {
+        const sb = recordingClient();
+        await createDb(sb).deletePendingByExternalIds('u1', ['a', 'b']);
+        expect(sb.calls[0]).toContainEqual(['delete']);
+        expect(sb.calls[0]).toContainEqual(['eq', 'user_id', 'u1']);
+        expect(sb.calls[0]).toContainEqual(['eq', 'bank_status', 'pending']);
+        expect(sb.calls[0]).toContainEqual(['in', 'external_id', ['a', 'b']]);
     });
     it('cuenta links activos excluyendo desconectados', async () => {
         const sb = recordingClient({ data: null, error: null, count: 3 });

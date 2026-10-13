@@ -212,3 +212,39 @@ describe('syncLink: IA acotada y después de guardar', () => {
         expect(keySets.size).toBe(1);
     });
 });
+
+describe('syncLink: ediciones del usuario en filas existentes', () => {
+    it('conserva el client editado por el usuario y las llaves siguen uniformes', async () => {
+        const { db, provider, link, newId } = await setup();
+        await syncLink({ db, provider, classify: null, link, ...syncWindow(link, now), now, newId });
+        const oxxo = db.state.transactions.find((t) => t.external_id.endsWith('-t1'));
+        const zzqx = db.state.transactions.find((t) => t.external_id.endsWith('-t4'));
+        oxxo.client = 'Papá';   // settled row (rules categorized it)
+        zzqx.client = 'Trabajo'; // fresh row (still "Otros", re-categorized every sync)
+        const spy = vi.spyOn(db, 'upsertTransactions');
+        await syncLink({ db, provider, classify: null, link, from: '2025-10-13', to: '2026-10-13', now, newId });
+        expect(oxxo.client).toBe('Papá');
+        expect(zzqx.client).toBe('Trabajo');
+        const [rows] = spy.mock.calls[0];
+        expect(new Set(rows.map((r) => Object.keys(r).sort().join())).size).toBe(1);
+        expect(rows.every((r) => typeof r.client === 'string')).toBe(true);
+    });
+
+    it('cuentas: el mismo provider_account_id en otro usuario es otra fila', async () => {
+        const db = createFakeBankDb();
+        const [a] = await db.upsertAccounts([{ user_id: 'u1', provider_account_id: 'p1', name: 'A' }]);
+        const [b] = await db.upsertAccounts([{ user_id: 'u2', provider_account_id: 'p1', name: 'B' }]);
+        expect(a.id).not.toBe(b.id);
+        expect(db.state.accounts.map((x) => x.name)).toEqual(['A', 'B']);
+    });
+
+    it('el borrado de pendientes nunca toca filas procesadas', async () => {
+        const db = createFakeBankDb();
+        await db.upsertTransactions([
+            { user_id: 'u1', external_id: 'p', bank_status: 'pending' },
+            { user_id: 'u1', external_id: 'q', bank_status: 'processed' },
+        ]);
+        await db.deletePendingByExternalIds('u1', ['p', 'q']);
+        expect(db.state.transactions.map((t) => t.external_id)).toEqual(['q']);
+    });
+});

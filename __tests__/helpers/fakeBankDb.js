@@ -38,7 +38,7 @@ export function createFakeBankDb({ maxRows } = {}) {
         },
         async upsertAccounts(rows) {
             return rows.map((row) => {
-                const existing = state.accounts.find((a) => a.provider_account_id === row.provider_account_id);
+                const existing = state.accounts.find((a) => a.user_id === row.user_id && a.provider_account_id === row.provider_account_id);
                 if (existing) return Object.assign(existing, row);
                 const r = { id: id('acc'), ...row };
                 state.accounts.push(r);
@@ -51,7 +51,7 @@ export function createFakeBankDb({ maxRows } = {}) {
         async getTransactionsByExternalIds(userId, ids) {
             return state.transactions
                 .filter((t) => t.user_id === userId && ids.includes(t.external_id))
-                .map(({ external_id, categoria, categoria_origen, transfer_group_id }) => ({ external_id, categoria, categoria_origen, transfer_group_id }));
+                .map(({ external_id, client, categoria, categoria_origen, transfer_group_id }) => ({ external_id, client, categoria, categoria_origen, transfer_group_id }));
         },
         async listUserCategorized(userId) {
             return complete(state.transactions.filter((t) => t.user_id === userId && t.categoria_origen === 'usuario')
@@ -70,8 +70,8 @@ export function createFakeBankDb({ maxRows } = {}) {
                 .sort(byKey('external_id'))
                 .map(({ external_id, bank_status, date }) => ({ external_id, bank_status, date })));
         },
-        async deleteTransactionsByExternalIds(userId, ids) {
-            state.transactions = state.transactions.filter((t) => !(t.user_id === userId && ids.includes(t.external_id)));
+        async deletePendingByExternalIds(userId, ids) {
+            state.transactions = state.transactions.filter((t) => !(t.user_id === userId && t.bank_status === 'pending' && ids.includes(t.external_id)));
         },
         async listRecentBankTransactions(userId, since) {
             return complete(state.transactions

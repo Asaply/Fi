@@ -62,7 +62,7 @@ export function createDb(sb) {
         async upsertAccounts(rows) {
             if (!rows.length) return [];
             const stamped = rows.map((r) => ({ ...r, updated_at: new Date().toISOString() }));
-            return must(await sb.from('bank_accounts').upsert(stamped, { onConflict: 'provider_account_id' }).select()) || [];
+            return must(await sb.from('bank_accounts').upsert(stamped, { onConflict: 'user_id,provider_account_id' }).select()) || [];
         },
         async setAccountsConnected(linkId, connected) {
             must(await sb.from('bank_accounts').update({ connected }).eq('link_id', linkId));
@@ -71,7 +71,7 @@ export function createDb(sb) {
             const out = [];
             for (const part of chunks(externalIds, 200)) {
                 out.push(...(must(await sb.from('transactions')
-                    .select('external_id, categoria, categoria_origen, transfer_group_id')
+                    .select('external_id, client, categoria, categoria_origen, transfer_group_id')
                     .eq('user_id', userId).in('external_id', part)) || []));
             }
             return out;
@@ -91,9 +91,11 @@ export function createDb(sb) {
                 .eq('user_id', userId).in('bank_account_id', accountIds).gte('date', from).lte('date', to)
                 .order('external_id'));
         },
-        async deleteTransactionsByExternalIds(userId, externalIds) {
+        // Only ever removes pending rows (stale pendings the provider re-issued).
+        async deletePendingByExternalIds(userId, externalIds) {
             for (const part of chunks(externalIds, 200)) {
-                must(await sb.from('transactions').delete().eq('user_id', userId).in('external_id', part));
+                must(await sb.from('transactions').delete().eq('user_id', userId).eq('bank_status', 'pending')
+                    .in('external_id', part));
             }
         },
         // Only rows not yet in a transfer group: pairing ignores grouped ones anyway.
