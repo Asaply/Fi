@@ -21,7 +21,7 @@ export default function LandingPage() {
         <div className={styles.navActions}>
           <Link href="/blog" className={styles.navLink}>Blog</Link>
           <Link href="/login" className={styles.navLink}>Iniciar sesión</Link>
-          <Link href="/analyze" className={styles.navCta}>Empezar gratis</Link>
+          <Link href="/login" className={styles.navCta}>Prueba 7 días gratis</Link>
         </div>
       </nav>
 
@@ -46,14 +46,14 @@ export default function LandingPage() {
           fugas de dinero e inversiones en menos de 30 segundos.
         </p>
         <div className={styles.heroActions}>
-          <Link href="/analyze" className={styles.cta}>
-            Analizar mi estado de cuenta
+          <Link href="/login" className={styles.cta}>
+            Prueba 7 días gratis
           </Link>
           <Link href="/login" className={styles.ctaSecondary}>
             Ya tengo cuenta →
           </Link>
         </div>
-        <p className={styles.ctaNote}>Sin registro · Sin tarjeta · Compatible con todos los bancos de México</p>
+        <p className={styles.ctaNote}>7 días gratis · Cancela cuando quieras · Compatible con todos los bancos de México</p>
       </section>
 
       {/* ── Trust bar — bancos compatibles ── */}
@@ -217,10 +217,10 @@ export default function LandingPage() {
         <p className={styles.ctaSectionSubtitle}>
           Sube tu estado de cuenta y en 30 segundos tienes claridad total sobre tus finanzas.
         </p>
-        <Link href="/analyze" className={styles.cta}>
-          Empezar gratis ahora
+        <Link href="/login" className={styles.cta}>
+          Prueba 7 días gratis
         </Link>
-        <p className={styles.ctaNote}>Sin registro · 100% privado · Tus datos no se guardan</p>
+        <p className={styles.ctaNote}>7 días gratis · Luego $99 MXN/mes · Cancela cuando quieras</p>
       </section>
 
       {/* ── Footer ── */}

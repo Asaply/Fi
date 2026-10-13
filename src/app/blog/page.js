@@ -22,7 +22,7 @@ export default function BlogPage() {
         </Link>
         <div className={styles.navActions}>
           <Link href="/login" className={styles.navLink}>Iniciar sesión</Link>
-          <Link href="/analyze" className={styles.navCta}>Empezar gratis</Link>
+          <Link href="/login" className={styles.navCta}>Prueba 7 días gratis</Link>
         </div>
       </nav>
 

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { API_BASE } from '@/lib/apiBase';
-import { hasAccess } from '@/lib/access';
+import { userHasAccess } from '@/lib/access';
 import styles from '../paywall.module.css';
 
 function SuccessContent() {
@@ -44,7 +44,7 @@ function SuccessContent() {
             // 2. Fallback: check if webhook already activated via session refresh
             await supabase.auth.refreshSession();
             const { data: { user } } = await supabase.auth.getUser();
-            if (hasAccess(user?.user_metadata)) {
+            if (userHasAccess(user)) {
                 activatedRef.current = true;
                 const dest = user?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
                 setStatus('active');
@@ -71,7 +71,7 @@ function SuccessContent() {
     async function handleManualContinue() {
         await supabase.auth.refreshSession();
         const { data: { user } } = await supabase.auth.getUser();
-        if (hasAccess(user?.user_metadata)) {
+        if (userHasAccess(user)) {
             const dest = user?.user_metadata?.onboarded ? '/finanzas' : '/onboarding';
             router.replace(dest);
         } else {

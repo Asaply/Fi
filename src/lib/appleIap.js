@@ -4,6 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import { SignedDataVerifier, Environment } from '@apple/app-store-server-library';
+import { accessMetadata } from './access';
 
 export const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'lat.nva.app';
 export const APPLE_PRODUCT_ID = process.env.APPLE_SUB_PRODUCT_ID || 'lat.nva.app.sub.monthly';
@@ -62,7 +63,7 @@ export function deriveAppleStatus(tx, notificationType, now = Date.now()) {
     return { status: active ? 'active' : 'expired', expiresAt };
 }
 
-// Persist Apple subscription state: subscriptions row + user_metadata.
+// Persist Apple subscription state: subscriptions row + app_metadata (+ mirror).
 export async function applyAppleSubscription(admin, userId, { status, expiresAt, originalTransactionId }) {
     const { error: upsertErr } = await admin
         .from('subscriptions')
@@ -76,12 +77,11 @@ export async function applyAppleSubscription(admin, userId, { status, expiresAt,
         }, { onConflict: 'user_id' });
     if (upsertErr) console.error('[appleIap] subscriptions upsert (non-fatal):', upsertErr.message);
 
+    const access = accessMetadata({ status, source: 'apple', expiresAt });
     const { error: metaErr } = await admin.auth.admin.updateUserById(userId, {
-        user_metadata: {
-            subscription_status: status,
-            subscription_source: 'apple',
-            subscription_expires_at: expiresAt,
-        },
+        app_metadata: access,
+        // Mirror for iOS builds already in the App Store (see stripeSync.js).
+        user_metadata: access,
     });
     if (metaErr) throw metaErr;
 }

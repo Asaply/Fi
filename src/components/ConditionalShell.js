@@ -94,7 +94,7 @@ export default function ConditionalShell({ children }) {
     // Public routes — no shell
     if (pathname === '/login' || pathname === '/' || pathname === '/onboarding' ||
         pathname === '/terms' || pathname === '/privacy' ||
-        pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
+        pathname.startsWith('/auth/') ||
         pathname.startsWith('/paywall') || pathname.startsWith('/blog')) {
         return <>{children}</>;
     }

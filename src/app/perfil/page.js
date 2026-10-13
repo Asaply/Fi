@@ -10,7 +10,7 @@ import { useTopbar } from '@/components/TopbarContext';
 import { supabase } from '@/lib/supabaseClient';
 import { exportDataAsPDF } from '@/lib/exportPdf';
 import { API_BASE } from '@/lib/apiBase';
-import { hasAccess } from '@/lib/access';
+import { getAccessMeta, hasAccess } from '@/lib/access';
 import { isNativeApp, nativePurchase, nativeRestore } from '@/lib/iap';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -55,7 +55,7 @@ export default function PerfilPage() {
 
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) {
-                const m = user.user_metadata || {};
+                const m = getAccessMeta(user) || {};
                 setSub({
                     status: m.subscription_status || 'none',
                     source: m.subscription_source || null,
@@ -143,7 +143,7 @@ export default function PerfilPage() {
     const refreshSub = async () => {
         await supabase.auth.refreshSession();
         const { data: { user } } = await supabase.auth.getUser();
-        const m = user?.user_metadata || {};
+        const m = getAccessMeta(user) || {};
         setSub({
             status: m.subscription_status || 'none',
             source: m.subscription_source || null,

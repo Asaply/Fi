@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { hasAccess } from '@/lib/access';
+import { postAuthDestination } from '@/lib/access';
 
 // Native-only. When the email-verification (or any auth) link bounces back into
 // the app via the nvaapp:// custom scheme, Capacitor fires `appUrlOpen`. We pull
@@ -13,10 +13,7 @@ function isNativeApp() {
 }
 
 function routeAfterAuth(router, user) {
-    const m = user?.user_metadata;
-    if (!m?.onboarded) router.replace('/onboarding');
-    else if (!hasAccess(m)) router.replace('/paywall');
-    else router.replace('/finanzas');
+    router.replace(postAuthDestination(user));
 }
 
 export default function NativeAuthDeepLink() {

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { inferirCategoria as categorize } from '@/lib/categorias';
-import { getAuthUser, unauthorized, serverError, validateUpload } from '@/lib/apiAuth';
+import { getAuthUser, unauthorized, validateUpload } from '@/lib/apiAuth';
 import { checkRateLimit } from '@/lib/rateLimit';
-import { checkAnonRateLimit } from '@/lib/rateLimitAnon';
+import { userHasAccess } from '@/lib/access';
 import { auditLog, getIp } from '@/lib/auditLog';
 import { tryDeterministicParse } from '@/lib/statementParser';
 
@@ -336,29 +336,24 @@ async function callClaudeText(csvText) {
 export async function POST(request) {
     try {
     const user = await getAuthUser();
+    if (!user) return unauthorized();
+    if (!userHasAccess(user)) {
+        return NextResponse.json(
+            { error: 'Necesitas una suscripción activa para analizar estados de cuenta.' },
+            { status: 402 }
+        );
+    }
 
     const ip = getIp(request);
 
-    if (user) {
-        // Authenticated — rate limit per user: 10 req/min
-        const rl = await checkRateLimit(user.id, { maxRequests: 10, windowMs: 60_000 });
-        if (!rl.allowed) {
-            auditLog({ userId: user.id, event: 'analysis.rate_limited', ip });
-            return NextResponse.json(
-                { error: 'Demasiadas solicitudes. Espera un momento antes de intentar de nuevo.' },
-                { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
-            );
-        }
-    } else {
-        // Anonymous free-tier — 1 analysis per IP per day (distributed via Supabase)
-        const rl = await checkAnonRateLimit(`anon:${ip}`, 1, 24 * 60 * 60_000);
-        if (!rl.allowed) {
-            auditLog({ userId: null, event: 'analysis.anon_rate_limited', ip });
-            return NextResponse.json(
-                { error: 'Ya usaste tu análisis gratuito. Crea una cuenta para acceso completo.', limitReached: true },
-                { status: 429 }
-            );
-        }
+    // Rate limit per user: 10 req/min
+    const rl = await checkRateLimit(user.id, { maxRequests: 10, windowMs: 60_000 });
+    if (!rl.allowed) {
+        auditLog({ userId: user.id, event: 'analysis.rate_limited', ip });
+        return NextResponse.json(
+            { error: 'Demasiadas solicitudes. Espera un momento antes de intentar de nuevo.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+        );
     }
 
     try {

@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { hasAccess } from '@/lib/access'
+import { userHasAccess, postAuthDestination } from '@/lib/access'
 
 function corsHeaders(origin: string | null) {
   return {
@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
 
   // Public routes — no auth required
   const isPublic = pathname === '/' || pathname === '/login' ||
-    pathname.startsWith('/analyze') || pathname.startsWith('/auth/') ||
+    pathname.startsWith('/auth/') ||
     pathname.startsWith('/terms') || pathname.startsWith('/privacy') ||
     pathname.startsWith('/paywall') ||
     pathname.startsWith('/api/stripe/webhook') ||
@@ -69,7 +69,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Authenticated user state
-  const isPaid = hasAccess(user.user_metadata)
+  const isPaid = userHasAccess(user)
   const isOnboarded = !!user.user_metadata?.onboarded
   const isPaywallRoute = pathname.startsWith('/paywall')
   const isOnboardingRoute = pathname.startsWith('/onboarding')
@@ -78,9 +78,7 @@ export async function middleware(request: NextRequest) {
   // Smart destination for this user
   // Order: onboarding first → paywall → app
   function getSmartDest() {
-    if (!isOnboarded) return '/onboarding'
-    if (!isPaid) return '/paywall'
-    return '/finanzas'
+    return postAuthDestination(user)
   }
 
   // Authenticated user at login or root → smart redirect
@@ -91,8 +89,10 @@ export async function middleware(request: NextRequest) {
   // API routes pass through
   if (isApiRoute) return response
 
-  // Not onboarded → must complete onboarding first (paywall is inside onboarding)
-  if (!isOnboarded && !isOnboardingRoute) {
+  // Not onboarded → must complete onboarding first (paywall is inside onboarding).
+  // /paywall/success is the exception: it finishes verifying a Stripe payment and
+  // then sends the user back to onboarding itself.
+  if (!isOnboarded && !isOnboardingRoute && !pathname.startsWith('/paywall/success')) {
     return NextResponse.redirect(new URL('/onboarding', request.url))
   }
 

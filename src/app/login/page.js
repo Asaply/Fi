@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { hasAccess } from '@/lib/access';
+import { postAuthDestination } from '@/lib/access';
 import './Login.css';
 
 // mode: 'landing' | 'login' | 'register' | 'registered'
@@ -32,25 +32,6 @@ function translateError(msg) {
     return msg;
 }
 
-function LoginBanner({ reason }) {
-    if (!reason) return null;
-    const msg = reason === 'free_analysis_used'
-        ? 'Ya usaste tu análisis gratis. Crea una cuenta para análisis ilimitados.'
-        : reason === 'more_analyses'
-        ? 'Crea tu cuenta para guardar y analizar más estados de cuenta.'
-        : null;
-    if (!msg) return null;
-    return (
-        <div style={{
-            background: '#FF8700', color: '#fff', fontWeight: 600,
-            fontSize: '0.9rem', textAlign: 'center', padding: '0.75rem 1rem',
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        }}>
-            {msg}
-        </div>
-    );
-}
-
 function LoginPageInner() {
     const [mode, setMode]               = useState('landing');
     const [tosAccepted, setTos]         = useState(false);
@@ -71,7 +52,6 @@ function LoginPageInner() {
     const [checkingSession, setCheckingSession] = useState(true);
     const router = useRouter();
     const searchParams = useSearchParams();
-    const reason = searchParams.get('reason');
     const redirectTo = searchParams.get('redirect') || null;
 
     useEffect(() => {
@@ -102,10 +82,7 @@ function LoginPageInner() {
             const remembered = await getRemember();
             if (cancelled) return;
             if (!remembered) { await supabase.auth.signOut(); setCheckingSession(false); return; }
-            const m = session.user?.user_metadata || {};
-            if (!m.onboarded) router.replace('/onboarding');
-            else if (!hasAccess(m)) router.replace('/paywall');
-            else router.replace('/finanzas');
+            router.replace(postAuthDestination(session.user));
             // Keep checkingSession true: we're navigating away, so never reveal
             // the login form during the redirect.
         })();
@@ -272,11 +249,7 @@ function LoginPageInner() {
                         });
                         if (authErr) throw authErr;
                         const user = authData?.user;
-                        const isOnboarded = !!user?.user_metadata?.onboarded;
-                        const isPaid = hasAccess(user?.user_metadata);
-                        if (!isOnboarded) router.push('/onboarding');
-                        else if (!isPaid) router.push('/paywall');
-                        else router.push('/finanzas');
+                        router.push(postAuthDestination(user));
                     } catch (e2) {
                         setError(`Error al autenticar: ${e2.message}`);
                         setIsLoading(false);
@@ -328,11 +301,7 @@ function LoginPageInner() {
                             });
                             if (authErr) throw authErr;
                             const user = authData?.user;
-                            const isOnboarded = !!user?.user_metadata?.onboarded;
-                            const isPaid = hasAccess(user?.user_metadata);
-                            if (!isOnboarded) router.push('/onboarding');
-                            else if (!isPaid) router.push('/paywall');
-                            else router.push('/finanzas');
+                            router.push(postAuthDestination(user));
                         } catch (e2) {
                             setError(`Error al autenticar: ${e2.message}`);
                             setIsLoading(false);
@@ -365,7 +334,6 @@ function LoginPageInner() {
 
     return (
         <div className="login-root">
-            <LoginBanner reason={reason} />
             <div className="login-bg-glow"        aria-hidden />
             <div className="login-bg-speedlines"  aria-hidden />
 
