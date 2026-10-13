@@ -211,6 +211,7 @@ export default function FinanzasPage() {
             const { error } = await supabase.from('transactions')
                 .update({ account_type: 'credito' })
                 .eq('user_id', user.id)
+                .eq('source', 'manual')
                 .eq('account_type', 'debito');
             if (!error) {
                 localStorage.setItem(flag, '1');
