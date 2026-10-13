@@ -1,10 +1,24 @@
 // In-memory implementation of the db.js interface for handler/sync tests.
 import { TRANSFER_CATEGORY } from '../../supabase/functions/_shared/bancos/constants.js';
 
-export function createFakeBankDb() {
+const byKey = (k) => (a, b) => (a[k] < b[k] ? -1 : a[k] > b[k] ? 1 : 0);
+
+// The db.js contract is that list methods return COMPLETE, totally ordered results
+// (db.js pages past the server's max_rows). `maxRows` makes the fake read its own
+// data in capped pages the same way, so results stay complete whatever the cap.
+export function createFakeBankDb({ maxRows } = {}) {
     const state = { links: [], accounts: [], transactions: [] };
     let seq = 0;
     const id = (p) => `${p}-${++seq}`;
+    const complete = (rows) => {
+        if (!maxRows) return rows;
+        const out = [];
+        for (let from = 0; ; from += maxRows) {
+            const page = rows.slice(from, from + maxRows);
+            if (!page.length) return out;
+            out.push(...page);
+        }
+    };
 
     return {
         state,
@@ -36,7 +50,8 @@ export function createFakeBankDb() {
                 .map(({ external_id, categoria, categoria_origen, transfer_group_id }) => ({ external_id, categoria, categoria_origen, transfer_group_id }));
         },
         async listUserCategorized(userId) {
-            return state.transactions.filter((t) => t.user_id === userId && t.categoria_origen === 'usuario').map(({ concept, categoria }) => ({ concept, categoria }));
+            return complete(state.transactions.filter((t) => t.user_id === userId && t.categoria_origen === 'usuario')
+                .sort(byKey('id')).map(({ concept, categoria }) => ({ concept, categoria })));
         },
         async upsertTransactions(rows) {
             for (const row of rows) {
@@ -46,17 +61,19 @@ export function createFakeBankDb() {
             }
         },
         async listBankTransactionsInRange(userId, accountIds, { from, to }) {
-            return state.transactions
+            return complete(state.transactions
                 .filter((t) => t.user_id === userId && accountIds.includes(t.bank_account_id) && t.date >= from && t.date <= to)
-                .map(({ external_id, bank_status, date }) => ({ external_id, bank_status, date }));
+                .sort(byKey('external_id'))
+                .map(({ external_id, bank_status, date }) => ({ external_id, bank_status, date })));
         },
         async deleteTransactionsByExternalIds(userId, ids) {
             state.transactions = state.transactions.filter((t) => !(t.user_id === userId && ids.includes(t.external_id)));
         },
         async listRecentBankTransactions(userId, since) {
-            return state.transactions
-                .filter((t) => t.user_id === userId && t.source === 'banco' && t.date >= since)
-                .map(({ external_id, bank_account_id, date, amount, type, concept, transfer_group_id }) => ({ external_id, bank_account_id, date, amount, type, concept, transfer_group_id }));
+            return complete(state.transactions
+                .filter((t) => t.user_id === userId && t.source === 'banco' && t.date >= since && !t.transfer_group_id)
+                .sort(byKey('external_id'))
+                .map(({ external_id, bank_account_id, date, amount, type, concept, transfer_group_id }) => ({ external_id, bank_account_id, date, amount, type, concept, transfer_group_id })));
         },
         async setTransferGroup(userId, ids, groupId) {
             for (const t of state.transactions) {

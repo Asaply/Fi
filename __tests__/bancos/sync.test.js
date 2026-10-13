@@ -8,8 +8,8 @@ const now = new Date('2026-10-13T12:00:00Z');
 // Fake AI: answers per concept, so the result doesn't depend on how many rows the rules leave unresolved.
 const fakeAi = async (items) => items.map((i) => (i.concept.includes('ZZQX') ? 'Ropa y Accesorios' : 'Entretenimiento'));
 
-async function setup() {
-    const db = createFakeBankDb();
+async function setup(dbOptions) {
+    const db = createFakeBankDb(dbOptions);
     const provider = createMockProvider({ now });
     const pid = provider.simulateConnect({ userId: 'u1', institutionName: 'BBVA' });
     const link = await db.insertLink({ user_id: 'u1', provider_link_id: pid, institution_name: 'BBVA', status: 'syncing', last_synced_at: null });
@@ -132,5 +132,24 @@ describe('syncLink: robustez del lote', () => {
         };
         await syncLink({ db, provider: dupProvider, classify: null, link, ...syncWindow(link, now), now, newId });
         expect(db.state.transactions.find((t) => t.external_id.endsWith('-t1')).concept).toBe('OXXO ACTUALIZADO');
+    });
+});
+
+describe('syncLink: lecturas completas aunque el servidor corte páginas', () => {
+    it('con maxRows pequeño el resultado es el mismo', async () => {
+        const { db, provider, link, newId } = await setup({ maxRows: 2 });
+        const res = await syncLink({ db, provider, classify: vi.fn(fakeAi), link, ...syncWindow(link, now), now, newId });
+        expect(res).toMatchObject({ accounts: 2, transactions: 9, transfersLinked: 1 });
+    });
+
+    it('un rival guardado antes sigue bloqueando el par aunque haya más filas que maxRows', async () => {
+        const { db, provider, link, newId } = await setup({ maxRows: 2 });
+        await syncLink({ db, provider, classify: null, link, from: '2026-10-12', to: '2026-10-13', now, newId });
+        const deb = db.state.accounts.find((a) => a.account_type === 'debito');
+        // A second 5000 "PAGO" outflow from debit the same day: t6 and this one both match t7 → ambiguous → no link.
+        await db.upsertTransactions([{ user_id: 'u1', source: 'banco', external_id: 'aaa-rival', bank_account_id: deb.id, date: '2026-10-08', amount: 5000, type: 'Egreso', concept: 'PAGO TDC SPEI', transfer_group_id: null }]);
+        const res = await syncLink({ db, provider, classify: null, link, ...syncWindow({ last_synced_at: null }, now), now, newId });
+        expect(res.transfersLinked).toBe(0);
+        expect(db.state.transactions.filter((t) => t.transfer_group_id)).toHaveLength(0);
     });
 });

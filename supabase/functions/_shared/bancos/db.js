@@ -14,6 +14,22 @@ function must({ data, error }) {
     return data;
 }
 
+// PostgREST silently caps every response at `max_rows` (1000 on Supabase), and
+// `.limit()` can't go past it. Reads that must be complete page with `.range()`
+// until a page comes back empty. `build` returns a fresh, totally ordered query
+// each time; `from` advances by what actually arrived, so a server cap smaller
+// than `size` still skips nothing.
+export async function readAll(build, size = 1000) {
+    const out = [];
+    let from = 0;
+    for (;;) {
+        const page = must(await build().range(from, from + size - 1)) || [];
+        if (!page.length) return out;
+        out.push(...page);
+        from += page.length;
+    }
+}
+
 export function createDb(sb) {
     return {
         async countActiveLinks(userId) {
@@ -57,8 +73,8 @@ export function createDb(sb) {
             return out;
         },
         async listUserCategorized(userId) {
-            return must(await sb.from('transactions').select('concept, categoria')
-                .eq('user_id', userId).eq('categoria_origen', 'usuario').limit(5000)) || [];
+            return readAll(() => sb.from('transactions').select('concept, categoria')
+                .eq('user_id', userId).eq('categoria_origen', 'usuario').order('id'));
         },
         async upsertTransactions(rows) {
             for (const part of chunks(rows, 500)) {
@@ -67,18 +83,21 @@ export function createDb(sb) {
         },
         async listBankTransactionsInRange(userId, accountIds, { from, to }) {
             if (!accountIds.length) return [];
-            return must(await sb.from('transactions').select('external_id, bank_status, date')
-                .eq('user_id', userId).in('bank_account_id', accountIds).gte('date', from).lte('date', to)) || [];
+            return readAll(() => sb.from('transactions').select('external_id, bank_status, date')
+                .eq('user_id', userId).in('bank_account_id', accountIds).gte('date', from).lte('date', to)
+                .order('external_id'));
         },
         async deleteTransactionsByExternalIds(userId, externalIds) {
             for (const part of chunks(externalIds, 200)) {
                 must(await sb.from('transactions').delete().eq('user_id', userId).in('external_id', part));
             }
         },
+        // Only rows not yet in a transfer group: pairing ignores grouped ones anyway.
         async listRecentBankTransactions(userId, since) {
-            return must(await sb.from('transactions')
+            return readAll(() => sb.from('transactions')
                 .select('external_id, bank_account_id, date, amount, type, concept, transfer_group_id')
-                .eq('user_id', userId).eq('source', 'banco').gte('date', since)) || [];
+                .eq('user_id', userId).eq('source', 'banco').gte('date', since).is('transfer_group_id', null)
+                .order('external_id'));
         },
         async setTransferGroup(userId, externalIds, groupId) {
             must(await sb.from('transactions').update({ transfer_group_id: groupId })
